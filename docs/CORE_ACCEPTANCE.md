@@ -25,4 +25,4 @@ Acceptance entries are marked PASS only after the listed command exits 0.
 | Docker Compose startup/health | `docker compose up --build` and `scripts/wait-for-services.ps1` | Healthy services | Not executed because Docker engine is unavailable | FAIL | `STATUS.md` |
 | Live FRED smoke | External live test with `FRED_ENABLED=true` and `FRED_API_KEY` | Connected provider and persisted FRED rows | Not executed; no credentials configured | PENDING | `docs/FRED_PROVIDER.md` |
 | Backend lint | Ruff/mypy or equivalent | Exit 0 | Not configured | PENDING | `TASKS.md` |
-| Source line count | PowerShell `rg --files ...` count command | Non-generated count reported | `files=162 lines=6556` | PASS | `docs/BUILD_EVIDENCE.md` |
+| Source line count | PowerShell `rg --files ...` count command | Non-generated count reported | `files=172 lines=6696` | PASS | `docs/BUILD_EVIDENCE.md` |

@@ -33,7 +33,7 @@ Remote: `https://github.com/Harishk3110/Terminalxoxo.git`
 | Secret scan | `rg -n -I "AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|FRED_API_KEY=[a-z0-9]{32}" ...` | 0 | No matches. |
 | Explicit no-execution search | `rg -n "placeOrder|cancelOrder|reqGlobalCancel|transmitOrder|modifyOrder|submitOrder|executeTrade|autoRebalance|autoHedge|Buy button|Sell button|Submit order|Transmit order|Cancel broker order|Live execution toggle" ...` | 0 | Only `docs/GAP_AUDIT.md` contains the command reference; application source is clean. |
 | Acceptance script | `scripts/acceptance.ps1` | Not run | Equivalent commands were run individually; full script not run because Docker engine is unavailable. |
-| Source line count | `rg --files ... | Measure-Object` | 0 | `files=162 lines=6556`, excluding node_modules, Next outputs, dist/build/coverage, lock files, DBs, and generated outputs. |
+| Source line count | `rg --files ... | Measure-Object` | 0 | `files=172 lines=6696`, excluding node_modules, Next outputs, dist/build/coverage, lock files, DBs, and generated outputs. |
 
 ## Docker Blocker
 
