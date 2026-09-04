@@ -75,6 +75,9 @@ importers:
 
   apps/terminal-web:
     dependencies:
+      '@knk/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@knk/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
@@ -142,6 +145,12 @@ importers:
       tailwindcss:
         specifier: 3.4.17
         version: 3.4.17
+      typescript:
+        specifier: 5.7.3
+        version: 5.7.3
+
+  packages/api-client:
+    devDependencies:
       typescript:
         specifier: 5.7.3
         version: 5.7.3

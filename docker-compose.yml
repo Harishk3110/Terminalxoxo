@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: knk
       POSTGRES_PASSWORD: knk_local_demo
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -14,16 +14,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   minio:
     image: minio/minio:RELEASE.2024-12-18T13-15-44Z
@@ -32,10 +36,28 @@ services:
       MINIO_ROOT_USER: knk-local
       MINIO_ROOT_PASSWORD: knk-local-demo
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 knk-local knk-local-demo; do sleep 2; done;
+      mc mb --ignore-existing local/knk-terminal-local;
+      mc anonymous set none local/knk-terminal-local;
+      "
+    restart: "no"
 
   api:
     build:
@@ -43,15 +65,28 @@ services:
       dockerfile: infrastructure/docker/python.Dockerfile
       args:
         SERVICE_DIR: api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: /bin/sh -c "alembic upgrade head && python scripts/seed_demo.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+psycopg://knk:knk_local_demo@postgres:5432/knk_terminal
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_BUCKET: knk-terminal-local
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=5).read()"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   public-web:
     build:
@@ -61,11 +96,17 @@ services:
         APP_FILTER: "@knk/public-web"
     command: pnpm --filter @knk/public-web dev --hostname 0.0.0.0 --port 3000
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   terminal-web:
     build:
@@ -75,11 +116,17 @@ services:
         APP_FILTER: "@knk/terminal-web"
     command: pnpm --filter @knk/terminal-web dev --hostname 0.0.0.0 --port 3001
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   worker-data:
     build:
@@ -89,8 +136,19 @@ services:
         SERVICE_DIR: worker-data
     command: python -m app.main --daemon
     env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+psycopg://knk:knk_local_demo@postgres:5432/knk_terminal
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - api
+      - redis
+      - postgres
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.main", "--healthcheck"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   worker-quant:
     build:
@@ -100,8 +158,18 @@ services:
         SERVICE_DIR: worker-quant
     command: python -m app.main --daemon
     env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+psycopg://knk:knk_local_demo@postgres:5432/knk_terminal
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - api
+      - postgres
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.main", "--healthcheck"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   report-engine:
     build:
@@ -112,7 +180,13 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8010
     env_file: .env.example
     ports:
-      - "8010:8010"
+      - "127.0.0.1:8010:8010"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health/live', timeout=5).read()"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   broker-agent:
     build:
@@ -123,23 +197,54 @@ services:
     command: uvicorn agent.main:app --host 0.0.0.0 --port 8020
     env_file: .env.example
     ports:
-      - "8020:8020"
+      - "127.0.0.1:8020:8020"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health/live', timeout=5).read()"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
+
+  prefect-server:
+    image: prefecthq/prefect:3.1.11-python3.12
+    command: prefect server start --host 0.0.0.0
+    ports:
+      - "127.0.0.1:4200:4200"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4200/api/health', timeout=5).read()"]
+      interval: 15s
+      timeout: 8s
+      retries: 20
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v2.55.1
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.4.0
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     volumes:
       - grafana-data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres-data:
+  redis-data:
   minio-data:
   grafana-data:

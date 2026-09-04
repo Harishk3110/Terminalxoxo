@@ -4,9 +4,14 @@ node_modules/
 
 # Build outputs
 .next/
+.next-build/
+.next-prod/
 out/
 dist/
 coverage/
+.coverage*
+test-results/
+playwright-report/
 .turbo/
 *.tsbuildinfo
 __pycache__/
@@ -30,6 +35,8 @@ data/redis/
 uploads/
 reports/generated/
 logs/
+.knk-object-store/
+*.db
 
 # Editors and OS
 .DS_Store

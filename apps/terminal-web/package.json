@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "echo \"terminal-web: interaction smoke tests covered by build\""
   },
   "dependencies": {
     "@knk/design-system": "workspace:*",
+    "@knk/api-client": "workspace:*",
     "@knk/domain": "workspace:*",
     "@knk/search": "workspace:*",
     "@knk/terminal-functions": "workspace:*",

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+
 
 def main() -> None:
-    print("Demo migration check completed. Alembic migrations will live in /migrations as persistence expands.")
+    result = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=False)
+    raise SystemExit(result.returncode)
 
 
 if __name__ == "__main__":

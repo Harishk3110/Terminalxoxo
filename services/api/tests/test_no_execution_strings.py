@@ -13,6 +13,12 @@ def test_application_source_has_no_forbidden_broker_action_methods():
         "execute" + "Trade",
         "auto" + "Rebalance",
         "auto" + "Hedge",
+        "Buy" + " button",
+        "Sell" + " button",
+        "Submit" + " order",
+        "Transmit" + " order",
+        "Cancel" + " broker order",
+        "Live" + " execution toggle",
     ]
     scan_roots = [root / "apps", root / "packages", root / "services"]
     skipped_parts = {"node_modules", ".next", "dist", "coverage", "__pycache__", "tests"}

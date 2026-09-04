@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 import time
 
 import numpy as np
 import structlog
+from sqlalchemy import create_engine, text
 
 logger = structlog.get_logger()
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./knk_terminal.db")
 
 
 def run_demo_backtest() -> dict[str, float | str]:
@@ -18,10 +21,21 @@ def run_demo_backtest() -> dict[str, float | str]:
     return {"strategy": "quality_momentum_demo", "quality": "DEMO DATA", "annualized_volatility": volatility}
 
 
+def healthcheck() -> None:
+    engine = create_engine(DATABASE_URL, future=True)
+    with engine.connect() as connection:
+        connection.execute(text("select 1"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--daemon", action="store_true")
+    parser.add_argument("--healthcheck", action="store_true")
     args = parser.parse_args()
+    if args.healthcheck:
+        healthcheck()
+        print("ok")
+        return
     if not args.daemon:
         print(run_demo_backtest())
         return

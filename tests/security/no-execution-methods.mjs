@@ -15,7 +15,13 @@ const forbidden = [
   "submit" + "Order",
   "execute" + "Trade",
   "auto" + "Rebalance",
-  "auto" + "Hedge"
+  "auto" + "Hedge",
+  "Buy" + " button",
+  "Sell" + " button",
+  "Submit" + " order",
+  "Transmit" + " order",
+  "Cancel" + " broker order",
+  "Live" + " execution toggle"
 ];
 
 function extension(path) {

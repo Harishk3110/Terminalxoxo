@@ -17,6 +17,7 @@
     "paths": {
       "@knk/design-system": ["packages/design-system/src/index.tsx"],
       "@knk/domain": ["packages/domain/src/index.ts"],
+      "@knk/api-client": ["packages/api-client/src/index.ts"],
       "@knk/terminal-functions": ["packages/terminal-functions/src/index.ts"],
       "@knk/search": ["packages/search/src/index.ts"]
     }

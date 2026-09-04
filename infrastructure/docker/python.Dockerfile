@@ -7,6 +7,8 @@ COPY services/${SERVICE_DIR}/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/${SERVICE_DIR} ./
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
 
 EXPOSE 8000 8010 8020
 CMD ["python", "-m", "app.main"]

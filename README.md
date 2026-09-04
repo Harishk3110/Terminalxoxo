@@ -2,29 +2,45 @@
 
 Repository: `Terminalxoxo`
 
-KnK Capital Terminal is a production-shaped demo-mode investment platform for KnK Capital. It includes a public website, a private terminal, a FastAPI backend, background workers, a report service, a read-only local broker agent, security tests, Docker Compose, and setup documentation.
+KnK Capital Terminal is a private investment-terminal monorepo for KnK Capital. The current V1 remediation replaces the rejected static demo with database-backed FastAPI services, Alembic migrations, deterministic demo ingestion, an API-backed terminal UI, provider abstractions, FRED integration, portfolio/risk/backtest calculations, upload/report/Pine export paths, and security guardrails.
 
-The current build is intentionally safe:
+The build remains deliberately safe:
 
-- Demo data works without external credentials.
-- The operating mode is labelled as `DEMO DATA`.
+- Demo mode works without external credentials and labels seeded records as `DEMO DATA`.
+- FRED is `NOT_CONFIGURED` until `FRED_ENABLED=true` and `FRED_API_KEY` are supplied.
 - Broker integration is read-only by design.
-- No broker execution API is implemented.
-- Public content is separated from private portfolio data.
+- No broker order execution methods are present in application source.
+- Public content is separated from private portfolio, provider, research, strategy, and risk APIs.
 
 ## Run Locally
 
 ```bash
 corepack prepare pnpm@9.15.4 --activate
 corepack pnpm install
-corepack pnpm dev
+python -m pip install -r services/api/requirements.txt
+python -m alembic upgrade head
+python services/api/scripts/seed_demo.py --reset
+corepack pnpm --filter @knk/terminal-web build
 ```
 
-Public web: http://localhost:3000
+API:
 
-Terminal web: http://localhost:3001
+```bash
+cd services/api
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-API: http://localhost:8000
+Terminal web:
+
+```bash
+corepack pnpm --filter @knk/terminal-web dev --hostname 127.0.0.1 --port 3001
+```
+
+Public web:
+
+```bash
+corepack pnpm --filter @knk/public-web dev --hostname 127.0.0.1 --port 3000
+```
 
 ## Docker
 
@@ -33,29 +49,20 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Docker Desktop must be running before Compose commands are executed.
-
-## Demo Login
-
-Demo mode uses a local single-administrator setup flow. Open the terminal web app and use Settings > Security to inspect the configured state. The API exposes deterministic demo data until real providers are configured.
-
-## Provider Connections
-
-Credentials are supplied through Settings > Connections or environment variables. Data providers start in `DEMO` mode and transition dataset-by-dataset to connected mode after a successful connection test and backfill.
-
-## IBKR Paper Agent
-
-Run the broker agent next to TWS or IB Gateway with API read-only mode enabled. The agent only exposes account, position, fill, commission, and heartbeat data. It does not include broker order submission, revision, or cancellation paths.
+Docker Compose config validates, but the latest local `docker compose build` could not run because Docker Desktop's Linux engine was not reachable on this machine. See `docs/BUILD_EVIDENCE.md`.
 
 ## Verification
 
 ```bash
+python -m compileall -q services/api/app services/api/scripts services/worker-data/app services/worker-quant/app services/report-engine/app services/broker-agent
+python -m pytest services/api/tests --cov=services/api/app --cov-report=term-missing
 corepack pnpm typecheck
 corepack pnpm lint
 corepack pnpm test
-python -m pytest services/api/tests
-corepack pnpm build
-docker compose build
+corepack pnpm --filter @knk/public-web build
+corepack pnpm --filter @knk/terminal-web build
+corepack pnpm test-e2e
+docker compose config --quiet
 ```
 
-See [STATUS.md](./STATUS.md), [TASKS.md](./TASKS.md), and [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+See `STATUS.md`, `TASKS.md`, `docs/CORE_ACCEPTANCE.md`, and `docs/BUILD_EVIDENCE.md` for exact results.
