@@ -29,6 +29,7 @@ data/postgres/
 data/redis/
 uploads/
 reports/generated/
+logs/
 
 # Editors and OS
 .DS_Store
