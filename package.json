@@ -1,0 +1,39 @@
+{
+  "name": "knk-capital-terminal",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "description": "KnK Capital Terminal monorepo: public website, private investment terminal, API, workers, reports, and read-only broker agent.",
+  "scripts": {
+    "bootstrap": "corepack prepare pnpm@9.15.4 --activate && corepack pnpm install",
+    "dev": "corepack pnpm -r --parallel --if-present dev",
+    "dev:public": "corepack pnpm --filter @knk/public-web dev",
+    "dev:terminal": "corepack pnpm --filter @knk/terminal-web dev",
+    "build": "corepack pnpm -r --if-present build",
+    "lint": "corepack pnpm -r --if-present lint",
+    "format": "prettier --write .",
+    "typecheck": "corepack pnpm -r --if-present typecheck",
+    "test": "corepack pnpm test-unit && corepack pnpm security-check",
+    "test-unit": "corepack pnpm -r --if-present test",
+    "test-integration": "python -m pytest services/api/tests",
+    "test-e2e": "playwright test tests/e2e",
+    "security-check": "node tests/security/no-execution-methods.mjs",
+    "migrate": "python services/api/scripts/migrate_demo.py",
+    "seed": "python services/api/scripts/seed_demo.py",
+    "reset-demo": "python services/api/scripts/seed_demo.py --reset",
+    "backfill": "python services/worker-data/app/main.py --once",
+    "backup": "python infrastructure/scripts/backup.py",
+    "restore": "python infrastructure/scripts/restore.py",
+    "health": "python infrastructure/scripts/health.py",
+    "broker-agent-build": "python -m py_compile services/broker-agent/agent/main.py"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/node": "22.10.5",
+    "eslint": "8.57.1",
+    "prettier": "3.4.2",
+    "turbo": "2.3.3",
+    "typescript": "5.7.3",
+    "vitest": "2.1.8"
+  }
+}

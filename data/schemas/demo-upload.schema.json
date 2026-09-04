@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KnK Demo Upload",
+  "type": "object",
+  "required": ["date", "ticker", "value", "quality"],
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "ticker": { "type": "string" },
+    "value": { "type": "number" },
+    "quality": { "const": "DEMO DATA" }
+  }
+}

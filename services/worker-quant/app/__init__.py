@@ -1,0 +1,1 @@
+"""KnK quant worker."""

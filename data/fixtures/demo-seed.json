@@ -1,0 +1,7 @@
+{
+  "brand": "KnK Capital",
+  "environment": "local-demo",
+  "base_currency": "SGD",
+  "reference_capital": 70000,
+  "quality": "DEMO DATA"
+}

@@ -1,0 +1,14 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: knk_terminal_test
+      POSTGRES_USER: knk
+      POSTGRES_PASSWORD: knk_test
+    ports:
+      - "55432:5432"
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "56379:6379"
