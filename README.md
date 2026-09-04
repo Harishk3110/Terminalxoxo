@@ -16,8 +16,8 @@ The current build is intentionally safe:
 
 ```bash
 corepack prepare pnpm@9.15.4 --activate
-pnpm install
-pnpm dev
+corepack pnpm install
+corepack pnpm dev
 ```
 
 Public web: http://localhost:3000
@@ -32,6 +32,8 @@ API: http://localhost:8000
 cp .env.example .env
 docker compose up --build
 ```
+
+Docker Desktop must be running before Compose commands are executed.
 
 ## Demo Login
 
@@ -48,9 +50,11 @@ Run the broker agent next to TWS or IB Gateway with API read-only mode enabled. 
 ## Verification
 
 ```bash
-pnpm typecheck
-pnpm test
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm test
 python -m pytest services/api/tests
+corepack pnpm build
 docker compose build
 ```
 
