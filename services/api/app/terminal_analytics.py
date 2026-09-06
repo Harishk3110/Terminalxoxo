@@ -188,6 +188,9 @@ def fundamentals(session: Session, key: str):
         return curated
     row = session.scalar(select(models.FundamentalSnapshot).where(models.FundamentalSnapshot.instrument_id == item.id))
     if row is None:
+        from .config import get_settings
+        if get_settings().knk_env not in {"local-demo", "test", "demo"}:
+            return {"symbol": item.symbol, "unit": f"{item.currency} millions / shares in millions", "source": "UNAVAILABLE", "quality": "UNAVAILABLE", "as_of": None, "items": [], "warnings": ["Import verified statements or configure a fundamentals provider; no production demo fallback."]}
         quote = MarketRepository(session).latest_quote(item.id)
         # Deterministic synthetic statements. These are never presented as company filings.
         rng = np.random.default_rng(sum(ord(c) for c in item.symbol) + 3110)
@@ -195,7 +198,7 @@ def fundamentals(session: Session, key: str):
         statements = []
         for year in range(2021, 2026):
             sales *= float(rng.uniform(1.04, 1.18))
-            statements.append({"year": str(year), "revenue": round(sales, 2), "gross_profit": round(sales * .43, 2), "ebit": round(sales * .25, 2), "net_income": round(sales * .20, 2), "operating_cash_flow": round(sales * .28, 2), "capex": round(sales * .05, 2), "free_cash_flow": round(sales * .23, 2), "assets": round(sales * 1.4, 2), "debt": round(sales * .3, 2), "cash": round(sales * .2, 2), "shares": round(sales * .2 / max(float(quote.price) / 25, 1), 2)})
+            statements.append({"year": str(year), "revenue": round(sales, 2), "gross_profit": round(sales * .43, 2), "ebit": round(sales * .25, 2), "net_income": round(sales * .20, 2), "operating_cash_flow": round(sales * .28, 2), "capex": round(sales * .05, 2), "free_cash_flow": round(sales * .23, 2), "assets": round(sales * 1.4, 2), "debt": round(sales * .3, 2), "cash": round(sales * .2, 2), "shares": round(sales * .2 / max(float(quote.price) / 25 if quote else 1, 1), 2)})
         row = models.FundamentalSnapshot(instrument_id=item.id, source="DemoProvider synthetic financial statements", quality="DEMO DATA", as_of=datetime(2025, 12, 31, tzinfo=timezone.utc), statements={"items": statements})
         session.add(row)
         try:

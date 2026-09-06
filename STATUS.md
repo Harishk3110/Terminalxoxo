@@ -65,3 +65,15 @@ fundamental factors, full attribution and general strategy walk-forward optimisa
 remain explicitly incomplete. No live user-facing 3001 deployment is claimed.
 Docker Linux daemon was unavailable; Vercel CLI was logged out; no cloud URL is
 verified. Existing local data and historical runs are retained.
+
+Equity checkpoint: 693 sprint tests, 97 full API tests and 231 frontend tests
+passed. Subsequent focused runs passed 17 equity tests and all 10 file-import/
+operations tests, including partial restatement provenance and unit rejection.
+The new test insertion initially misplaced an existing factor assertion; it was
+restored to its original test and the file rerun passed. Node 22 production build,
+new-module Ruff and broker-action scan passed. Both browser workflows passed,
+then both passed again after denser two-column desktop DCF and mobile rechecks.
+Saved FIN/FCFF/WACC/comparables/thesis workflows and interactive price charts are
+connected. Thesis versions preserve manual-ledger references and history.
+Segments, ROIC, historical/forward valuation multiples and unconnected provider
+workflows remain unavailable; see EQUITY_RESEARCH.md. No 3001 deployment claimed.

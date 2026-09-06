@@ -1119,6 +1119,8 @@ export function OperatingDeskPage({
   const equity = useApi<{
     coverage: Row[];
     theses: Row[];
+    summary: Row;
+    universe: Row[];
     quality: string;
     source: string;
     as_of: string;
@@ -1235,6 +1237,28 @@ export function OperatingDeskPage({
           {desk === "equity" ? "Research notes" : "Backtests"}
         </button>
       </PageTitle>
+      {desk === "equity" && (
+        <Kpis
+          items={[
+            {
+              label: "Holdings",
+              value: number(equity.data?.summary?.holdings, 0),
+            },
+            {
+              label: "Without thesis",
+              value: number(equity.data?.summary?.without_thesis, 0),
+            },
+            {
+              label: "Reviews due",
+              value: number(equity.data?.summary?.review_due, 0),
+            },
+            {
+              label: "Valued securities",
+              value: number(equity.data?.summary?.saved_valuations, 0),
+            },
+          ]}
+        />
+      )}
       {desk === "quant" && (
         <Kpis
           source="Latest 100 research jobs"
@@ -1287,6 +1311,20 @@ export function OperatingDeskPage({
                   { key: "price", label: "Price", numeric: true },
                   { key: "source", label: "Source", size: 185 },
                   { key: "thesis_count", label: "Theses" },
+                  { key: "fair_value", label: "Fair value", numeric: true },
+                  {
+                    key: "upside",
+                    label: "Upside",
+                    numeric: true,
+                    percent: true,
+                  },
+                  {
+                    key: "valuation_quality",
+                    label: "Valuation source",
+                    size: 150,
+                  },
+                  { key: "review_due", label: "Review due" },
+                  { key: "catalysts", label: "Catalysts", size: 230 },
                   { key: "filings_state", label: "Filings", size: 155 },
                   { key: "latest_file", label: "Latest file", size: 190 },
                 ]}
@@ -1302,8 +1340,48 @@ export function OperatingDeskPage({
                 columns={[
                   { key: "title", label: "Thesis", size: 240 },
                   { key: "state", label: "State" },
+                  { key: "review_date", label: "Review date" },
+                  { key: "version", label: "Version" },
                 ]}
                 onSelect={() => open("/research", "RES")}
+              />
+            </Panel>
+            <Panel
+              title="Coverage universe / saved valuations"
+              source="Source-aware quotes and private research"
+              className="wide-panel"
+            >
+              <DataTable
+                id="equity-universe"
+                rows={equity.data?.universe ?? []}
+                columns={[
+                  { key: "symbol", label: "Security" },
+                  { key: "name", label: "Company", size: 200 },
+                  { key: "price", label: "Price", numeric: true },
+                  { key: "currency", label: "CCY" },
+                  { key: "fair_value", label: "Fair value", numeric: true },
+                  {
+                    key: "upside",
+                    label: "Upside",
+                    numeric: true,
+                    percent: true,
+                  },
+                  { key: "quality", label: "Price state", size: 160 },
+                  { key: "as_of", label: "Price timestamp", size: 190 },
+                  {
+                    key: "valuation_quality",
+                    label: "Valuation state",
+                    size: 160,
+                  },
+                ]}
+                onSelect={(row) =>
+                  open(
+                    `/security/${row.symbol}`,
+                    `${row.symbol} DES`,
+                    false,
+                    String(row.symbol),
+                  )
+                }
               />
             </Panel>
           </>

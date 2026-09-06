@@ -110,6 +110,47 @@ def equity(session: Database):
         }
         for t in session.scalars(select(models.InvestmentThesis)).all()
     ]
+    research = session.scalars(
+        select(models.AnalysisRun)
+        .where(models.AnalysisRun.kind == "thesis")
+        .order_by(models.AnalysisRun.created_at.desc())
+        .limit(500)
+    ).all()
+    superseded = {row.result.get("parent_id") for row in research}
+    structured_ids = {row.id for row in research}
+    theses = [row for row in theses if row["id"] not in structured_ids]
+    theses.extend(
+        {
+            "id": row.id,
+            **row.result,
+            "summary": row.result.get("one_sentence"),
+            "review_due": bool(
+                row.result.get("review_date")
+                and row.result["review_date"] <= date.today().isoformat()
+            ),
+        }
+        for row in research
+        if row.id not in superseded
+    )
+    valuations = session.scalars(
+        select(models.AnalysisRun)
+        .where(models.AnalysisRun.kind == "dcf", models.AnalysisRun.status == "SUCCEEDED")
+        .order_by(models.AnalysisRun.created_at.desc())
+        .limit(500)
+    ).all()
+    targets = {}
+    for run in valuations:
+        key = run.result.get("instrument_id")
+        if key not in targets:
+            base = next(
+                (row for row in run.result.get("scenarios", []) if row["name"] == "BASE"), None
+            )
+            if base:
+                targets[key] = {
+                    "fair_value": base["fair_value"],
+                    "valuation_id": run.id,
+                    "valuation_quality": run.result["quality"],
+                }
     coverage = []
     for row in data["positions"]:
         item = session.get(models.Instrument, row["instrument_id"])
@@ -132,14 +173,48 @@ def equity(session: Database):
                 "source": row["source"],
                 "as_of": row["as_of"],
                 "thesis_count": sum(t["instrument_id"] == item.id for t in theses),
+                "review_due": any(
+                    t["instrument_id"] == item.id and t.get("review_due") for t in theses
+                ),
+                "fair_value": targets.get(item.id, {}).get("fair_value"),
+                "upside": float(targets[item.id]["fair_value"]) / float(row["market_price"]) - 1
+                if item.id in targets and row["market_price"] and float(row["market_price"]) > 0
+                else None,
+                "valuation_quality": targets.get(item.id, {}).get("valuation_quality"),
+                "catalysts": " / ".join(
+                    t.get("catalysts", "")
+                    for t in theses
+                    if t["instrument_id"] == item.id and t.get("catalysts")
+                ),
                 "latest_file": files[0].fields.get("filename") if files else None,
                 "filings_state": "PROVIDER REQUIRED",
                 "earnings_state": "PROVIDER REQUIRED",
             }
         )
+    from .terminal_analytics import quotes
+
+    universe = []
+    for quote in quotes(session):
+        target = targets.get(quote["id"], {})
+        universe.append(
+            {
+                **quote,
+                **target,
+                "upside": float(target["fair_value"]) / quote["price"] - 1
+                if target and quote.get("price") and quote["price"] > 0
+                else None,
+            }
+        )
     return {
         "coverage": coverage,
         "theses": theses,
+        "universe": universe,
+        "summary": {
+            "holdings": len(coverage),
+            "without_thesis": sum(row["thesis_count"] == 0 for row in coverage),
+            "review_due": sum(bool(row.get("review_due")) for row in theses),
+            "saved_valuations": len(targets),
+        },
         "source": data["source"],
         "quality": data["quality"],
         "as_of": data["as_of"],

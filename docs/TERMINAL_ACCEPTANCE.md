@@ -67,3 +67,16 @@ the actual engines; navigation or a screenshot alone does not certify them.
   window. The corrected assertion checks an actually visible factor row.
 - Limits and pending workflows are explicit in QUANT_RESEARCH.md and
   ALPHA_METHODOLOGY.md. A positive demo result is not certified alpha or an edge.
+
+## Equity Checkpoint
+
+- 693 sprint, 97 API and 231 frontend tests passed.
+- Subsequent 17 equity tests and 10 import/operations tests passed.
+- FCFF, WACC, TTM completeness, unit rejection, restatements, source lineage,
+  peer statistics, immutable thesis references and authentication tested.
+- Node 22 production build, new-module Ruff and broker-action scan passed.
+- Two browser workflows passed; both passed again after denser desktop layout.
+- DCF/COMP/thesis save/revision/refresh and security chart controls tested.
+- 1440px/390px screenshots inspected; chart/table geometry does not overlap.
+- The isolated browser harness is not a live 3001 deployment. Provider-driven
+  workflows and financial-model limits are recorded in EQUITY_RESEARCH.md.

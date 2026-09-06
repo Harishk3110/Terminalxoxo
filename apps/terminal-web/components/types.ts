@@ -149,6 +149,7 @@ export interface Health {
 export interface Prices {
   items: {
     date: string;
+    as_of?: string;
     open: number;
     high: number;
     low: number;

@@ -1444,7 +1444,7 @@
   {
     "mnemonic": "THESIS",
     "name": "Investment Thesis",
-    "description": "Private free-form thesis notes; structured valuation and catalyst fields are not implemented.",
+    "description": "Versioned private thesis, scenarios, catalysts, invalidation, sizing and source-linked valuation.",
     "category": "research",
     "keywords": [
       "investment thesis"

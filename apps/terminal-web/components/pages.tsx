@@ -20,7 +20,7 @@ import {
   HealthPage,
   ReconciliationPage,
 } from "./system-pages";
-import { MarketPage, SecurityPage } from "./security-pages";
+import { MarketPage } from "./security-pages";
 const BacktestPage = dynamic(() =>
   import("./lab-pages").then((m) => m.BacktestPage),
 );
@@ -42,6 +42,15 @@ const AlphaWorkspace = dynamic(() =>
 );
 const ModelWorkspace = dynamic(() =>
   import("./model-page").then((m) => m.ModelWorkspace),
+);
+const EquityWorkspace = dynamic(() =>
+  import("./equity-page").then((m) => m.EquityWorkspace),
+);
+const ThesisWorkspace = dynamic(() =>
+  import("./thesis-page").then((m) => m.ThesisWorkspace),
+);
+const MarketSecurityWorkspace = dynamic(() =>
+  import("./market-security-page").then((m) => m.MarketSecurityWorkspace),
 );
 
 export function PageRouter({ route }: { route: string }) {
@@ -70,8 +79,8 @@ export function PageRouter({ route }: { route: string }) {
   if (route.startsWith("/data-catalogue"))
     return <CataloguePage route={route} />;
   if (route === "/data-jobs") return <JobsPage />;
-  if (["/research", "/thesis", "/ideas"].includes(route))
-    return <ResearchPage />;
+  if (["/research", "/thesis"].includes(route)) return <ThesisWorkspace />;
+  if (route === "/ideas") return <ResearchPage />;
   if (route === "/tradingview") return <PinePage />;
   if (route === "/excel-studio") return <ExcelPage />;
   if (["/settings/connections", "/settings"].includes(route))
@@ -91,11 +100,13 @@ export function PageRouter({ route }: { route: string }) {
     ].includes(route)
   )
     return <MarketPage route={route} />;
+  if (/^\/(financials|valuation|dcf|wacc|comparables)\//.test(route))
+    return <EquityWorkspace route={route} />;
   if (
     /^\/(security|quote|chart|technicals|financials|valuation|dcf|wacc|comparables)\//.test(
       route,
     )
   )
-    return <SecurityPage route={route} />;
+    return <MarketSecurityWorkspace route={route} />;
   return <FunctionDirectory route={route} />;
 }

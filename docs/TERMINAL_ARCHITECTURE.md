@@ -25,3 +25,8 @@ there are no broker order-execution methods.
 Settings retain per-provider capability and freshness states. A connected provider
 does not change unrelated datasets to LIVE. See PRD_TERMINAL_ONLY.md and
 TERMINAL_ACCEPTANCE.md for required scope and measured coverage.
+
+Equity research uses immutable AnalysisRun results for Decimal FCFF/WACC,
+source-pinned peer comparisons and structured thesis revisions. Matching thesis
+references preserve legacy ledger foreign keys; no historical research is removed.
+Imported financials preserve metric-level source lineage and frequency semantics.

@@ -18,7 +18,7 @@ test("command navigation, security context, workspaces and keyboard controls", a
   await expect(page.getByTestId("terminal-shell")).toBeVisible();
   await command(page, "AAPL FIN");
   await expect(
-    page.getByRole("heading", { name: "AAPL / Financial Statements" }),
+    page.getByRole("heading", { name: "AAPL / Financial Analysis" }),
   ).toBeVisible();
   await command(page, "MSFT GP", true);
   await expect(page.getByTestId("security-context")).toContainText("MSFT");
@@ -205,7 +205,7 @@ test("table controls, security context menu and resized inspector", async ({
     .getByRole("menuitem", { name: "FIN Financial Statements" })
     .click();
   await expect(
-    page.getByRole("heading", { name: "AAPL / Financial Statements" }),
+    page.getByRole("heading", { name: "AAPL / Financial Analysis" }),
   ).toBeVisible();
   const handle = page.locator("[data-panel-resize-handle-id]");
   const box = await handle.boundingBox();

@@ -15,7 +15,8 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Extend risk with measured duration, option repricing and futures/FX covariance where supported input data exist.
 - [x] Verify saved alpha, technical factors, offline multi-security backtests, model/expanding-window evaluation, Monte Carlo and candidate review records.
 - [ ] Complete corporate-action/weekly/intraday backtests, point-in-time fundamental factors, detailed alpha attribution and general strategy walk-forward optimisation.
-- [ ] Complete equity/DCF/comparables/thesis acceptance.
+- [x] Verify annual/quarterly/TTM, saved FCFF/WACC/comparables, structured theses and security views.
+- [ ] Complete verified segments, ROIC, historical/forward multiples and provider-driven earnings/ownership/short-interest/events.
 - [ ] Complete options-chain/Greeks/gamma/GEX acceptance.
 - [ ] Complete provider/file-source/freshness acceptance.
 - [ ] Complete internal Excel/decks/PDF/Pine acceptance.

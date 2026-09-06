@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Source-Pinned Equity Research
+
+- Added annual/quarterly/TTM statements, ratio guards and metric-level import provenance.
+- Added Decimal FCFF scenarios, saved WACC, sensitivity grids and peer statistics.
+- Added immutable structured theses and manual-ledger-compatible research references.
+- Expanded security charts, observed quote details, coverage valuations and review monitoring.
+- Preserved unavailable/provider-dependent fields and existing research history.
+
 ## Reproducible Quant Research
 
 - Added saved NET/GROSS/cost alpha with CAPM/HAC inference and versioned factor returns.

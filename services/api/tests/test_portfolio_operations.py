@@ -164,3 +164,27 @@ def test_factor_is_oos_separation_and_insufficient_history():
     insufficient = factor_statistics(frame.iloc[:20], 21, 5)
     assert insufficient["state"] == "INSUFFICIENT DATA"
     assert insufficient["in_sample"]["mean_ic"] is None
+
+
+def test_curated_quarters_units_and_restatements_keep_metric_provenance(drop, accounting_session):
+    from app.terminal_analytics import fundamentals
+    from app.equity_financials import statements
+    header = "Symbol,Period,Metric,Value,Frequency,Unit,Scale,Actual Estimate,Report Date\n"
+    raw = header + "".join(f"AAPL,2025Q{i},revenue,{i*10},QUARTERLY,USD,1000000,ACTUAL,2026-02-01\nAAPL,2025Q{i},cash,{i*5},QUARTERLY,USD,1000000,ACTUAL,2026-02-01\n" for i in range(1, 5))
+    upload = drop.receive("AAPL_quarters.csv", raw.encode())
+    mapped = drop.map_validate(upload["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id)
+    assert mapped["validation"]["valid"], mapped
+    imported = drop.import_file(upload["id"], name="Quarterly statements", licence="Internal test fixture", approve=True)
+    first = fundamentals(accounting_session, "AAPL")
+    assert statements(first, "TTM")[0]["revenue"] == 100
+    second = drop.receive("AAPL_restatement.csv", (header + "AAPL,2025Q4,revenue,45,QUARTERLY,USD,1000000,ACTUAL,2026-03-01\nAAPL,2025Q4,debt,12,QUARTERLY,SHARES,1000000,ACTUAL,2026-03-01\n").encode())
+    drop.map_validate(second["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id)
+    drop.import_file(second["id"], name="Restatement", licence="Internal test fixture", approve=True)
+    revised = fundamentals(accounting_session, "AAPL")
+    last = revised["items"][-1]
+    assert statements(revised, "TTM")[0]["revenue"] == 105
+    assert statements(revised, "TTM")[0]["cash"] == 20
+    assert last["metric_sources"]["cash"]["version_id"] == imported["dataset_version_id"]
+    assert last["metric_sources"]["revenue"]["version_id"] != last["metric_sources"]["cash"]["version_id"]
+    assert last.get("debt") is None
+    assert any("incompatible unit SHARES" in warning for warning in revised["warnings"])
