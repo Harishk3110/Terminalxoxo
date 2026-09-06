@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 from collections import defaultdict
 from dataclasses import asdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -19,12 +18,14 @@ from sqlalchemy.orm import Session
 from . import models
 from .portfolio_domain.types import AccountingPolicy
 from .portfolio_domain.postings import BalanceAdjustment, CurrencyMark, outstanding_postings, summarize_postings, transaction_postings
+from .portfolio_domain.transaction_cash import enrich_cash_effects
+from .transaction_context import context_payload
 from .ledger_revisions import apply_revisions
 from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, money, nav_total
-from .portfolio_seed import DEMO_SOURCE, ensure_main, profile_for
-from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day, utc
+from .portfolio_seed import ensure_main, profile_for
+from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.1"
+VERSION = "knk-nav-4.2"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -47,6 +48,15 @@ def number(value):
 def load_entries(session: Session, portfolio_id: str) -> tuple[list[Entry], list[dict[str, Any]]]:
     rows = session.execute(select(models.PortfolioTransaction, models.TransactionDetail).outerjoin(models.TransactionDetail, models.TransactionDetail.transaction_id == models.PortfolioTransaction.id).where(models.PortfolioTransaction.portfolio_id == portfolio_id).order_by(models.PortfolioTransaction.trade_date, models.PortfolioTransaction.created_at, models.PortfolioTransaction.id)).all()
     entries, payloads = [], []
+    creators: dict[str, str | None] = {}
+    creation_logs = session.execute(select(models.AuditLog.resource_id, models.AuditLog.actor_user_id)
+        .join(models.PortfolioTransaction, models.PortfolioTransaction.id == models.AuditLog.resource_id)
+        .where(models.PortfolioTransaction.portfolio_id == portfolio_id,
+               models.AuditLog.resource_type == "portfolio_transaction",
+               models.AuditLog.action == "LEDGER_TRANSACTION_CREATED")
+        .order_by(models.AuditLog.created_at, models.AuditLog.id)).all()
+    for identifier, actor in creation_logs:
+        creators.setdefault(identifier, actor)
     instruments = {r.id: r for r in session.scalars(select(models.Instrument)).all()}
     for txn, detail in rows:
         amount = detail.gross_amount if detail else txn.quantity * txn.price
@@ -73,7 +83,8 @@ def load_entries(session: Session, portfolio_id: str) -> tuple[list[Entry], list
             "source": txn.source, "quality": txn.quality, "notes": txn.notes,
             "created_at": txn.created_at, "updated_at": txn.updated_at,
             "source_file_id": detail.source_file_id if detail else None,
-            "external_reference": detail.external_key if detail else None,
+            "external_key": detail.external_key if detail else None,
+            **context_payload(detail.metadata_json if detail else {}, creators.get(txn.id)),
             "reconciliation_state": detail.reconciliation_state if detail else "INTERNAL_ONLY",
             "metadata": detail.metadata_json if detail else {},
         }))
@@ -463,6 +474,7 @@ class PortfolioValuationService:
              for row in adjustments], end, marks,
         ))
         posting_totals = summarize_postings(postings)
+        enrich_cash_effects(transactions, entries, state.cash_service.movements)
         posting_differences = {name: money(posting_totals[name] - expected_value)
                               for name, expected_value in {
                                   "external_flows": state.external_flows, "income": state.income,

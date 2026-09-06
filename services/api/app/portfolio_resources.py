@@ -12,9 +12,10 @@ from .accounting_persistence import accounting_records
 from .ledger_contracts import AccountingPolicyRequest, PortfolioCreateRequest
 from .portfolio_domain.ledger import LedgerState
 from .portfolio_domain.postings import PostingCategory
-from .portfolio_domain.types import AccountingPolicy
+from .portfolio_domain.types import TRANSACTION_TYPES, AccountingPolicy
 from .portfolio_operations import CURRENCIES, PortfolioLedgerService
 from .portfolio_valuation import PortfolioValuationService, load_entries
+from .transaction_views import transaction_views
 
 
 class PortfolioNotFound(ValueError):
@@ -71,6 +72,32 @@ class PortfolioResourceService:
             select(models.PortfolioProfile.portfolio_id).order_by(models.PortfolioProfile.code)
         ).all()
         return [self.metadata(identifier) for identifier in identifiers]
+
+    def entry_options(self, key: str) -> dict[str, Any]:
+        metadata = self.metadata(key)
+        strategies = self.session.scalars(
+            select(models.StrategyDefinition).order_by(models.StrategyDefinition.name)
+        ).all()
+        theses = self.session.scalars(
+            select(models.InvestmentThesis).order_by(models.InvestmentThesis.title)
+        ).all()
+        return {
+            "portfolio": metadata,
+            "transaction_types": sorted(TRANSACTION_TYPES),
+            "currencies": sorted(CURRENCIES),
+            "strategies": [
+                {"id": row.id, "name": row.name, "state": row.status} for row in strategies
+            ],
+            "theses": [
+                {
+                    "id": row.id,
+                    "title": row.title,
+                    "state": row.thesis_state,
+                    "instrument_id": row.instrument_id,
+                }
+                for row in theses
+            ],
+        }
 
     def create(self, request: PortfolioCreateRequest, actor: str | None) -> dict[str, Any]:
         if request.opening_date > datetime.now(UTC).date():
@@ -194,7 +221,7 @@ class PortfolioResourceService:
 
     def transactions(self, key: str) -> list[dict[str, Any]]:
         portfolio, _ = self.resolve(key)
-        return load_entries(self.session, portfolio.id)[1]
+        return transaction_views(self.session, portfolio.id)
 
     def transaction(self, key: str, transaction_id: str) -> dict[str, Any]:
         item = next((row for row in self.transactions(key) if row["id"] == transaction_id), None)

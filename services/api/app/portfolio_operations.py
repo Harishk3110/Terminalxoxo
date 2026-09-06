@@ -16,6 +16,9 @@ from .portfolio_domain.money import money, stored_decimal
 from .portfolio_engine import LedgerState, TRANSACTION_TYPES, decimal
 from .portfolio_valuation import PortfolioValuationService, jsonable, load_entries
 from .price_sources import FxRateResolver, close_of_day
+from .transaction_context import record_context
+from .portfolio_domain.transaction_cash import enrich_cash_effects
+from .transaction_views import transaction_views
 
 CURRENCIES = {"SGD", "USD", "EUR", "GBP", "JPY", "HKD", "AUD", "CAD", "CHF", "CNH", "CNY", "NZD"}
 
@@ -100,6 +103,7 @@ class PortfolioLedgerService:
         for key in ("to_currency", "to_amount", "ratio", "cost_allocation", "exchange_ratio", "cash_per_share", "cash_cost_allocation", "reason", "direction", "thesis_id", "strategy_id", "rationale"):
             if payload.get(key) is not None:
                 metadata[key] = payload[key]
+        context = record_context(payload, metadata, day)
         if kind == "FX_CONVERSION":
             if str(metadata.get("to_currency", "")).upper() not in CURRENCIES:
                 raise ValueError("FX destination currency is unknown")
@@ -113,7 +117,7 @@ class PortfolioLedgerService:
             if metadata.get(link) and self.session.get(model, metadata[link]) is None:
                 raise ValueError(f"Unknown {link}")
         metadata["fx_source"] = fx_source
-        reference = payload.get("external_reference")
+        reference = context.external_reference
         external_key = hashlib.sha256(f"{portfolio.id}|{source}|{reference}".encode()).hexdigest() if reference else None
         if external_key:
             old = self.session.scalar(select(models.TransactionDetail).where(models.TransactionDetail.external_key == external_key))
@@ -170,9 +174,11 @@ class PortfolioLedgerService:
         if any(Decimal(c["amount"]) < 0 for c in after["cash"]):
             breaches.append({"metric": "NEGATIVE_CASH", "severity": "WARN", "state": "OPEN"})
         self.session.add(models.TradeRiskSnapshot(trade_id=event.id, before=snapshot(before), after=snapshot(after), breaches=breaches))
-        audit(self.session, "LEDGER_TRANSACTION_CREATED", "portfolio_transaction", txn.id, {"portfolio_id": portfolio.id, "type": kind, "amount": amount, "currency": currency, "fx": fx, "source": source, "source_file_id": source_file_id}, actor)
+        audit(self.session, "LEDGER_TRANSACTION_CREATED", "portfolio_transaction", txn.id, {"portfolio_id": portfolio.id, "type": kind, "amount": amount, "currency": currency, "fx": fx, "source": source, "source_file_id": source_file_id, "context": context.model_dump(mode="json")}, actor)
         self.session.flush()
-        return {**next(t for t in load_entries(self.session, portfolio.id)[1] if t["id"] == txn.id), "trade_event_id": event.id}
+        payloads = load_entries(self.session, portfolio.id)[1]
+        enrich_cash_effects(payloads, entries, state.cash_service.movements)
+        return {**next(t for t in payloads if t["id"] == txn.id), "trade_event_id": event.id}
 
 
 class TradeMonitorService:
@@ -181,7 +187,7 @@ class TradeMonitorService:
 
     def list(self, portfolio_key=None):
         portfolio, _ = PortfolioValuationService(self.session).portfolio(portfolio_key)
-        _, transactions = load_entries(self.session, portfolio.id)
+        transactions = transaction_views(self.session, portfolio.id)
         txns = {t["id"]: t for t in transactions}
         risks = {r.trade_id: r for r in self.session.scalars(select(models.TradeRiskSnapshot).join(models.TradeEvent, models.TradeEvent.id == models.TradeRiskSnapshot.trade_id).where(models.TradeEvent.portfolio_id == portfolio.id)).all()}
         rows = self.session.scalars(select(models.TradeEvent).where(models.TradeEvent.portfolio_id == portfolio.id).order_by(models.TradeEvent.created_at.desc()).limit(500)).all()

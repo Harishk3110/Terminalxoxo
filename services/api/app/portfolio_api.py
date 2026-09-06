@@ -18,6 +18,7 @@ from .portfolio_seed import reset_main_demo
 from .portfolio_valuation import PortfolioValuationService, jsonable
 from .price_sources import PRIORITY
 from .portfolio_balances import BalanceAdjustmentRequest as BalanceRequest, PortfolioBalanceService
+from .transaction_context import TransactionContext
 
 router = APIRouter(prefix="/api/v1/operations")
 
@@ -32,7 +33,7 @@ def identity(request: Request, session: Session, admin: bool = False) -> str | N
     return session.scalar(select(models.User.id).where(models.User.email == user["email"]))
 
 
-class LedgerRequest(BaseModel):
+class LedgerRequest(TransactionContext):
     transaction_type: str
     trade_date: date
     settle_date: date | None = None
@@ -47,7 +48,6 @@ class LedgerRequest(BaseModel):
     fx_rate_to_base: str | None = None
     contract_multiplier: str = "1"
     account_id: str | None = None
-    external_reference: str | None = Field(default=None, max_length=160)
     notes: str | None = Field(default=None, max_length=10000)
     child_symbol: str | None = None
     metadata: dict = Field(default_factory=dict)

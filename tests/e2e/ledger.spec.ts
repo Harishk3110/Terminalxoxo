@@ -57,7 +57,7 @@ test("accounting dialogs fit desktop and mobile, retain focus, and expose cash a
       dialog.getByRole("rowheader", { name: "AAPL", exact: true }),
     ).toBeVisible();
     await expect(dialog.locator(".ledger-run-details")).toContainText(
-      "knk-nav-4.1",
+      "knk-nav-4.2",
     );
     expect(
       await dialog.evaluate((node) => node.scrollWidth <= node.clientWidth + 1),

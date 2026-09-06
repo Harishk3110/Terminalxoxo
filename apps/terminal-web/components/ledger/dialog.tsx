@@ -7,10 +7,12 @@ export function LedgerDialog({
   title,
   children,
   onClose,
+  closeLabel = "Close accounting dialog",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  closeLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const heading = useId();
@@ -36,7 +38,7 @@ export function LedgerDialog({
     >
       <header className="ledger-dialog-header">
         <h2 id={heading}>{title}</h2>
-        <IconButton label="Close accounting dialog" onClick={onClose}>
+        <IconButton label={closeLabel} onClick={onClose}>
           <X size={15} />
         </IconButton>
       </header>

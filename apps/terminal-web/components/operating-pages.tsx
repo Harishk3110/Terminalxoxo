@@ -33,6 +33,7 @@ import {
 import type { PortfolioData, Row } from "./types";
 import { AccountingDialog } from "./ledger/accounting-dialog";
 import { TransactionCorrectionDialog } from "./ledger/transaction-correction";
+import { TransactionEntryDialog } from "./ledger/transaction-entry";
 
 type OperatingData = PortfolioData & {
   portfolio: PortfolioData["portfolio"] & Row;
@@ -386,49 +387,10 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
   );
   const portfolio = usePortfolio();
   const data = portfolio.data as OperatingData | undefined;
-  const client = useQueryClient();
   const [selected, setSelected] = useState<Row | null>(null);
   const [note, setNote] = useState("");
   const [state, setState] = useState("REVIEWED");
   const [form, setForm] = useState(false);
-  const [details, setDetails] = useState<Record<string, string>>({
-    to_currency: "USD",
-    to_amount: "",
-    ratio: "2",
-    cost_allocation: "",
-    child_symbol: "",
-    reason: "",
-    direction: "CREDIT",
-  });
-  const [draft, setDraft] = useState<Record<string, string>>({
-    transaction_type: "BUY",
-    trade_date: new Date().toISOString().slice(0, 10),
-    symbol: "AAPL",
-    quantity: "1",
-    price: "",
-    currency: "USD",
-    amount: "",
-    commission: "0",
-    fee: "0",
-    tax: "0",
-    notes: "",
-    fx_rate_to_base: "",
-  });
-  const save = useMutation({
-    mutationFn: () =>
-      knkApi.post<Row>("/api/v1/operations/transactions", {
-        ...Object.fromEntries(
-          Object.entries(draft).filter(([, v]) => v !== ""),
-        ),
-        metadata: details,
-        child_symbol: details.child_symbol || undefined,
-      }),
-    onSuccess: () => {
-      setForm(false);
-      client.invalidateQueries({ queryKey: ["operating-trades"] });
-      client.invalidateQueries({ queryKey: ["terminal-portfolio"] });
-    },
-  });
   const review = useMutation({
     mutationFn: () =>
       knkApi.post("/api/v1/operations/trades/" + selected?.id + "/review", {
@@ -653,108 +615,7 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
           </Panel>
         </div>
       )}
-      {form && (
-        <div className="modal-backdrop">
-          <section
-            className="modal"
-            role="dialog"
-            aria-label="Record ledger transaction"
-          >
-            <header className="modal-title">
-              <h2>Record ledger transaction / KNK_MAIN</h2>
-              <IconButton
-                label="Close transaction"
-                onClick={() => setForm(false)}
-              >
-                <X size={14} />
-              </IconButton>
-            </header>
-            <div className="modal-body operation-form">
-              <div className="operation-fields">
-                <Field label="Transaction type">
-                  <select
-                    value={draft.transaction_type}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        transaction_type: e.target.value,
-                      }))
-                    }
-                  >
-                    {[
-                      "BUY",
-                      "SELL",
-                      "SHORT",
-                      "COVER",
-                      "DEPOSIT",
-                      "WITHDRAWAL",
-                      "DIVIDEND",
-                      "INTEREST",
-                      "COMMISSION",
-                      "FEE",
-                      "TAX",
-                      "TRANSFER_IN",
-                      "TRANSFER_OUT",
-                      "FX_CONVERSION",
-                      "SPLIT",
-                      "SPINOFF",
-                      "OTHER_ADJUSTMENT",
-                    ].map((v) => (
-                      <option key={v}>{v}</option>
-                    ))}
-                  </select>
-                </Field>
-                {Object.entries(draft)
-                  .filter(([k]) => !["transaction_type", "notes"].includes(k))
-                  .map(([key, value]) => (
-                    <Field key={key} label={key.replaceAll("_", " ")}>
-                      <input
-                        type={key === "trade_date" ? "date" : "text"}
-                        value={value}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, [key]: e.target.value }))
-                        }
-                      />
-                    </Field>
-                  ))}
-              </div>
-              {[
-                ...(draft.transaction_type === "FX_CONVERSION"
-                  ? ["to_currency", "to_amount"]
-                  : []),
-                ...(draft.transaction_type === "SPLIT" ? ["ratio"] : []),
-                ...(draft.transaction_type === "SPINOFF"
-                  ? ["child_symbol", "cost_allocation"]
-                  : []),
-                ...(draft.transaction_type === "OTHER_ADJUSTMENT"
-                  ? ["reason", "direction"]
-                  : []),
-              ].map((key) => (
-                <Field key={key} label={key.replaceAll("_", " ")}>
-                  <input
-                    value={details[key]}
-                    onChange={(e) =>
-                      setDetails((d) => ({ ...d, [key]: e.target.value }))
-                    }
-                  />
-                </Field>
-              ))}
-              <Field label="Rationale / notes">
-                <textarea
-                  value={draft.notes}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, notes: e.target.value }))
-                  }
-                />
-              </Field>
-              <Notice error={save.error} />
-              <button disabled={save.isPending} onClick={() => save.mutate()}>
-                <Check size={13} /> Record transaction
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      {form && <TransactionEntryDialog onClose={() => setForm(false)} />}
     </>
   );
 }

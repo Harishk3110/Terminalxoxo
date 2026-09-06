@@ -215,6 +215,47 @@
 .ledger-table tr[aria-selected="true"] {
   background: #27231a;
 }
+.ledger-entry-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  border: 0;
+  padding: 0 0 16px;
+  margin: 0;
+}
+.ledger-entry-fields input,
+.ledger-entry-fields select,
+.ledger-entry-fields textarea {
+  width: 100%;
+  min-width: 0;
+}
+.ledger-entry-fields textarea {
+  resize: vertical;
+}
+.ledger-entry-wide {
+  grid-column: 1 / -1;
+}
+.ledger-entry-section {
+  border-top: 1px solid #353940;
+  padding-top: 12px;
+  color: #989fac;
+  font-size: 11px;
+}
+.ledger-audit-fields dd {
+  font-size: 12px;
+}
+.ledger-methodology {
+  font-size: 10px;
+  color: #989fac;
+}
+.ledger-methodology dt {
+  margin-top: 8px;
+}
+.ledger-methodology dd {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 600px) {
   .ledger-dialog {
     width: calc(100vw - 12px);
@@ -231,6 +272,15 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .ledger-amendment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ledger-entry-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ledger-entry-time {
+    grid-column: 1 / -1;
+  }
+  .ledger-audit-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

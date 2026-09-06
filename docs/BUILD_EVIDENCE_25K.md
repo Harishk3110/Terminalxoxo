@@ -122,3 +122,60 @@ A replay regression test initially compared Decimal string scale (`10000` versus
 Supported fractional inputs retain quantity, gross, commission and NAV after a
 fresh database read. Broader precision/storage architecture remains an open M1/M18
 task; these tests are not certification of all PostgreSQL or SQLite accounting.
+
+## Transaction Context and Entry Views, 2026-09-06 12:18 UTC
+
+The new context contract validates aware trade timestamps, original external
+references, broker references and strategy/thesis links. It normalizes timestamps
+to UTC, rejects future/inconsistent timestamps and non-printable reference
+characters, and reads creator identity from the creation audit rather than client
+metadata. Legacy missing or malformed fields remain unknown with warnings; their
+original metadata is not rewritten. Broker references never imply confirmation.
+
+Transaction cash effects now come from actual ledger movements. Source-currency
+net cash, base-valued source cash, all-leg base cash and individual native legs
+are distinct. This covers FX conversions, cash mergers and non-cash actions;
+voided or not-yet-effective historical entries report NOT_REPLAYED, not zero.
+
+The Trade Monitor's old form is replaced by the typed 19-kind ledger form. Its
+portfolio-scoped options provide accounts, policy, currencies and research links.
+Hidden fields do not leak into unrelated transaction types, standalone expenses
+do not double-submit charges, and source/destination FX currencies stay distinct.
+The existing black/amber shell and separate Portfolio-page manual flow remain.
+
+| Verification | Exit | Result |
+| --- | ---: | --- |
+| Combined Python command from the prior checkpoint, additionally --cov=app.transaction_context --cov=app.transaction_views | 0 | 442 passed, three existing deprecation warnings; targeted 98%, 1,194 statements, 24 missing |
+| corepack pnpm --filter @knk/terminal-web test | 0 | 103 passed, including 38 entry-payload cases and 13 rendered entry/detail tests |
+| corepack pnpm test-unit | 0 | Same 103 frontend tests plus three domain and two function-registry tests; package echo scripts receive no test credit |
+| KNK_NEXT_DIST_DIR=logs/sprint-25k-build corepack pnpm --filter @knk/terminal-web build | 0 | Final frontend build and typecheck; route 96.1 kB / 188 kB first load |
+| PLAYWRIGHT_DIST_DIR=logs/sprint-25k-build PLAYWRIGHT_RUN_ID=sprint25k-entry-2 corepack pnpm exec playwright test tests/e2e | 0 | All 18 browser tests passed on final frontend, including entered timestamp persistence, all entry modes and audit detail at five viewport sizes |
+| Ruff, new modules and sprint tests | 0 | Full targeted check passed; legacy operations/API/valuation checked with E9/F |
+| Strict mypy with --follow-imports=silent | 0 | 22 targeted source files; includes transaction_context.py, transaction_views.py and portfolio_domain/transaction_cash.py |
+| corepack pnpm security-check | 0 | No forbidden broker action method names |
+| LOC counter with --check | 1 | Expected: 6,275 qualifying lines, every category floor still unmet |
+
+The first full browser attempt (sprint25k-entry-1) passed 17 and failed one older
+workflow because its exact lowercase `price` locator no longer matched `Price`.
+The locator was corrected without removing its record/review assertions. The
+final rerun passed that workflow and the remaining suite. The mobile datetime
+input was widened after screenshot review; a width assertion now protects it.
+The final malformed-legacy-reference read guard was added during browser startup
+and is covered separately by the final 442-test Python run.
+
+Evidence images: `25k/entry-buy-390.png`, `25k/transaction-details-390.png`,
+`25k/transaction-details-1440.png`. Local five-size captures and test logs remain
+under logs/ledger-screenshots and logs/e2e-sprint25k-entry-2-*.log. Screenshot
+inspection confirmed legible wrapping and no overlapping audit fields.
+
+The previously migrated backup copy, logs/sprint-subledger-final.sqlite, revalued
+at SGD 70,597.57 under knk-nav-4.2, with both reconciliations BALANCED. All nine
+main-portfolio transactions include context/cash states. The preservation report
+logs/sprint-context-preservation.json retains every original hash, including all
+16 transactions across portfolios and 22 prior runs; the copy now has 24 runs.
+The real database remains unmigrated and the user-facing web is not deployed.
+
+Remaining M1 gaps include full position metrics and corporate-action daily P&L,
+broader storage precision, portfolio-creation UI and permitted live migration.
+Trade timestamps are provenance only, not an intraday matching-order claim.
+No milestone or 25K acceptance certification is implied by this checkpoint.

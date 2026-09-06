@@ -92,6 +92,11 @@ def transactions(portfolio_id: str, session: Database) -> dict[str, Any]:
     return {"items": PortfolioResourceService(session).transactions(portfolio_id)}
 
 
+@router.get("/{portfolio_id}/entry-options")
+def entry_options(portfolio_id: str, session: Database) -> dict[str, Any]:
+    return PortfolioResourceService(session).entry_options(portfolio_id)
+
+
 @router.post("/{portfolio_id}/transactions", status_code=201)
 def add_transaction(
     portfolio_id: str, payload: LedgerRequest, request: Request, session: Database

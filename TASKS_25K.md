@@ -10,7 +10,8 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [x] Verify baseline inventory and LOC-counter regression tests (55 counter tests).
 - [x] Verify FIFO/policy, persisted lots, settlement, corrections and accounting subledgers (checkpoint evidence in docs/BUILD_EVIDENCE_25K.md).
 - [x] Verify historical component queries, balance reversals, saved-data copy preservation and desktop/mobile accounting workflows.
-- [ ] Complete remaining M1 audit fields, storage precision, position metrics and creation/corporate-action UI; verify live migration before certification.
+- [x] Verify transaction context, replay cash effects, 19-kind entry UI and audit detail views (442 Python / 103 frontend / 18 browser tests; docs/BUILD_EVIDENCE_25K.md).
+- [ ] Complete remaining M1 storage precision, position metrics, corporate-action daily attribution and portfolio creation UI; verify live migration before certification.
 - [ ] Complete M2-M20 and all category LOC/acceptance gates.
 
 ## Full Directive Checklist
@@ -333,30 +334,30 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [ ] [L453] Account ID.
 - [ ] [L454] Instrument ID where applicable.
 - [ ] [L455] Transaction type.
-- [ ] [L456] Trade timestamp.
+- [x] [L456] Trade timestamp. (Validated optional provenance; legacy unknowns explicit, not intraday order.)
 - [ ] [L457] Trade date.
 - [ ] [L458] Settlement date.
 - [ ] [L459] Quantity.
 - [ ] [L460] Price.
 - [ ] [L461] Currency.
 - [ ] [L462] Gross amount.
-- [ ] [L463] Net amount.
+- [x] [L463] Net amount. (Replay-derived source-currency economic cash, with separate FX legs.)
 - [ ] [L464] Commission.
 - [ ] [L465] Fee.
 - [ ] [L466] Tax.
 - [ ] [L467] FX rate to SGD.
 - [ ] [L468] Base-currency value.
 - [ ] [L469] Source.
-- [ ] [L470] External reference.
+- [x] [L470] External reference. (Original reference separate from deduplication hash.)
 - [ ] [L471] Source file ID.
-- [ ] [L472] Broker execution ID.
-- [ ] [L473] Strategy ID.
-- [ ] [L474] Thesis ID.
+- [x] [L472] Broker execution ID. (Reference only; no broker confirmation or execution.)
+- [x] [L473] Strategy ID.
+- [x] [L474] Thesis ID.
 - [ ] [L475] Notes.
 - [ ] [L476] Reconciliation status.
 - [ ] [L477] Created timestamp.
 - [ ] [L478] Updated timestamp.
-- [ ] [L479] Created by.
+- [x] [L479] Created by. (Actual creation audit actor; anonymous/legacy unknowns explicit.)
 - [ ] [L480] Audit version.
 - [ ] [L482] Positions must be derived from transactions.
 - [ ] [L484] Do not treat a directly editable position quantity as the source of truth.

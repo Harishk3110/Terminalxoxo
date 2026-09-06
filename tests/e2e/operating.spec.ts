@@ -131,7 +131,7 @@ test("approved file changes source and survives reload; ledger review persists",
   const dialog = page.getByRole("dialog", {
     name: "Record ledger transaction",
   });
-  await dialog.getByLabel("price", { exact: true }).fill("218");
+  await dialog.getByLabel("Price", { exact: true }).fill("218");
   await dialog.getByLabel("Rationale / notes").fill("QA manual ledger review");
   await dialog
     .getByRole("button", { name: "Record transaction", exact: true })

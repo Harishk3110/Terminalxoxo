@@ -11,6 +11,7 @@ export interface PortfolioMetadata {
   code: string;
   name: string;
   base_currency: string;
+  configuration: { allow_short?: boolean; [key: string]: unknown };
   accounting_policy: AccountingPolicy;
   accounts: Array<{
     id: string;
@@ -97,6 +98,9 @@ export interface TransactionRevision {
 
 export interface LedgerTransaction {
   id: string;
+  portfolio_id: string;
+  account_id: string | null;
+  instrument_id: string | null;
   type: string;
   symbol: string | null;
   trade_date: string;
@@ -112,6 +116,28 @@ export interface LedgerTransaction {
   notes: string | null;
   audit_version: number;
   ledger_state: "ACTIVE" | "VOID";
+  trade_timestamp: string | null;
+  trade_timestamp_state: "RECORDED" | "NOT_RECORDED";
+  trade_timestamp_usage: string;
+  external_reference: string | null;
+  external_key: string | null;
+  broker_execution_id: string | null;
+  strategy_id: string | null;
+  thesis_id: string | null;
+  created_by: string | null;
+  creator_state: string;
+  context_warnings: string[];
+  source: string;
+  source_file_id: string | null;
+  reconciliation_state: string;
+  created_at: string;
+  updated_at: string;
+  net_amount: string | null;
+  net_base_value: string | null;
+  net_cash_base: string | null;
+  net_amount_basis: string;
+  cash_effect_state: string;
+  net_cash_by_currency: { currency: string; amount: string; base_amount: string }[];
   revisions: TransactionRevision[];
 }
 

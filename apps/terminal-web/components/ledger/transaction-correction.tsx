@@ -2,9 +2,10 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { knkApi } from "@knk/api-client";
-import { Ban, History, Pencil, RefreshCw, Save } from "lucide-react";
+import { Ban, History, Info, Pencil, RefreshCw, Save } from "lucide-react";
 import { Badge, Field, IconButton, timestamp } from "../ui";
 import { LedgerDialog, LedgerError, LedgerLoading } from "./dialog";
+import { TransactionDetails } from "./transaction-details";
 import {
   portfolioPath,
   type LedgerTransaction,
@@ -19,7 +20,7 @@ import {
   type TransactionDraft,
 } from "./transaction-draft";
 
-type View = "amend" | "history" | "void";
+type View = "amend" | "history" | "void" | "details";
 
 export function TransactionCorrectionDialog({
   transactionId,
@@ -74,6 +75,7 @@ export function TransactionCorrectionDialog({
     <LedgerDialog
       title={`Transaction / ${transaction?.symbol ?? transaction?.type ?? transactionId}`}
       onClose={onClose}
+      closeLabel="Close transaction dialog"
     >
       <div className="ledger-toolbar">
         <div className="segmented" role="group" aria-label="Transaction action">
@@ -83,6 +85,7 @@ export function TransactionCorrectionDialog({
           >
             <Pencil size={13} /> Correct
           </button>
+          <button aria-pressed={view === "details"} onClick={() => setView("details")}><Info size={13} /> Details</button>
           <button
             aria-pressed={view === "history"}
             onClick={() => setView("history")}
@@ -130,6 +133,7 @@ export function TransactionCorrectionDialog({
               <dd>{transaction.currency}</dd>
             </div>
           </dl>
+          {view === "details" && <TransactionDetails transaction={transaction} />}
           {view === "amend" && (
             <form
               onSubmit={(event) => {
