@@ -6,6 +6,7 @@ import {
   BookOpen,
   Crosshair,
   Layers,
+  PieChart,
   RefreshCw,
   Save,
   Scale,
@@ -17,6 +18,7 @@ import { LedgerDialog, LedgerError, LedgerLoading } from "./dialog";
 import { AccountingActivity } from "./accounting-activity";
 import { BalanceEditor } from "./balance-editor";
 import { PositionInspector } from "./position-inspector";
+import { ExposureInspector } from "./exposure-inspector";
 import {
   portfolioPath,
   type AccountingPolicy,
@@ -24,7 +26,14 @@ import {
   type PortfolioMetadata,
 } from "./contracts";
 
-type View = "policy" | "cash" | "lots" | "activity" | "balances" | "positions";
+type View =
+  | "policy"
+  | "cash"
+  | "lots"
+  | "activity"
+  | "balances"
+  | "positions"
+  | "exposures";
 
 export function AccountingDialog({
   portfolioKey = "KNK_MAIN",
@@ -115,6 +124,12 @@ export function AccountingDialog({
             <Layers size={13} /> Lots
           </button>
           <button
+            aria-pressed={view === "exposures"}
+            onClick={() => setView("exposures")}
+          >
+            <PieChart size={13} /> Exposures
+          </button>
+          <button
             aria-pressed={view === "activity"}
             onClick={() => setView("activity")}
           >
@@ -137,6 +152,12 @@ export function AccountingDialog({
             });
             client.invalidateQueries({
               queryKey: ["ledger-balances", portfolioKey],
+            });
+            client.invalidateQueries({
+              queryKey: ["ledger-exposures", portfolioKey],
+            });
+            client.invalidateQueries({
+              queryKey: ["ledger-position", portfolioKey],
             });
           }}
         >
@@ -324,6 +345,12 @@ export function AccountingDialog({
         />
       )}
       {view === "balances" && <BalanceEditor portfolioKey={portfolioKey} />}
+      {view === "exposures" && summary.data && (
+        <ExposureInspector
+          portfolioKey={portfolioKey}
+          runId={summary.data.valuation_run_id}
+        />
+      )}
       {view === "positions" && summary.data && (
         <PositionInspector
           portfolioKey={portfolioKey}

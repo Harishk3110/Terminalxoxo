@@ -1,5 +1,4 @@
 """Read-only paper broker snapshots and explicitly approved fill-to-ledger imports."""
-import copy
 import hashlib
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -16,7 +15,6 @@ from .portfolio_api import identity
 from .portfolio_engine import decimal
 from .portfolio_operations import PortfolioLedgerService, audit
 from .portfolio_seed import profile_for
-from .portfolio_valuation import PortfolioValuationService, jsonable
 from .price_sources import utc
 
 router = APIRouter()
@@ -175,8 +173,21 @@ def account_view(session, internal):
     row, active = current_snapshot(session, internal["portfolio"]["id"])
     if row is None or not active:
         return {**internal, "broker_state": "NOT CONNECTED" if row is None else "STALE / OFFLINE", "account_source": "INTERNAL LEDGER"}
-    data = copy.deepcopy(internal)
+    data = {
+        "portfolio": {key: internal["portfolio"].get(key)
+                      for key in ("id", "code", "name", "base_currency", "execution_mode", "broker_mode")},
+        "performance": {key: None for key in internal["performance"]},
+        "risk": {key: None for key in internal["risk"]},
+        "transactions": [], "lots": [], "lot_matches": [], "cost_basis": None,
+        "accounting": {"state": "UNAVAILABLE", "items": [], "totals": None, "reconciliation": None},
+        "exposure_balances": [], "exposure_methodology": None,
+        "valuation_run_id": None, "calculation_version": "BROKER SNAPSHOT", "calculated_at": None,
+        "methodology": "Reported paper account snapshot; no internal ledger analytics",
+    }
     p = data["portfolio"]
+    for key in ("reference_capital", "opening_capital", "settled_cash", "available_cash",
+                "settlement_receivables", "settlement_payables", "accounting_policy"):
+        p[key] = None
     p.update({"nav": str(row.nav), "view": "BROKER REPORTED", "quality": "BROKER REPORTED", "as_of": row.as_of.isoformat(), "total_pnl": None, "total_return": None, "daily_pnl": None, "opening_nav": None})
     fx = {**row.payload.get("fx", {}), row.currency: "1"}
     cash, positions = [], []

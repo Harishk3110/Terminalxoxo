@@ -7,12 +7,13 @@ Transaction-entry checkpoint: c770947a04b3b169332f0ff6442780b5db06d99a, pushed.
 Position-period checkpoint: bef7c5cc84b8efbbc61382ca3adc0f8d96d2135f, pushed.
 Position-inspector checkpoint: 8ac83a42153845dd9cc6c2b190d165355761180f, pushed.
 Portfolio-directory checkpoint: bb8812fd99420534498ac62af36764cafb97f35f, pushed.
-Current change: correction storage bounds and FX/void audit provenance; `git rev-parse HEAD` resolves this checkout.
+Correction-storage checkpoint: 1318447728acfac59058bb3e444b3521c86f68a8, pushed.
+Current change: grouped exposure/freshness, broker boundary and historical cache; `git rev-parse HEAD` resolves this checkout.
 Branch main; existing origin retained. No sprint milestone is certified complete.
 
 - Current milestone: M1 in progress, audited ledger and accounting subledgers implemented.
-- Qualifying delta at 2026-09-06 13:11 UTC: 8,331 conservative novel source/test lines.
-  Backend 2,238; frontend 1,820; workers/agents/reports/infra 263; tests 4,010.
+- Qualifying delta at 2026-09-06 13:45 UTC: 9,357 conservative novel source/test lines.
+  Backend 2,436; frontend 2,004; workers/agents/reports/infra 263; tests 4,654.
   This is an interim worktree count, not a milestone certification.
 - Gates: backend 9,000; frontend 6,000; infrastructure/agents/reports 3,000;
   substantive tests 7,000; total 25,000.
@@ -22,15 +23,17 @@ Branch main; existing origin retained. No sprint milestone is certified complete
 - Operational routes/APIs: portfolio resources added, including append-only
   corrections, scoped lot details, accounting policy, cash, recalculation,
   historical-run accounting components and append-only balance adjustments.
-- Tests: combined Python suite 524 passed, including all 66 existing backend tests;
-  targeted accounting coverage 98% (1,449 statements, 26 missing), not whole-app coverage.
-  Frontend 131 passed; production build/typecheck passed (101 kB terminal route).
+- Tests: combined Python suite 571 passed, including all 66 existing backend tests;
+  targeted accounting coverage 98% (1,558 statements, 26 missing), not whole-app coverage.
+  Frontend 143 passed; production build/typecheck passed (102 kB terminal route).
   Repository test-unit command also passes five shared-package tests; other package echo scripts are not tests.
-  Full Playwright suite 21 passed with knk-nav-4.4 (run sprint25k-directory-1).
-  Latest backend-only patch passed six targeted browser workflows (sprint25k-correction-1);
-  the unchanged frontend build and the other browser cases were verified at bb8812f.
-  Final frontend build includes the portfolio directory in logs/sprint-25k-build.
-- New Python modules: Ruff and strict mypy passed on 25 source files (legacy imports silent).
+  Full Playwright suite 22 passed with knk-nav-4.5 (sprint25k-exposure-1).
+  Eight affected workflows passed after the mobile strip/broker follow-up
+  (sprint25k-exposure-final); this preceded the historical-cache and explicit
+  refresh follow-ups, covered by backend/frontend unit tests. The final exposure
+  refresh browser case passed at all five widths (sprint25k-exposure-refresh).
+  Final frontend build: logs/sprint-25k-exposure-build.
+- New Python modules: Ruff and strict mypy passed on 27 source files (legacy imports silent).
 - Migrations 0004/0005 passed 15 lifecycle/schema/constraint tests. A fresh saved-data
   backup copy upgraded from 0003 to 0005, valued at SGD 70,597.57, and retained all
   captured original hashes (16 transactions, two dataset versions, 22 prior runs).
@@ -47,8 +50,8 @@ Branch main; existing origin retained. No sprint milestone is certified complete
   no alternative server launch was used to bypass that denial.
 - Blockers: none for demo/domain/contract implementation. Live credentials absent
   are not treated as blockers.
-- First unchecked execution task: finish M1 input/storage precision contracts,
-  broader exposure detail and remaining persisted metric contracts. Audit timestamps are
+- First unchecked execution task: finish M1 derived-storage and display precision,
+  NAV balance-sheet and remaining persisted metric contracts. Audit timestamps are
   provenance only; same-day replay order remains the original ledger record order.
   Audit references are not yet editable through the correction dialog.
   Live additive migration, permitted service deployment and M1 certification remain.
@@ -65,8 +68,8 @@ Branch main; existing origin retained. No sprint milestone is certified complete
   Reads are pinned to the parent accounting run; older snapshots explicitly lack detail.
   New screenshots: docs/25k/position-value-390.png, position-daily-390.png and
   position-sources-1440.png. All five required widths passed browser checks.
-- Backup-copy knk-nav-4.4 NAV remains SGD 70,597.57 with all original hashes retained;
-  preservation report logs/sprint-position-metrics-preservation.json (26 copy valuation runs).
+- Backup-copy knk-nav-4.5 NAV remains SGD 70,597.57 with all original hashes retained;
+  preservation report logs/sprint-exposure-preservation.json (27 copy valuation runs).
 - Portfolio directory creates actual internal ledgers with explicit opening deposits,
   lists persisted accounts, and scopes accounting, entry and correction actions by ID.
   Creation uses configured currencies/securities and the current server UTC date boundary.
@@ -77,8 +80,17 @@ Branch main; existing origin retained. No sprint milestone is certified complete
   Changed FX is marked AUDITED MANUAL CORRECTION while original provider evidence
   remains in before-history; voided records display their last corrected values and
   remain excluded from cash replay. Twelve regression tests cover these boundaries.
-- Next implementation: complete grouped exposure and stale cash-FX reporting, then
-  continue the remaining M1/M2 financial and persistence contracts.
+- Grouped exposures retain missing marks, exact signed net/gross and component
+  values. Economic cash and outstanding manual balances are included once in
+  currency/asset-class groups. Freshness includes stale cash FX and balance marks.
+  Saved-run Exposures controls show groups, freshness and balance provenance;
+  legacy snapshots explicitly lack unrecorded fields. New screenshot evidence:
+  docs/25k/exposure-currency-1440.png, exposure-currency-390.png and exposure-freshness-390.png.
+- Broker presentation now uses permitted metadata instead of copying internal
+  financial fields. Historical valuation cache identity no longer changes every
+  wall-clock minute; current-day freshness and source-change invalidation remain.
+- Next implementation: explicit NAV short/overdraft liability components and
+  remaining precision/persistence work, then M2 performance and attribution.
 - M2-M20, all category LOC floors and all final acceptance gates remain incomplete.
 
 Progress/evidence: docs/LOC_EVIDENCE_25K.md, docs/BUILD_EVIDENCE_25K.md and

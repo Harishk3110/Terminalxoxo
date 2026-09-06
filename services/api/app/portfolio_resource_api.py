@@ -246,6 +246,16 @@ def attribution(portfolio_id: str, session: Database, end: date | None = None) -
     }
 
 
+@router.get("/{portfolio_id}/exposures")
+def exposures(
+    portfolio_id: str,
+    session: Database,
+    end: date | None = None,
+    run_id: str | None = None,
+) -> dict[str, Any]:
+    return PortfolioResourceService(session).exposures(portfolio_id, run_id, end)
+
+
 @router.post("/{portfolio_id}/reset-demo")
 def reset_demo(
     portfolio_id: str, payload: ResetRequest, request: Request, session: Database

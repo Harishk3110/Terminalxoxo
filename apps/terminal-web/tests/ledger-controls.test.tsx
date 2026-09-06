@@ -8,6 +8,7 @@ import { AccountingDialog } from "../components/ledger/accounting-dialog";
 import { TransactionCorrectionDialog } from "../components/ledger/transaction-correction";
 import { metadata, summary, transaction } from "./fixtures/accounting";
 import { positionSnapshot } from "./fixtures/position";
+import { exposureSnapshot } from "./fixtures/exposures";
 import { renderLedger } from "./ledger-render";
 
 beforeEach(() => {
@@ -40,12 +41,50 @@ afterEach(() => {
 });
 
 describe("accounting controls", () => {
+  it.each([
+    ["Exposures", "/exposures?", "Grouped portfolio exposures"],
+    ["Positions", "/positions/", "AAA / Test security"],
+  ])(
+    "retries failed %s detail on explicit refresh even when the parent run is unchanged",
+    async (view, part, result) => {
+      let attempts = 0;
+      vi.mocked(knkApi.get).mockImplementation(async <T,>(path: string) => {
+        if (path.includes(part)) {
+          if (++attempts === 1)
+            throw new Error("Temporary detail read failure");
+          return (
+            view === "Exposures" ? exposureSnapshot : positionSnapshot
+          ) as T;
+        }
+        return (path.endsWith("/summary") ? summary : metadata) as T;
+      });
+      renderLedger(<AccountingDialog portfolioKey="book" onClose={() => {}} />);
+      await screen.findByLabelText("Cost-basis method");
+      await userEvent.click(
+      screen.getByRole("button", { name: view }),
+      );
+      expect((await screen.findByRole("alert")).textContent).toContain(
+        "Temporary detail read failure",
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "Refresh accounting records" }),
+      );
+      if (view === "Exposures")
+        await screen.findByRole("table", { name: result });
+      else await screen.findByText(result);
+      expect(attempts).toBe(2);
+      expect(screen.queryByRole("alert")).toBeNull();
+    },
+  );
   it("opens position detail from the saved accounting run", async () => {
     renderLedger(<AccountingDialog portfolioKey="book" onClose={() => {}} />);
     await screen.findByLabelText("Cost-basis method");
     await userEvent.click(screen.getByRole("button", { name: "Positions" }));
     await screen.findByText("AAA / Test security");
-    expect(knkApi.get).toHaveBeenCalledWith("/api/v1/portfolios/book/positions/AAA?run_id=run-1", expect.any(AbortSignal));
+    expect(knkApi.get).toHaveBeenCalledWith(
+      "/api/v1/portfolios/book/positions/AAA?run_id=run-1",
+      expect.any(AbortSignal),
+    );
     expect(screen.getByText("Base market value / SGD")).toBeTruthy();
   });
   it("returns focus to the launch control after the dialog unmounts", async () => {

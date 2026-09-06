@@ -12,7 +12,9 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [x] Verify historical component queries, balance reversals, saved-data copy preservation and desktop/mobile accounting workflows.
 - [x] Verify transaction context, replay cash effects, 19-kind entry UI and audit detail views (442 Python / 103 frontend / 18 browser tests; docs/BUILD_EVIDENCE_25K.md).
 - [x] Verify cash-based daily position P&L, corporate-action reference transfers, closed-position income and unknown marks (470 Python / 18 browser tests; docs/BUILD_EVIDENCE_25K.md).
-- [ ] Complete remaining M1 storage precision, native/base position metrics, exposure detail and portfolio creation UI; verify live migration before certification.
+- [x] Verify native/base position metrics and scoped portfolio creation/directory workflows (8ac83a4 and bb8812f).
+- [x] Verify grouped exposures, cash/balance freshness and saved-run inspection; mobile controls remain visible at all five widths.
+- [ ] Complete remaining M1 derived-storage, NAV balance-sheet and persisted metric contracts; verify permitted live migration before certification.
 - [ ] Complete M2-M20 and all category LOC/acceptance gates.
 
 ## Full Directive Checklist
@@ -416,9 +418,9 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [x] [L541] Daily P&L. (Recorded cash/marks; explicit corporate reference allocation; missing marks unavailable.)
 - [x] [L542] Portfolio weight. (Signed marked value / NAV; unknown and zero NAV distinct.)
 - [x] [L543] Sector weight.
-- [ ] [L544] Currency exposure.
-- [ ] [L545] Country exposure.
-- [ ] [L546] Asset-class exposure.
+- [x] [L544] Currency exposure. (Signed positions, economic cash and net outstanding manual balances.)
+- [x] [L545] Country exposure. (Positions only; missing classification retained as Unclassified.)
+- [x] [L546] Asset-class exposure. (Cash, accrual and liability components separate from securities.)
 - [x] [L547] Beta contribution. (Weight times available beta; insufficient beta remains null.)
 - [ ] [L548] Risk contribution.
 - [ ] [L549] Data freshness.
@@ -453,7 +455,7 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [ ] [L593] Calculation timestamp.
 - [ ] [L594] Price-source state.
 - [ ] [L595] Data-quality state.
-- [ ] [L596] Percentage of NAV using stale data.
+- [x] [L596] Percentage of NAV using stale data. (Absolute marked stale components / absolute NAV; unavailable for missing or zero NAV; not capped.)
 
 ### 6.6 Portfolio views
 

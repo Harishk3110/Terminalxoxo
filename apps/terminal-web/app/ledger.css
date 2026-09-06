@@ -74,6 +74,10 @@
   color: #939ba8;
   font-size: 11px;
 }
+.ledger-exposure-nav {
+  display: block;
+  padding: 0;
+}
 .ledger-totals dd {
   color: #f2c56d;
   margin: 5px 0 0;
@@ -173,6 +177,12 @@
 .ledger-toolbar .segmented {
   flex-wrap: wrap;
   max-width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.ledger-toolbar .segmented button[aria-pressed="true"] {
+  color: var(--knk-amber);
+  border-bottom-color: var(--knk-amber);
 }
 .ledger-adjustment-form {
   display: grid;

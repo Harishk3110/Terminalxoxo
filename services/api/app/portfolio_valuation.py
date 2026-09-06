@@ -21,13 +21,14 @@ from .portfolio_domain.postings import BalanceAdjustment, CurrencyMark, outstand
 from .portfolio_domain.transaction_cash import enrich_cash_effects
 from .portfolio_domain.position_pnl import PositionPnlSession
 from .portfolio_domain.position_metrics import ExposurePosition, PortfolioPositionService, position_exposures
+from .portfolio_exposure import exposure_service
 from .transaction_context import context_payload
 from .ledger_revisions import apply_revisions
 from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, money, nav_total
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.4"
+VERSION = "knk-nav-4.5"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -165,7 +166,9 @@ class PortfolioValuationService:
         return portfolio, profile
 
     def fingerprint(self, portfolio_id, end):
-        parts = [VERSION, portfolio_id, end.isoformat(), datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")]
+        now = datetime.now(timezone.utc)
+        freshness_epoch = now.strftime("%Y-%m-%dT%H:%M") if end >= now.date() else "HISTORICAL"
+        parts = [VERSION, portfolio_id, end.isoformat(), freshness_epoch]
         for model in (models.PortfolioTransaction, models.TransactionDetail, models.TransactionRevision, models.MarketObservation, models.FxObservation, models.SourcePrecedenceRule, models.PortfolioProfile, models.PortfolioBalanceAdjustment, models.RiskLimit):
             query = select(func.count(model.id), func.max(model.updated_at))
             if hasattr(model, "portfolio_id"):
@@ -281,7 +284,8 @@ class PortfolioValuationService:
                     continue
                 rate, provenance = fx.resolve(currency, portfolio.base_currency, at)
                 value = amount * rate if rate is not None else None
-                cash_rows.append({"currency": currency, "amount": amount, "settled": cash_balance.settled, "receivable": cash_balance.receivable, "payable": cash_balance.payable, "available": cash_balance.available, "base_value": money(value) if value is not None else None, "as_of": provenance["as_of"], "quality": provenance["data_state"], "fx_rate": rate, "source": provenance["source"]})
+                cash_rows.append({"currency": currency, "amount": amount, "settled": cash_balance.settled, "receivable": cash_balance.receivable, "payable": cash_balance.payable, "available": cash_balance.available, "base_value": money(value) if value is not None else None, "base_value_exact": value, "as_of": provenance["as_of"], "quality": provenance["data_state"], "fx_rate": rate, "fx_provenance": provenance, "source": provenance["source"]})
+                sources.append(provenance)
                 if value is None:
                     missing.append(f"Missing FX {currency}/{portfolio.base_currency}")
                 else:
@@ -290,7 +294,6 @@ class PortfolioValuationService:
                     available_cash += cash_balance.available * rate
                     settlement_receivables += cash_balance.receivable * rate
                     settlement_payables += cash_balance.payable * rate
-                    sources.append(provenance)
             for instrument_id, lot in state.lots.items():
                 if lot.quantity == 0:
                     continue
@@ -315,14 +318,25 @@ class PortfolioValuationService:
                     "weight": ZERO, "beta": None, "risk_contribution": None,
                 })
             balances = defaultdict(Decimal)
+            native_balances = defaultdict(Decimal)
             for adjustment in adjustments:
                 if adjustment.effective_date <= day:
-                    rate, adjustment_provenance = fx.resolve(adjustment.currency, portfolio.base_currency, at)
-                    sources.append(adjustment_provenance)
-                    if rate is None:
-                        missing.append(f"Missing adjustment FX {adjustment.currency}")
-                    else:
-                        balances[adjustment.bucket] += adjustment.amount * rate
+                    native_balances[(adjustment.bucket, adjustment.currency)] += adjustment.amount
+            balance_exposure_rows = []
+            for (bucket, currency), amount in sorted(native_balances.items()):
+                if not amount:
+                    continue
+                rate, adjustment_provenance = fx.resolve(currency, portfolio.base_currency, at)
+                sources.append(adjustment_provenance)
+                value = amount * rate if rate is not None else None
+                sign = ONE if bucket in {"accrued_income", "receivables"} else -ONE
+                balance_exposure_rows.append({"bucket": bucket, "currency": currency, "amount": amount,
+                                              "base_value": value * sign if value is not None else None,
+                                              "fx_rate": rate, "fx_provenance": adjustment_provenance})
+                if value is None:
+                    missing.append(f"Missing adjustment FX {currency}")
+                else:
+                    balances[bucket] += value
             balances["receivables"] += settlement_receivables
             balances["payables"] += settlement_payables
             totals = nav_total(settled_cash, list(position_values.values()), dict(balances))
@@ -387,12 +401,13 @@ class PortfolioValuationService:
             beta = float(np.cov(pr, br, ddof=1)[0, 1] / np.var(br, ddof=1)) if np.var(br, ddof=1) else None
             rf = float(profile.configuration.get("risk_free_rate", 0)) / 252
             performance.update({"beta": beta, "alpha": (float(pr.mean()) - rf - beta * (float(br.mean()) - rf)) * 252 if beta is not None else None, "tracking_error": tracking * math.sqrt(252), "information_ratio": float(np.mean(pr - br)) / tracking * math.sqrt(252) if tracking else None})
-        exposure = self.exposure(last_positions, last_cash, nav)
+        marked_exposure = exposure_service(last_positions, last_cash, balance_exposure_rows, nav)
+        exposure = marked_exposure.groups()
         risk.update({
             "max_position_weight": max((abs(float(p["weight"])) for p in last_positions), default=0),
             "top_five_concentration": sum(sorted((abs(float(p["weight"])) for p in last_positions), reverse=True)[:5]),
-            "max_sector_weight": max((abs(r["weight"]) for r in exposure["sector"]), default=0),
-            "max_currency_weight": max((abs(r["weight"]) for r in exposure["currency"]), default=0),
+            "max_sector_weight": number(max((abs(r["weight"]) for r in exposure["sector"]), default=ZERO)) if nav and all(r["weight"] is not None for r in exposure["sector"]) else None,
+            "max_currency_weight": number(max((abs(r["weight"]) for r in exposure["currency"]), default=ZERO)) if nav and all(r["weight"] is not None for r in exposure["currency"]) else None,
             "cash_weight": float(total_cash / nav) if nav else None,
         })
         if nav is None:
@@ -408,7 +423,6 @@ class PortfolioValuationService:
             actual = risk.get(limit.metric)
             if actual is not None and (actual > float(limit.threshold) if limit.direction == "MAX" else actual < float(limit.threshold)):
                 breaches.append({"limit_id": limit.id, "metric": limit.metric, "value": actual, "threshold": str(limit.threshold), "severity": "WARN", "state": "OPEN", "as_of": now.isoformat()})
-        stale_value = sum((abs(Decimal(p["market_value"])) for p in last_positions if p["market_value"] is not None and (p["price_provenance"].get("stale") or p["fx_provenance"].get("stale"))), ZERO)
         if any(p.get("stale") for p in selected_sources):
             warnings.append("CALCULATED WITH STALE DATA: selected prices/FX are retained; no demo substitution")
             warnings.append("Risk estimates include carried-forward stale observations and may understate variability")
@@ -420,8 +434,9 @@ class PortfolioValuationService:
             warnings.append("Some position risk metrics have insufficient paired price history")
         warnings.append("Risk uses current security weights; cash FX and liability sensitivities are excluded. Historical valuations use currently accepted source versions, not point-in-time research snapshots.")
         categories = {p.get("source_category") for p in selected_sources} - {None}
-        quality = "UNAVAILABLE" if nav is None else ("CALCULATED WITH STALE DATA" if any(p.get("stale") for p in selected_sources) else "DEMO DATA" if categories <= {"DEMO"} else "FILE IMPORT" if categories <= {"FILE"} else "MIXED SOURCES")
-        source_name = "INTERNAL LEDGER / " + ", ".join(sorted({p["source"] for p in selected_sources if p.get("source") != "IDENTITY"}))
+        quality = "UNAVAILABLE" if nav is None else ("CALCULATED WITH STALE DATA" if any(p.get("stale") for p in selected_sources) else "CALCULATED" if not categories else "DEMO DATA" if categories <= {"DEMO"} else "FILE IMPORT" if categories <= {"FILE"} else "MIXED SOURCES")
+        market_sources = sorted({p["source"] for p in selected_sources if p.get("source") != "IDENTITY"})
+        source_name = "INTERNAL LEDGER" + (" / " + ", ".join(market_sources) if market_sources else "")
         market_stamps = [p["as_of"] for p in selected_sources if p.get("as_of") and p.get("source") != "IDENTITY"]
         as_of = min(market_stamps) if market_stamps else now.isoformat()
         investment = sum((lot.realised for lot in state.lots.values()), ZERO) + sum((position_values.get(key, ZERO) - lot.cost_base for key, lot in state.lots.items()), ZERO)
@@ -492,9 +507,11 @@ class PortfolioValuationService:
                                               "differences": posting_differences}},
             "performance": performance, "risk": risk, "curve": curve, "monthly": monthly, "correlation": correlations,
             "exposures": exposure, "attribution": attribution, "breaches": breaches,
+            "exposure_balances": balance_exposure_rows,
+            "exposure_methodology": "Signed marked positions, economic cash and net outstanding manual balance buckets; sector and country exclude cash and balance buckets; currency and asset class include them; settlement receivables/payables already included in economic cash",
             "source": source_name, "quality": quality, "as_of": as_of, "calculated_at": now.isoformat(),
             "methodology": METHOD, "calculation_version": VERSION, "metric_metadata": metric_metadata,
-            "warnings": list(dict.fromkeys(warnings)), "freshness": {"stale_market_value": money(stale_value), "stale_nav_pct": number(stale_value / abs(nav)) if nav else None, "price_coverage_pct": sum(p["market_price"] is not None and p["fx_rate"] is not None for p in last_positions) / len(last_positions) * 100 if last_positions else 100},
+            "warnings": list(dict.fromkeys(warnings)), "freshness": marked_exposure.freshness(),
             "reconciliation": {"opening_capital": portfolio.reference_capital, "net_external_flows": money(state.external_flows), "additional_capital_flows": money(state.external_flows - portfolio.reference_capital), "investment_pnl": money(investment) if nav is not None else None, "income": money(state.income), "fees": money(state.fees), "taxes": money(state.taxes), "cash_fx_pnl": money(cash_fx) if nav is not None else None, "adjustments": money(state.adjustments + balance_effect), "expected_nav": money(expected) if nav is not None else None, "difference": difference, "state": "BALANCED" if difference == ZERO else "INCOMPLETE" if difference is None else "BREAK"},
         })
 
@@ -527,18 +544,3 @@ class PortfolioValuationService:
             row["risk_contribution"] = float(weights[row["instrument_id"]] * marginal[row["instrument_id"]] / variance) if variance else None
             row["marginal_volatility"] = float(marginal[row["instrument_id"]] / volatility) if volatility else None
         return {**empty, "beta": beta, "volatility": volatility, "var_95": min(0, q * float(nav)), "var_99": min(0, float(weighted.quantile(.01)) * float(nav)), "cvar_95": min(0, float(tail.mean()) * float(nav)) if len(tail) else None}, correlations
-
-    @staticmethod
-    def exposure(positions, cash, nav):
-        result = {}
-        for field in ("sector", "country", "currency", "asset_class"):
-            groups = defaultdict(Decimal)
-            for row in positions:
-                if row["market_value"] is not None:
-                    groups[row[field]] += Decimal(row["market_value"])
-            if field == "currency":
-                for row in cash:
-                    if row["base_value"] is not None:
-                        groups[row["currency"]] += Decimal(row["base_value"])
-            result[field] = [{"name": key, "value": money(value), "weight": float(value / nav) if nav else 0} for key, value in sorted(groups.items(), key=lambda pair: abs(pair[1]), reverse=True)]
-        return result

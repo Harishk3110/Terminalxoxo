@@ -1,0 +1,82 @@
+import type {
+  ExposureSnapshot,
+  ExposureGroup,
+} from "../../components/ledger/exposure-contracts";
+
+const usd: ExposureGroup = {
+  name: "USD",
+  value: "675.23",
+  net_value: "675.23456789",
+  gross_value: "1425.23456789",
+  known_value: "675.23456789",
+  long_value: "1000.23456789",
+  short_value: "-200",
+  cash_value: "-100",
+  balance_value: "-25",
+  weight: "0.67523456789",
+  gross_weight: "1.42523456789",
+  item_count: 4,
+  position_count: 2,
+  missing_count: 0,
+  stale_count: 3,
+  state: "AVAILABLE",
+};
+
+export const exposureSnapshot: ExposureSnapshot = {
+  groups: {
+    currency: [usd],
+    sector: [
+      {
+        ...usd,
+        name: "Technology",
+        net_value: "800.23456789",
+        cash_value: "0",
+        balance_value: "0",
+      },
+    ],
+    country: [{ ...usd, name: "United States" }],
+    asset_class: [{ ...usd, name: "Equity" }],
+  },
+  balances: [
+    {
+      bucket: "accrued_fees",
+      currency: "USD",
+      amount: "20",
+      base_value: "-25",
+      fx_rate: "1.25",
+      fx_provenance: {
+        source: "FX_FILE",
+        data_state: "FILE IMPORT",
+        stale: true,
+        as_of: "2026-01-05T20:00:00+00:00",
+        observation_id: "fx-test",
+      },
+    },
+  ],
+  freshness: {
+    stale_market_value: "1200.23456789",
+    stale_cash_value: "100",
+    stale_balance_value: "25",
+    stale_total_value: "1325.23456789",
+    stale_nav_pct: "1.32523456789",
+    known_marked_value: "1425.23456789",
+    price_coverage_pct: 100,
+    cash_fx_coverage_pct: 50,
+    stale_items: 3,
+    unavailable_items: 0,
+    item_count: 4,
+    state: "AVAILABLE",
+    methodology: "Absolute stale components divided by absolute NAV",
+  },
+  methodology: "Economic cash includes settlement balances once",
+  state: "AVAILABLE",
+  warnings: [],
+  portfolio_id: "book",
+  base_currency: "SGD",
+  nav: "1000",
+  valuation_run_id: "run-1",
+  valuation_date: "2026-01-07",
+  calculation_version: "knk-nav-4.5",
+  quality: "CALCULATED WITH STALE DATA",
+  calculated_at: "2026-01-07T22:00:00Z",
+};

@@ -324,3 +324,73 @@ were needed; the last full 21-browser-test run and 131 frontend tests are from
 bb8812f. LOC --check expected exit 1: 8,331 qualifying lines, all floors unmet.
 No migration or real-data mutation occurred. Broader derived snapshot precision,
 exposure/freshness coverage, all milestone certifications and final gates remain open.
+
+## Grouped Exposures and Cash Freshness, 2026-09-06
+
+Source predecessor: 1318447728acfac59058bb3e444b3521c86f68a8, pushed.
+knk-nav-4.5 preserves unavailable groups instead of dropping them, and retains
+exact marked values before display rounding. Group results separate long/short,
+cash, net outstanding manual balances, net/gross values and signed NAV weights.
+Currency and asset-class partitions include cash and balances; country and sector
+remain position-only. Economic cash already includes settlement balances, so
+settlement receivables/payables are not added again to exposure.
+
+Freshness now includes absolute stale cash-FX and outstanding-balance values.
+Reversals are netted by native bucket/currency before marking. Missing components
+make the stale-NAV ratio unavailable; zero NAV is not a zero ratio, and leverage
+can legitimately produce a ratio above 100%. Base-currency cash-only valuations
+are CALCULATED, not incorrectly classified DEMO by an empty source-category set.
+
+GET /api/v1/portfolios/{id}/exposures is scoped and supports run_id or end,
+rejecting both together. Saved runs are read without current repricing. Legacy
+snapshots retain old aggregate values but explicitly lack new components.
+The accounting Exposures view presents groups, freshness and balance FX marks.
+
+Connected broker presentation now constructs an explicit metadata allowlist;
+internal lots, transactions, accounting, exposures and valuation identities are
+not inherited into broker-reported results. Internal NAV remains separately
+labelled only for reconciliation. This adds no broker write capability.
+
+Verification:
+- Initial complete backend run: 566 passed; targeted accounting coverage 98%,
+  1,558 statements and 26 missing. Exposure domain and adapter both 100% statements.
+- Broker boundary plus existing broker/agent regressions: seven passed.
+- A subsequent full rerun exposed the existing wall-clock-minute fingerprint
+  problem (567 passed, one historical-cache identity failure). Historical
+  fingerprints now omit the wall-clock epoch; current-day freshness still
+  refreshes each minute, and source changes/force still invalidate. The failing
+  case and three deterministic cache tests pass. Final full rerun: 571 passed,
+  three existing deprecation warnings, unchanged targeted coverage, 236.62 seconds.
+- Frontend: 143 Vitest tests pass, including two explicit detail-query refresh
+  recovery cases. Build and separate typecheck pass; terminal
+  route 102 kB, first load 194 kB. Final output logs/sprint-25k-exposure-build.
+- Full Playwright: 22 passed, run sprint25k-exposure-1, before the final CSS and
+  broker-boundary follow-up. Screenshot review then found wrapped controls
+  clipped by a fixed 29px strip. Ledger strips now expand and visibly mark the
+  selected mode. The stronger final browser run passes all eight affected ledger,
+  position, directory and exposure workflows, run sprint25k-exposure-final.
+  That run preceded the historical-cache and explicit-refresh fixes, covered by
+  backend and frontend unit tests. The final exposure refresh browser case passed
+  at all five widths (sprint25k-exposure-refresh, one test, 1.8 minutes).
+- Ruff checks and strict mypy passed on 27 audited source files. Legacy valuation
+  and broker modules pass E9/F checks; this is not whole-repository strict typing.
+  Broker-execution security scan passed; LOC --check correctly exits 1.
+
+Screenshots reviewed: 25k/exposure-currency-1440.png,
+25k/exposure-currency-390.png, 25k/exposure-freshness-390.png. Tables scroll inside
+the dialog and every accounting control fits its strip at all five target widths.
+Test-only mistakes in the first draft (deposit amount field, Vitest hook return,
+rerender provider, unsupported testing-library option and placeholder assertions)
+were corrected before final verification.
+
+The existing migrated backup copy replayed with NAV SGD 70,597.57, BALANCED,
+and all captured original record hashes retained. Preservation comparison:
+logs/sprint-exposure-preservation.json, 16 transactions, nine details, two dataset
+versions, one analysis run and 27 copy valuation runs. No schema change or real
+database mutation occurred. Isolated servers stopped; only baseline API 8000
+remains. No user-facing deployment or complete milestone is claimed.
+
+Qualifying delta: 9,357, all category floors unmet. Next financial work is the
+NAV balance-sheet presentation of short liabilities/overdrafts, remaining derived
+storage and metric contracts, then M2 performance/attribution. M1-M20 certification
+and all final acceptance gates remain incomplete.

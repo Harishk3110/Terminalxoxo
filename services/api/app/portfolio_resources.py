@@ -206,18 +206,49 @@ class PortfolioResourceService:
         )
         return result
 
+    def valuation_snapshot(
+        self, key: str, run_id: str | None = None, end: date | None = None
+    ) -> dict[str, Any]:
+        if run_id and end is not None:
+            raise ValueError("Choose a saved valuation run or an end date, not both")
+        if not run_id:
+            return self.summary(key, end)
+        portfolio, _ = self.resolve(key)
+        run = self.session.get(models.PortfolioValuationRun, run_id)
+        if run is None or run.portfolio_id != portfolio.id:
+            raise PortfolioNotFound("Valuation run not found in portfolio")
+        return dict(run.payload)
+
+    def exposures(
+        self, key: str, run_id: str | None = None, end: date | None = None
+    ) -> dict[str, Any]:
+        data = self.valuation_snapshot(key, run_id, end)
+        legacy = "exposure_methodology" not in data
+        return {
+            "groups": data.get("exposures", {}),
+            "balances": data.get("exposure_balances", []),
+            "freshness": data.get("freshness"),
+            "methodology": data.get("exposure_methodology"),
+            "state": "LEGACY_SNAPSHOT" if legacy else data["freshness"]["state"],
+            "warnings": ["This historical run predates complete exposure components"]
+            if legacy
+            else [],
+            "portfolio_id": data["portfolio"]["id"],
+            "base_currency": data["portfolio"]["base_currency"],
+            "nav": data["portfolio"]["nav"],
+            "valuation_run_id": data.get("valuation_run_id", run_id),
+            "valuation_date": data["curve"][-1]["date"],
+            "calculation_version": data["calculation_version"],
+            "quality": data["quality"],
+            "calculated_at": data["calculated_at"],
+        }
+
     def accounting(
         self, key: str, run_id: str | None, category: PostingCategory | None
     ) -> dict[str, Any]:
         portfolio, _ = self.resolve(key)
-        if run_id:
-            run = self.session.get(models.PortfolioValuationRun, run_id)
-            if run is None or run.portfolio_id != portfolio.id:
-                raise PortfolioNotFound("Valuation run not found in portfolio")
-            data = run.payload
-        else:
-            data = self.summary(portfolio.id)
-            run_id = data["valuation_run_id"]
+        data = self.valuation_snapshot(portfolio.id, run_id)
+        run_id = data.get("valuation_run_id", run_id)
         if "accounting" not in data:
             return {
                 "items": [],
@@ -251,16 +282,7 @@ class PortfolioResourceService:
     def position(
         self, key: str, position_id: str, end: date | None = None, run_id: str | None = None
     ) -> dict[str, Any]:
-        if run_id and end is not None:
-            raise ValueError("Choose a saved valuation run or an end date, not both")
-        if run_id:
-            portfolio, _ = self.resolve(key)
-            run = self.session.get(models.PortfolioValuationRun, run_id)
-            if run is None or run.portfolio_id != portfolio.id:
-                raise PortfolioNotFound("Valuation run not found in portfolio")
-            data = run.payload
-        else:
-            data = self.summary(key, end)
+        data = self.valuation_snapshot(key, run_id, end)
         item = next((row for row in data["positions"] if row["instrument_id"] == position_id), None)
         if item is None:
             raise PortfolioNotFound("Open position not found in portfolio")
