@@ -229,16 +229,36 @@ class PortfolioResourceService:
             raise PortfolioNotFound("Transaction not found in portfolio")
         return item
 
-    def position(self, key: str, position_id: str, end: date | None = None) -> dict[str, Any]:
-        data = self.summary(key, end)
+    def position(
+        self, key: str, position_id: str, end: date | None = None, run_id: str | None = None
+    ) -> dict[str, Any]:
+        if run_id and end is not None:
+            raise ValueError("Choose a saved valuation run or an end date, not both")
+        if run_id:
+            portfolio, _ = self.resolve(key)
+            run = self.session.get(models.PortfolioValuationRun, run_id)
+            if run is None or run.portfolio_id != portfolio.id:
+                raise PortfolioNotFound("Valuation run not found in portfolio")
+            data = run.payload
+        else:
+            data = self.summary(key, end)
         item = next((row for row in data["positions"] if row["instrument_id"] == position_id), None)
         if item is None:
             raise PortfolioNotFound("Open position not found in portfolio")
         return {
             **item,
-            "lots": [row for row in data["lots"] if row["instrument_id"] == position_id],
-            "matches": [row for row in data["lot_matches"] if row["instrument_id"] == position_id],
-            "valuation_run_id": data["valuation_run_id"],
+            "lots": [row for row in data.get("lots", []) if row["instrument_id"] == position_id],
+            "matches": [
+                row for row in data.get("lot_matches", []) if row["instrument_id"] == position_id
+            ],
+            "valuation_run_id": data.get("valuation_run_id", run_id),
+            "portfolio_id": data["portfolio"]["id"],
+            "base_currency": data["portfolio"]["base_currency"],
+            "valuation_date": data["curve"][-1]["date"],
+            "calculation_version": data["calculation_version"],
+            "calculated_at": data["calculated_at"],
+            "accounting_policy": data["portfolio"].get("accounting_policy"),
+            "measurement_state": "AVAILABLE" if "valuation_state" in item else "LEGACY_SNAPSHOT",
         }
 
     def change_policy(

@@ -256,6 +256,35 @@
   margin: 4px 0;
   overflow-wrap: anywhere;
 }
+.ledger-position-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.ledger-position-context {
+  color: #989fac;
+  font-size: 10px;
+  margin: 8px 0 16px;
+  overflow-wrap: anywhere;
+}
+.ledger-position-measures dd {
+  font-size: 12px;
+}
+.ledger-position-source {
+  border-top: 1px solid #353940;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.ledger-position-source h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 12px;
+}
 @media (max-width: 600px) {
   .ledger-dialog {
     width: calc(100vw - 12px);
@@ -281,6 +310,9 @@
     grid-column: 1 / -1;
   }
   .ledger-audit-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ledger-position-measures {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

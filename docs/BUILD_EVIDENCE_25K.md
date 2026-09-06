@@ -216,3 +216,43 @@ component states AVAILABLE and latest daily P&L zero on the unchanged stale mark
 All original immutable hashes survived; the copy now contains 25 valuation runs.
 Evidence: logs/sprint-position-pnl-preservation.json. No real database or user-facing
 service was migrated/restarted. M1 and the overall sprint remain incomplete.
+
+## Position Measurements and Inspector, 2026-09-06 12:50 UTC
+
+Source predecessor: bef7c5cc84b8efbbc61382ca3adc0f8d96d2135f, pushed.
+knk-nav-4.4 separates signed native/base market values and recorded cost bases,
+with unrealised price and FX components that reconcile algebraically. Missing FX
+does not erase native value; a known zero price is distinct from a missing mark.
+NAV and sector weights use unrounded marked values. Beta contributions remain
+unavailable when the underlying beta is unavailable.
+
+The accounting position inspector exposes valuation, daily components, separate
+price/FX provenance and open lots. Its API reads the parent's saved run, rejects
+cross-portfolio run IDs and conflicting date/run selectors, and does not reprice
+historical payloads. Legacy snapshots explicitly report absent breakdowns.
+
+- Combined Python/coverage command from the earlier checkpoint: exit 0, 498 passed,
+  three existing warnings. Targeted coverage 98%, 1,412 statements, 26 missing;
+  position_metrics.py 100%. This is not whole-application coverage.
+- Added 23 domain tests and five API tests, including property-based signed FX
+  decomposition, missing marks, saved-run immutability and portfolio ownership.
+- Frontend Vitest: exit 0, 113 passed, including nine inspector cases and one
+  accounting-dialog integration case. Typecheck passed.
+- Production build: exit 0, terminal route 98 kB / 190 kB first load.
+- Full Playwright: exit 0, 19 passed in 3.9 minutes, run sprint25k-position-1.
+  The inspector check covers all five viewport sizes, four views, run pinning,
+  security switching, overflow and focus restoration without browser errors.
+- Ruff passed on touched new domain/resource modules and tests. Strict mypy with
+  silent legacy imports passed on 24 source files. Security check passed.
+- LOC --check: expected exit 1, 7,423 qualifying lines; all floors remain unmet.
+
+Reviewed captures: 25k/position-value-390.png, 25k/position-daily-390.png,
+25k/position-sources-1440.png. The mobile values wrap within their grid and the
+desktop source panel separates imported prices from demo FX without a live claim.
+Full local captures remain in logs/ledger-screenshots.
+
+Backup-copy replay remains SGD 70,597.57, BALANCED, four marked positions AVAILABLE.
+logs/sprint-position-metrics-preservation.json verifies all original immutable
+hashes; there are now 26 copy valuation runs. The real database remains untouched.
+No user-facing deployment or milestone completion is claimed. Broader storage
+precision, portfolio creation UI, exposure coverage and M2-M20 remain unfinished.

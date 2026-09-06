@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { knkApi } from "@knk/api-client";
 import {
   BookOpen,
+  Crosshair,
   Layers,
   RefreshCw,
   Save,
@@ -15,6 +16,7 @@ import { Badge, Field, IconButton, money, number, timestamp } from "../ui";
 import { LedgerDialog, LedgerError, LedgerLoading } from "./dialog";
 import { AccountingActivity } from "./accounting-activity";
 import { BalanceEditor } from "./balance-editor";
+import { PositionInspector } from "./position-inspector";
 import {
   portfolioPath,
   type AccountingPolicy,
@@ -22,7 +24,7 @@ import {
   type PortfolioMetadata,
 } from "./contracts";
 
-type View = "policy" | "cash" | "lots" | "activity" | "balances";
+type View = "policy" | "cash" | "lots" | "activity" | "balances" | "positions";
 
 export function AccountingDialog({
   portfolioKey = "KNK_MAIN",
@@ -99,6 +101,12 @@ export function AccountingDialog({
             onClick={() => setView("cash")}
           >
             <Wallet size={13} /> Cash
+          </button>
+          <button
+            aria-pressed={view === "positions"}
+            onClick={() => setView("positions")}
+          >
+            <Crosshair size={13} /> Positions
           </button>
           <button
             aria-pressed={view === "lots"}
@@ -316,6 +324,13 @@ export function AccountingDialog({
         />
       )}
       {view === "balances" && <BalanceEditor portfolioKey={portfolioKey} />}
+      {view === "positions" && summary.data && (
+        <PositionInspector
+          portfolioKey={portfolioKey}
+          runId={summary.data.valuation_run_id}
+          positions={summary.data.positions}
+        />
+      )}
       {summary.data && (
         <footer className="ledger-run-details">
           <span>Run {summary.data.valuation_run_id}</span>

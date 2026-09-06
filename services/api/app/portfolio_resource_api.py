@@ -82,9 +82,13 @@ def positions(portfolio_id: str, session: Database, end: date | None = None) -> 
 
 @router.get("/{portfolio_id}/positions/{position_id}")
 def position(
-    portfolio_id: str, position_id: str, session: Database, end: date | None = None
+    portfolio_id: str,
+    position_id: str,
+    session: Database,
+    end: date | None = None,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
-    return PortfolioResourceService(session).position(portfolio_id, position_id, end)
+    return PortfolioResourceService(session).position(portfolio_id, position_id, end, run_id)
 
 
 @router.get("/{portfolio_id}/transactions")

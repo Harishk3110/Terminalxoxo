@@ -20,13 +20,14 @@ from .portfolio_domain.types import AccountingPolicy
 from .portfolio_domain.postings import BalanceAdjustment, CurrencyMark, outstanding_postings, summarize_postings, transaction_postings
 from .portfolio_domain.transaction_cash import enrich_cash_effects
 from .portfolio_domain.position_pnl import PositionPnlSession
+from .portfolio_domain.position_metrics import ExposurePosition, PortfolioPositionService, position_exposures
 from .transaction_context import context_payload
 from .ledger_revisions import apply_revisions
 from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, money, nav_total
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.3"
+VERSION = "knk-nav-4.4"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -297,7 +298,8 @@ class PortfolioValuationService:
                 price = prices.resolve(instrument_id, at)
                 provenance = prices.describe(instrument_id, at)
                 rate, fx_provenance = fx.resolve(item.currency, portfolio.base_currency, at)
-                value = lot.quantity * price.value * rate * lot.multiplier if price and rate is not None else None
+                measurement = PortfolioPositionService.measure(lot, price.value if price else None, rate)
+                value = measurement.base_value
                 if value is None:
                     missing.append(f"{item.symbol}: missing {'price' if not price else 'FX'}")
                 else:
@@ -305,12 +307,7 @@ class PortfolioValuationService:
                 sources.extend([provenance, fx_provenance])
                 position_rows.append({
                     "id": instrument_id, "instrument_id": instrument_id, "symbol": item.symbol, "name": item.name,
-                    "quantity": lot.quantity, "average_cost": lot.cost_native / lot.quantity / lot.multiplier,
-                    "cost_basis_base": lot.cost_base, "market_price": price.value if price else None,
-                    "market_value": money(value) if value is not None else None,
-                    "unrealised_pnl": money(value - lot.cost_base) if value is not None else None,
-                    "realised_pnl": money(lot.realised), "income": money(lot.income), "fees": money(lot.charges),
-                    "capitalized_charges": money(lot.capitalized_charges), "expensed_charges": money(lot.expensed_charges),
+                    **measurement.payload(),
                     "currency": item.currency, "sector": item.sector or "Unclassified", "country": item.country,
                     "asset_class": item.asset_class, "contract_multiplier": lot.multiplier,
                     "source": provenance["source"], "quality": provenance["data_state"], "as_of": provenance["as_of"],
@@ -345,11 +342,10 @@ class PortfolioValuationService:
             daily_details = daily_attribution.finish(marked_values, state.cash_service.movements[movement_start:])
             daily_contributions = {key: detail.pnl for key, detail in daily_details.items()}
             for row in position_rows:
-                row["weight"] = Decimal(row["market_value"]) / nav if nav and row["market_value"] is not None else ZERO
+                row["weight"] = position_values[row["instrument_id"]] / nav if nav and row["market_value"] is not None else ZERO
                 row["daily_pnl"] = number(daily_contributions.get(row["instrument_id"], ZERO)) if nav is not None and previous_nav is not None else None
                 row["daily_pnl_details"] = daily_details[row["instrument_id"]].payload()
-                row["total_pnl"] = money((position_values.get(row["instrument_id"], ZERO) - state.lots[row["instrument_id"]].cost_base) + state.lots[row["instrument_id"]].realised + state.lots[row["instrument_id"]].income - state.lots[row["instrument_id"]].expensed_charges) if row["market_value"] is not None else None
-                row["return"] = number((position_values[row["instrument_id"]] - state.lots[row["instrument_id"]].cost_base) / abs(state.lots[row["instrument_id"]].cost_base)) if row["market_value"] is not None and state.lots[row["instrument_id"]].cost_base else None
+                row["return"] = number(row["return"])
             for instrument_id in ids:
                 observation = prices.resolve(instrument_id, at)
                 item = instruments[instrument_id]
@@ -377,6 +373,13 @@ class PortfolioValuationService:
         performance, performance_warnings = metric_summary(curve, state.flow_events, end, float(profile.configuration.get("risk_free_rate", 0)))
         warnings.extend(performance_warnings)
         risk, correlations = self.risk(histories, last_positions, benchmark.id if benchmark else None, nav, performance)
+        position_weights = position_exposures([
+            ExposurePosition(row["instrument_id"], row["sector"], position_values.get(row["instrument_id"]),
+                             Decimal(str(row["beta"])) if row["beta"] is not None else None)
+            for row in last_positions
+        ], nav)
+        for row in last_positions:
+            row.update(position_weights[row["instrument_id"]])
         paired = [(p["return"], p["benchmark_return"]) for p in curve if p["return"] is not None and p["benchmark_return"] is not None and date.fromisoformat(p["date"]).weekday() < 5]
         if len(paired) >= 60:
             pr, br = np.array(paired).T

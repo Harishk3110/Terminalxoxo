@@ -403,23 +403,23 @@ execution, tests and recorded evidence. Source references refer to the supplied
 ### 6.4 Position engine
 
 - [ ] [L529] Calculate:
-- [ ] [L531] Quantity.
-- [ ] [L532] Long or short direction.
-- [ ] [L533] Average cost.
-- [ ] [L534] Cost basis.
-- [ ] [L535] Current price.
-- [ ] [L536] Market value.
-- [ ] [L537] SGD market value.
-- [ ] [L538] Realised P&L.
-- [ ] [L539] Unrealised P&L.
-- [ ] [L540] Total P&L.
+- [x] [L531] Quantity.
+- [x] [L532] Long or short direction.
+- [x] [L533] Average cost.
+- [x] [L534] Cost basis.
+- [x] [L535] Current price. (Selected mark with timestamp/state, not an assertion of live data.)
+- [x] [L536] Market value. (Native currency, signed quantity and contract multiplier.)
+- [x] [L537] SGD market value. (Configured base currency; missing FX explicitly unavailable.)
+- [x] [L538] Realised P&L.
+- [x] [L539] Unrealised P&L. (Separate native/base and price/FX components.)
+- [x] [L540] Total P&L.
 - [x] [L541] Daily P&L. (Recorded cash/marks; explicit corporate reference allocation; missing marks unavailable.)
-- [ ] [L542] Portfolio weight.
-- [ ] [L543] Sector weight.
+- [x] [L542] Portfolio weight. (Signed marked value / NAV; unknown and zero NAV distinct.)
+- [x] [L543] Sector weight.
 - [ ] [L544] Currency exposure.
 - [ ] [L545] Country exposure.
 - [ ] [L546] Asset-class exposure.
-- [ ] [L547] Beta contribution.
+- [x] [L547] Beta contribution. (Weight times available beta; insufficient beta remains null.)
 - [ ] [L548] Risk contribution.
 - [ ] [L549] Data freshness.
 - [ ] [L550] Price source.

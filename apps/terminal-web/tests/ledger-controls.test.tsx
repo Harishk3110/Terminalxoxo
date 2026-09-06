@@ -7,6 +7,7 @@ import { useState } from "react";
 import { AccountingDialog } from "../components/ledger/accounting-dialog";
 import { TransactionCorrectionDialog } from "../components/ledger/transaction-correction";
 import { metadata, summary, transaction } from "./fixtures/accounting";
+import { positionSnapshot } from "./fixtures/position";
 import { renderLedger } from "./ledger-render";
 
 beforeEach(() => {
@@ -27,6 +28,7 @@ beforeEach(() => {
   });
   vi.spyOn(knkApi, "get").mockImplementation(async <T,>(path: string) => {
     if (path.endsWith("/summary")) return summary as T;
+    if (path.includes("/positions/")) return positionSnapshot as T;
     if (path.includes("/transactions/")) return transaction as T;
     return metadata as T;
   });
@@ -38,6 +40,14 @@ afterEach(() => {
 });
 
 describe("accounting controls", () => {
+  it("opens position detail from the saved accounting run", async () => {
+    renderLedger(<AccountingDialog portfolioKey="book" onClose={() => {}} />);
+    await screen.findByLabelText("Cost-basis method");
+    await userEvent.click(screen.getByRole("button", { name: "Positions" }));
+    await screen.findByText("AAA / Test security");
+    expect(knkApi.get).toHaveBeenCalledWith("/api/v1/portfolios/book/positions/AAA?run_id=run-1", expect.any(AbortSignal));
+    expect(screen.getByText("Base market value / SGD")).toBeTruthy();
+  });
   it("returns focus to the launch control after the dialog unmounts", async () => {
     function Launcher() {
       const [open, setOpen] = useState(false);

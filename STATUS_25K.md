@@ -4,12 +4,13 @@ Sprint active. Baseline: c3d9e847604fbbfb59df170c1b5f83f7dbec94a1.
 Initial verified checkpoint: e25b94e52a7669458beaaa8c7685942dc256cd55, pushed to origin/main.
 Storage-boundary checkpoint: e5f5d43282d1f6f63c22e0eeec954155ee634eaf, pushed.
 Transaction-entry checkpoint: c770947a04b3b169332f0ff6442780b5db06d99a, pushed.
-Current change: position-period P&L and corporate transfers; `git rev-parse HEAD` resolves this checkout.
+Position-period checkpoint: bef7c5cc84b8efbbc61382ca3adc0f8d96d2135f, pushed.
+Current change: native/base position measurements and saved-run inspector; `git rev-parse HEAD` resolves this checkout.
 Branch main; existing origin retained. No sprint milestone is certified complete.
 
 - Current milestone: M1 in progress, audited ledger and accounting subledgers implemented.
-- Qualifying delta at 2026-09-06 12:26 UTC: 6,619 conservative novel source/test lines.
-  Backend 2,045; frontend 1,222; workers/agents/reports/infra 263; tests 3,089.
+- Qualifying delta at 2026-09-06 12:46 UTC: 7,423 conservative novel source/test lines.
+  Backend 2,186; frontend 1,472; workers/agents/reports/infra 263; tests 3,502.
   This is an interim worktree count, not a milestone certification.
 - Gates: backend 9,000; frontend 6,000; infrastructure/agents/reports 3,000;
   substantive tests 7,000; total 25,000.
@@ -19,13 +20,13 @@ Branch main; existing origin retained. No sprint milestone is certified complete
 - Operational routes/APIs: portfolio resources added, including append-only
   corrections, scoped lot details, accounting policy, cash, recalculation,
   historical-run accounting components and append-only balance adjustments.
-- Tests: combined Python suite 470 passed, including all 66 existing backend tests;
-  targeted accounting coverage 98% (1,308 statements, 26 missing), not whole-app coverage.
-  Frontend 103 passed; production build/typecheck passed (96.1 kB terminal route).
+- Tests: combined Python suite 498 passed, including all 66 existing backend tests;
+  targeted accounting coverage 98% (1,412 statements, 26 missing), not whole-app coverage.
+  Frontend 113 passed; production build/typecheck passed (98 kB terminal route).
   Repository test-unit command also passes five shared-package tests; other package echo scripts are not tests.
-  Full Playwright suite 18 passed with knk-nav-4.3 (run sprint25k-pnl-1).
-  Frontend implementation/build are unchanged since c770947.
-- New Python modules: Ruff and strict mypy passed on 23 source files (legacy imports silent).
+  Full Playwright suite 19 passed with knk-nav-4.4 (run sprint25k-position-1).
+  Final frontend build includes the position inspector in logs/sprint-25k-build.
+- New Python modules: Ruff and strict mypy passed on 24 source files (legacy imports silent).
 - Migrations 0004/0005 passed 15 lifecycle/schema/constraint tests. A fresh saved-data
   backup copy upgraded from 0003 to 0005, valued at SGD 70,597.57, and retained all
   captured original hashes (16 transactions, two dataset versions, 22 prior runs).
@@ -43,7 +44,7 @@ Branch main; existing origin retained. No sprint milestone is certified complete
 - Blockers: none for demo/domain/contract implementation. Live credentials absent
   are not treated as blockers.
 - First unchecked execution task: finish M1 input/storage precision contracts,
-  native/base position metrics, exposure detail and portfolio creation UI. Audit timestamps are
+  broader exposure detail and portfolio creation UI. Audit timestamps are
   provenance only; same-day replay order remains the original ledger record order.
   Audit references are not yet editable through the correction dialog.
   Live additive migration, permitted service deployment and M1 certification remain.
@@ -54,10 +55,15 @@ Branch main; existing origin retained. No sprint milestone is certified complete
   flows and paired corporate-action reference transfers. Closed-position income is
   retained, and missing opening marks cannot create artificial daily gains.
   Component breakdowns are saved in valuation payloads; the UI's existing daily
-  P&L columns consume the result. A dedicated component inspector remains to build.
-- Backup-copy knk-nav-4.3 NAV remains SGD 70,597.57 with all original hashes retained;
-  preservation report logs/sprint-position-pnl-preservation.json (25 copy valuation runs).
-- Next command: `rg -n 'daily_contributions|last_positions|risk_contribution|sector' services/api/app/portfolio_valuation.py`.
+  P&L columns and the new component inspector consume the result.
+- Position inspector exposes native/base values, unrealised price/FX components,
+  signed NAV/sector weights, beta contribution, daily components, sources and lots.
+  Reads are pinned to the parent accounting run; older snapshots explicitly lack detail.
+  New screenshots: docs/25k/position-value-390.png, position-daily-390.png and
+  position-sources-1440.png. All five required widths passed browser checks.
+- Backup-copy knk-nav-4.4 NAV remains SGD 70,597.57 with all original hashes retained;
+  preservation report logs/sprint-position-metrics-preservation.json (26 copy valuation runs).
+- Next implementation: scoped portfolio directory and explicit opening-capital form.
 - M2-M20, all category LOC floors and all final acceptance gates remain incomplete.
 
 Progress/evidence: docs/LOC_EVIDENCE_25K.md, docs/BUILD_EVIDENCE_25K.md and
