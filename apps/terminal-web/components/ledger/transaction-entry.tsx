@@ -75,6 +75,7 @@ export function TransactionEntryDialog({
         ["terminal-portfolio"],
         ["ledger-summary", portfolioKey],
         ["ledger-accounting", portfolioKey],
+        ["ledger-transactions", portfolioKey],
       ]) {
         await client.invalidateQueries({ queryKey });
       }

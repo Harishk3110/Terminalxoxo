@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { knkApi } from "@knk/api-client";
 import {
   ArrowDownToLine,
+  Building2,
   Check,
   Plus,
   Pencil,
@@ -32,6 +33,7 @@ import {
 } from "./ui";
 import type { PortfolioData, Row } from "./types";
 import { AccountingDialog } from "./ledger/accounting-dialog";
+import { PortfolioDirectory } from "./ledger/portfolio-directory";
 import { TransactionCorrectionDialog } from "./ledger/transaction-correction";
 import { TransactionEntryDialog } from "./ledger/transaction-entry";
 
@@ -143,6 +145,7 @@ function OperatingRibbon({ data }: { data?: OperatingData }) {
 }
 export function PortfolioHomePage() {
   const [accountingOpen, setAccountingOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const query = usePortfolio();
   const data = query.data as OperatingData | undefined;
   const { open, selectSecurity } = useTerminal();
@@ -164,6 +167,7 @@ export function PortfolioHomePage() {
       <PageTitle code="HOME" title="Portfolio Command Centre">
         <span className="secondary mono">KNK_MAIN / SGD</span>
         <Badge>{data?.quality ?? "LOADING"}</Badge>
+        <IconButton label="Portfolio ledgers" onClick={() => setDirectoryOpen(true)}><Building2 size={13} /></IconButton>
         <IconButton label="Portfolio accounting" onClick={() => setAccountingOpen(true)}>
           <Settings2 size={13} />
         </IconButton>
@@ -180,6 +184,7 @@ export function PortfolioHomePage() {
         </IconButton>
       </PageTitle>
       {accountingOpen && <AccountingDialog onClose={() => setAccountingOpen(false)} />}
+      {directoryOpen && <PortfolioDirectory onClose={() => setDirectoryOpen(false)} />}
       <OperatingRibbon data={data} />
       <Notice error={query.error} />
       <div className="page-grid portfolio-command-grid">

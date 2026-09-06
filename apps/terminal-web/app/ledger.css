@@ -242,6 +242,19 @@
   color: #989fac;
   font-size: 11px;
 }
+.ledger-create-switches {
+  display: grid;
+  gap: 12px;
+}
+.ledger-directory-table {
+  max-height: 280px;
+}
+.ledger-directory-table td:nth-child(2) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 150px;
+  max-width: 320px;
+}
 .ledger-audit-fields dd {
   font-size: 12px;
 }

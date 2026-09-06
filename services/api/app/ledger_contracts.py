@@ -92,18 +92,26 @@ class AccountingPolicyRequest(BaseModel):
         return AccountingPolicy(self.method, self.capitalize_commissions, self.capitalize_fees)
 
 
+MAX_REFERENCE_CAPITAL = Decimal("1e12")
+
+
 class PortfolioCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     code: str = Field(min_length=2, max_length=40, pattern=r"^[A-Z][A-Z0-9_]+$")
     name: str = Field(min_length=2, max_length=200)
     base_currency: str = Field(default="SGD", pattern=r"^[A-Z]{3}$")
-    reference_capital: Decimal = Field(gt=0, le=Decimal("1e12"))
+    reference_capital: Decimal = Field(gt=0, le=MAX_REFERENCE_CAPITAL)
     opening_date: date
     benchmark: str = Field(default="SPY", min_length=1, max_length=40)
     allow_short: bool = Field(default=False, strict=True)
     method: CostMethod = CostMethod.AVERAGE
     capitalize_commissions: bool = Field(default=True, strict=True)
     capitalize_fees: bool = Field(default=False, strict=True)
+
+    @field_validator("reference_capital")
+    @classmethod
+    def supported_capital(cls, value: Decimal) -> Decimal:
+        return stored_decimal(value, "Opening capital", positive=True)
 
     @field_validator("name")
     @classmethod

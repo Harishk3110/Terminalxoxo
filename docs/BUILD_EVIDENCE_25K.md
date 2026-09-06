@@ -256,3 +256,46 @@ logs/sprint-position-metrics-preservation.json verifies all original immutable
 hashes; there are now 26 copy valuation runs. The real database remains untouched.
 No user-facing deployment or milestone completion is claimed. Broader storage
 precision, portfolio creation UI, exposure coverage and M2-M20 remain unfinished.
+
+## Portfolio Directory, 2026-09-06 13:05 UTC
+
+Source predecessor: 8ac83a42153845dd9cc6c2b190d165355761180f, pushed.
+Home now opens a scoped internal-ledger directory. Creation records explicit
+opening capital, currency, benchmark, date and cost policy, with a real opening
+deposit and audit event. Creation options come from configured currencies and
+the security master. The date boundary is explicitly the existing server UTC
+rule, not a new exchange-calendar or Singapore business-date claim.
+
+Selected-ledger accounting, transaction entry and corrections share that ledger's
+ID and return to its directory context. Mutations refresh the scoped transaction
+list. The main dashboard remains KNK_MAIN; directory selection is not a global
+portfolio switch. The creation form blocks cancellation while its write is pending.
+
+- Full combined Python/coverage command: exit 0, 512 passed, three existing
+  warnings. Targeted coverage 98%, 1,418 statements, 25 missing.
+- 14 additional API tests cover options without KNK_MAIN, exact persisted capital,
+  policy flags, duplicate/unsafe-write rollback and separate-ledger NAV/ownership.
+- Frontend Vitest: exit 0, 131 passed, including eight creation and ten directory
+  cases. Typecheck passed. The 131 test count is unrelated to the user's 131
+  acceptance steps, which are NOT certified by this result.
+- Production build: exit 0, route 101 kB / 193 kB first load.
+- Full Playwright: exit 0, 21 passed in 4.3 minutes, run sprint25k-directory-1.
+  New browser checks cover five viewport sizes, non-nested dialog navigation,
+  opening capital, a USD deposit and correction, reload persistence and unchanged
+  KNK_MAIN transactions/NAV. Existing stress/backtest/login workflows also passed.
+- Ruff and strict mypy (24 targeted source files with silent legacy imports):
+  exit 0. Broker-execution security check passed. LOC --check expected exit 1:
+  8,227 qualifying lines, all category floors still unmet.
+
+Reviewed images: 25k/portfolio-directory-1440.png, 25k/portfolio-create-390.png,
+25k/portfolio-created-390.png. Tables scroll horizontally on mobile within the
+dialog; creation fields and ledger summaries remain inside the viewport.
+Two test-only assertions were corrected before the final passing runs: comparison
+before/after session expiration now uses persisted Decimal representations, and
+the BUY correction test locates Price rather than a cash-only Gross amount field.
+
+No new migration was needed. Earlier backup-copy preservation evidence remains
+valid for unchanged knk-nav-4.4; no real portfolio was created or mutated by tests.
+The isolated servers stopped after the run; only the earlier baseline API on 8000
+remains. User-facing deployment, M1 certification, broader precision/exposure work,
+M2-M20 and all final gates remain incomplete.

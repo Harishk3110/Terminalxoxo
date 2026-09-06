@@ -25,10 +25,12 @@ type View = "amend" | "history" | "void" | "details";
 export function TransactionCorrectionDialog({
   transactionId,
   portfolioKey = "KNK_MAIN",
+  portfolioLabel,
   onClose,
 }: {
   transactionId: string;
   portfolioKey?: string;
+  portfolioLabel?: string;
   onClose: () => void;
 }) {
   const [view, setView] = useState<View>("amend");
@@ -64,6 +66,9 @@ export function TransactionCorrectionDialog({
       await client.invalidateQueries({ queryKey: ["terminal-portfolio"] });
       await client.invalidateQueries({ queryKey: ["operating-trades"] });
       await client.invalidateQueries({
+        queryKey: ["ledger-transactions", portfolioKey],
+      });
+      await client.invalidateQueries({
         queryKey: ["ledger-summary", portfolioKey],
       });
     },
@@ -85,7 +90,12 @@ export function TransactionCorrectionDialog({
           >
             <Pencil size={13} /> Correct
           </button>
-          <button aria-pressed={view === "details"} onClick={() => setView("details")}><Info size={13} /> Details</button>
+          <button
+            aria-pressed={view === "details"}
+            onClick={() => setView("details")}
+          >
+            <Info size={13} /> Details
+          </button>
           <button
             aria-pressed={view === "history"}
             onClick={() => setView("history")}
@@ -107,6 +117,9 @@ export function TransactionCorrectionDialog({
         </IconButton>
         {transaction && (
           <>
+            <span className="secondary mono" title={transaction.portfolio_id}>
+              Portfolio {portfolioLabel ?? portfolioKey}
+            </span>
             <Badge>{transaction.ledger_state}</Badge>
             <span className="secondary mono">
               Version {transaction.audit_version}
@@ -133,7 +146,9 @@ export function TransactionCorrectionDialog({
               <dd>{transaction.currency}</dd>
             </div>
           </dl>
-          {view === "details" && <TransactionDetails transaction={transaction} />}
+          {view === "details" && (
+            <TransactionDetails transaction={transaction} />
+          )}
           {view === "amend" && (
             <form
               onSubmit={(event) => {

@@ -64,6 +64,11 @@ def create_portfolio(
     return PortfolioResourceService(session).create(payload, identity(request, session))
 
 
+@router.get("/creation-options")
+def creation_options(session: Database) -> dict[str, Any]:
+    return PortfolioResourceService(session).creation_options()
+
+
 @router.get("/{portfolio_id}")
 def portfolio(portfolio_id: str, session: Database) -> dict[str, Any]:
     return PortfolioResourceService(session).metadata(portfolio_id)

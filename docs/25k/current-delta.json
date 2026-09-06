@@ -25,17 +25,17 @@
   "branch": "main",
   "categories": {
     "backend": {
-      "added": 2186,
+      "added": 2206,
       "minimum": 9000,
       "passed": false
     },
     "frontend": {
-      "added": 1472,
+      "added": 1820,
       "minimum": 6000,
       "passed": false
     },
     "tests": {
-      "added": 3502,
+      "added": 3938,
       "minimum": 7000,
       "passed": false
     },
@@ -45,22 +45,22 @@
       "passed": false
     }
   },
-  "commit": "bef7c5cc84b8efbbc61382ca3adc0f8d96d2135f",
+  "commit": "8ac83a42153845dd9cc6c2b190d165355761180f",
   "current_inventory": {
     "backend": {
-      "eligible_lines": 8953,
+      "eligible_lines": 8977,
       "files": 58,
-      "physical_lines": 10779
+      "physical_lines": 10811
     },
     "frontend": {
-      "eligible_lines": 11085,
-      "files": 44,
-      "physical_lines": 13688
+      "eligible_lines": 11682,
+      "files": 46,
+      "physical_lines": 14405
     },
     "tests": {
-      "eligible_lines": 6814,
-      "files": 48,
-      "physical_lines": 8588
+      "eligible_lines": 7651,
+      "files": 52,
+      "physical_lines": 9624
     },
     "workers_agents_reports_infrastructure": {
       "eligible_lines": 1061,
@@ -68,7 +68,7 @@
       "physical_lines": 1297
     }
   },
-  "date": "2026-09-06T12:46:21.982075+00:00",
+  "date": "2026-09-06T13:05:04.016149+00:00",
   "files": [
     {
       "category": "frontend",
@@ -88,8 +88,8 @@
       "category": "frontend",
       "over_1200_lines": false,
       "path": "apps/terminal-web/app/ledger.css",
-      "physical_lines": 318,
-      "qualifying_added": 121
+      "physical_lines": 331,
+      "qualifying_added": 127
     },
     {
       "category": "frontend",
@@ -123,8 +123,8 @@
       "category": "frontend",
       "over_1200_lines": false,
       "path": "apps/terminal-web/components/ledger/dialog.tsx",
-      "physical_lines": 65,
-      "qualifying_added": 33
+      "physical_lines": 71,
+      "qualifying_added": 38
     },
     {
       "category": "frontend",
@@ -132,6 +132,20 @@
       "path": "apps/terminal-web/components/ledger/entry-draft.ts",
       "physical_lines": 194,
       "qualifying_added": 123
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/portfolio-create.tsx",
+      "physical_lines": 271,
+      "qualifying_added": 138
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/portfolio-directory.tsx",
+      "physical_lines": 406,
+      "qualifying_added": 202
     },
     {
       "category": "frontend",
@@ -145,14 +159,14 @@
       "over_1200_lines": false,
       "path": "apps/terminal-web/components/ledger/position-inspector.tsx",
       "physical_lines": 391,
-      "qualifying_added": 183
+      "qualifying_added": 178
     },
     {
       "category": "frontend",
       "over_1200_lines": false,
       "path": "apps/terminal-web/components/ledger/transaction-correction.tsx",
-      "physical_lines": 312,
-      "qualifying_added": 129
+      "physical_lines": 327,
+      "qualifying_added": 133
     },
     {
       "category": "frontend",
@@ -172,22 +186,22 @@
       "category": "frontend",
       "over_1200_lines": false,
       "path": "apps/terminal-web/components/ledger/transaction-entry.tsx",
-      "physical_lines": 406,
-      "qualifying_added": 207
+      "physical_lines": 407,
+      "qualifying_added": 201
     },
     {
       "category": "frontend",
       "over_1200_lines": true,
       "path": "apps/terminal-web/components/operating-pages.tsx",
-      "physical_lines": 1255,
-      "qualifying_added": 14
+      "physical_lines": 1260,
+      "qualifying_added": 18
     },
     {
       "category": "tests",
       "over_1200_lines": false,
       "path": "apps/terminal-web/tests/accounting-activity.test.tsx",
       "physical_lines": 287,
-      "qualifying_added": 146
+      "qualifying_added": 145
     },
     {
       "category": "tests",
@@ -208,7 +222,7 @@
       "over_1200_lines": false,
       "path": "apps/terminal-web/tests/ledger-controls.test.tsx",
       "physical_lines": 296,
-      "qualifying_added": 138
+      "qualifying_added": 135
     },
     {
       "category": "tests",
@@ -220,23 +234,37 @@
     {
       "category": "tests",
       "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/portfolio-create.test.tsx",
+      "physical_lines": 253,
+      "qualifying_added": 111
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/portfolio-directory.test.tsx",
+      "physical_lines": 340,
+      "qualifying_added": 136
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
       "path": "apps/terminal-web/tests/position-inspector.test.tsx",
       "physical_lines": 233,
-      "qualifying_added": 110
+      "qualifying_added": 105
     },
     {
       "category": "tests",
       "over_1200_lines": false,
       "path": "apps/terminal-web/tests/transaction-draft.test.ts",
       "physical_lines": 80,
-      "qualifying_added": 47
+      "qualifying_added": 45
     },
     {
       "category": "tests",
       "over_1200_lines": false,
       "path": "apps/terminal-web/tests/transaction-entry.test.tsx",
       "physical_lines": 381,
-      "qualifying_added": 169
+      "qualifying_added": 166
     },
     {
       "category": "frontend",
@@ -326,8 +354,8 @@
       "category": "backend",
       "over_1200_lines": false,
       "path": "services/api/app/ledger_contracts.py",
-      "physical_lines": 113,
-      "qualifying_added": 70
+      "physical_lines": 121,
+      "qualifying_added": 74
     },
     {
       "category": "backend",
@@ -473,15 +501,15 @@
       "category": "backend",
       "over_1200_lines": false,
       "path": "services/api/app/portfolio_resource_api.py",
-      "physical_lines": 258,
-      "qualifying_added": 127
+      "physical_lines": 263,
+      "qualifying_added": 130
     },
     {
       "category": "backend",
       "over_1200_lines": false,
       "path": "services/api/app/portfolio_resources.py",
-      "physical_lines": 304,
-      "qualifying_added": 168
+      "physical_lines": 323,
+      "qualifying_added": 181
     },
     {
       "category": "backend",
@@ -542,9 +570,16 @@
     {
       "category": "tests",
       "over_1200_lines": false,
+      "path": "tests/e2e/portfolio-directory.spec.ts",
+      "physical_lines": 255,
+      "qualifying_added": 103
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
       "path": "tests/e2e/position-inspector.spec.ts",
       "physical_lines": 160,
-      "qualifying_added": 55
+      "qualifying_added": 54
     },
     {
       "category": "tests",
@@ -572,7 +607,7 @@
       "over_1200_lines": false,
       "path": "tests/sprint/test_accounting_resources.py",
       "physical_lines": 224,
-      "qualifying_added": 147
+      "qualifying_added": 146
     },
     {
       "category": "tests",
@@ -626,9 +661,16 @@
     {
       "category": "tests",
       "over_1200_lines": false,
+      "path": "tests/sprint/test_portfolio_creation.py",
+      "physical_lines": 188,
+      "qualifying_added": 107
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
       "path": "tests/sprint/test_portfolio_resources.py",
       "physical_lines": 269,
-      "qualifying_added": 131
+      "qualifying_added": 129
     },
     {
       "category": "tests",
@@ -656,7 +698,7 @@
       "over_1200_lines": false,
       "path": "tests/sprint/test_position_snapshot_api.py",
       "physical_lines": 176,
-      "qualifying_added": 101
+      "qualifying_added": 100
     },
     {
       "category": "tests",
@@ -670,18 +712,18 @@
       "over_1200_lines": false,
       "path": "tests/sprint/test_transaction_context.py",
       "physical_lines": 346,
-      "qualifying_added": 166
+      "qualifying_added": 165
     },
     {
       "category": "tests",
       "over_1200_lines": false,
       "path": "tests/sprint/test_transaction_precision.py",
       "physical_lines": 227,
-      "qualifying_added": 72
+      "qualifying_added": 71
     }
   ],
   "line_gates_passed": false,
   "minimum_total": 25000,
   "semantic_review_required": true,
-  "total": 7423
+  "total": 8227
 }

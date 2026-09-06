@@ -8,11 +8,13 @@ export function LedgerDialog({
   children,
   onClose,
   closeLabel = "Close accounting dialog",
+  closeDisabled = false,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   closeLabel?: string;
+  closeDisabled?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const heading = useId();
@@ -33,12 +35,16 @@ export function LedgerDialog({
       aria-labelledby={heading}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (!closeDisabled) onClose();
       }}
     >
       <header className="ledger-dialog-header">
         <h2 id={heading}>{title}</h2>
-        <IconButton label={closeLabel} onClick={onClose}>
+        <IconButton
+          label={closeLabel}
+          onClick={onClose}
+          disabled={closeDisabled}
+        >
           <X size={15} />
         </IconButton>
       </header>

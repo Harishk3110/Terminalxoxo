@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .accounting_persistence import accounting_records
-from .ledger_contracts import AccountingPolicyRequest, PortfolioCreateRequest
+from .ledger_contracts import MAX_REFERENCE_CAPITAL, AccountingPolicyRequest, PortfolioCreateRequest
 from .portfolio_domain.ledger import LedgerState
 from .portfolio_domain.postings import PostingCategory
-from .portfolio_domain.types import TRANSACTION_TYPES, AccountingPolicy
+from .portfolio_domain.types import TRANSACTION_TYPES, AccountingPolicy, CostMethod
 from .portfolio_operations import CURRENCIES, PortfolioLedgerService
 from .portfolio_valuation import PortfolioValuationService, load_entries
 from .transaction_views import transaction_views
@@ -72,6 +72,23 @@ class PortfolioResourceService:
             select(models.PortfolioProfile.portfolio_id).order_by(models.PortfolioProfile.code)
         ).all()
         return [self.metadata(identifier) for identifier in identifiers]
+
+    def creation_options(self) -> dict[str, Any]:
+        securities = self.session.scalars(
+            select(models.Instrument).order_by(models.Instrument.symbol)
+        ).all()
+        return {
+            "currencies": sorted(CURRENCIES),
+            "methods": [method.value for method in CostMethod],
+            "max_opening_date": datetime.now(UTC).date().isoformat(),
+            "date_boundary": "UTC",
+            "maximum_capital": str(MAX_REFERENCE_CAPITAL),
+            "capital_decimal_places": 8,
+            "benchmarks": [
+                {"symbol": row.symbol, "name": row.name, "currency": row.currency}
+                for row in securities
+            ],
+        }
 
     def entry_options(self, key: str) -> dict[str, Any]:
         metadata = self.metadata(key)
@@ -133,6 +150,8 @@ class PortfolioResourceService:
                 "benchmark": request.benchmark,
                 "allow_short": request.allow_short,
                 "price_mode": "AUTO",
+                "opening_date": request.opening_date.isoformat(),
+                "execution_mode": "MANUAL",
             },
         )
         self.session.add(profile)
