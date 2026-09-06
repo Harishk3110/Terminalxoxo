@@ -1,5 +1,7 @@
 # Core Acceptance Evidence
 
+This is the archived V1 evidence from 2026-09-05. Current terminal V2 results are in STATUS.md and docs/VISUAL_ACCEPTANCE.md.
+
 Acceptance entries are marked PASS only after the listed command exits 0.
 
 | Requirement | Verification Command | Expected Result | Actual Result | Status | Evidence Reference |

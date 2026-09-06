@@ -47,24 +47,24 @@ export interface MacroDashboardPayload {
 }
 
 export interface RiskPayload {
-  beta: string;
-  volatility: string;
-  var_95: string;
-  cvar_95: string;
-  max_drawdown: string;
-  gross_exposure: string;
-  net_exposure: string;
-  concentration: string;
+  beta: number;
+  volatility: number;
+  var_95: number;
+  cvar_95: number;
+  max_drawdown: number;
+  gross_exposure: number;
+  net_exposure: number;
+  concentration: number;
   quality: string;
 }
 
 export interface PerformancePayload {
-  twr: string;
-  cagr: string;
-  volatility: string;
-  sharpe: string;
-  sortino: string;
-  max_drawdown: string;
+  twr: number;
+  cagr: number;
+  volatility: number;
+  sharpe: number;
+  sortino: number;
+  max_drawdown: number;
   quality: string;
 }
 
@@ -114,10 +114,11 @@ const defaultBaseUrl = "http://127.0.0.1:8000";
 export class KnkApiClient {
   constructor(private readonly baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultBaseUrl) {}
 
-  async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, { cache: "no-store" });
+  async get<T>(path: string, signal?: AbortSignal): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, { cache: "no-store", credentials: "include", signal });
     if (!response.ok) {
-      throw new Error(`${path} failed with ${response.status}`);
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail ? JSON.stringify(error.detail) : `${path} failed with ${response.status}`);
     }
     return (await response.json()) as T;
   }
@@ -125,11 +126,13 @@ export class KnkApiClient {
   async post<T>(path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
+      credentials: "include",
       headers: body instanceof FormData ? undefined : { "Content-Type": "application/json" },
       body: body instanceof FormData ? body : body === undefined ? undefined : JSON.stringify(body)
     });
     if (!response.ok) {
-      throw new Error(`${path} failed with ${response.status}`);
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail ? JSON.stringify(error.detail) : `${path} failed with ${response.status}`);
     }
     return (await response.json()) as T;
   }
@@ -193,6 +196,8 @@ export class KnkApiClient {
   pine() {
     return this.get<Record<string, unknown>>("/api/v1/pine/export");
   }
+
+  downloadUrl(path: string) { return `${this.baseUrl}${path}`; }
 }
 
 export const knkApi = new KnkApiClient();

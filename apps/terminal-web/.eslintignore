@@ -1,0 +1,4 @@
+logs/
+.next/
+.next-prod/
+.next-build/

@@ -10,7 +10,7 @@ import structlog
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text
@@ -22,6 +22,8 @@ from .database import SessionLocal, engine, get_session
 from .providers.fred import FredProvider
 from .repositories import InstrumentRepository, JobRepository, ProviderRepository, StrategyRepository, SystemRepository
 from .services import BacktestService, DatasetService, DemoIngestionService, FredIngestionService, MacroService, PerformanceService, PineService, PortfolioService, ReportService, RiskService, to_jsonable
+from .terminal_api import router as terminal_router
+from .terminal_analytics import FUNCTIONS, portfolio_analytics
 
 try:
     import redis
@@ -45,10 +47,11 @@ app = FastAPI(
     docs_url="/docs" if settings.knk_env != "production-paper" else None,
     redoc_url=None,
 )
+app.include_router(terminal_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Correlation-ID"],
@@ -98,6 +101,13 @@ def startup() -> None:
 @app.middleware("http")
 async def request_middleware(request: Request, call_next):
     ensure_database_ready()
+    path = request.url.path
+    public_paths = {"/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/session", "/api/v1/auth/logout", "/api/v1/public/content", "/api/v1/environment"}
+    if settings.knk_env != "local-demo" and path.startswith("/api/v1/") and path not in public_paths and request.method != "OPTIONS":
+        from .terminal_api import auth_session
+        with SessionLocal() as session:
+            if not auth_session(request, session)["authenticated"]:
+                return JSONResponse({"detail": "Authentication required"}, status_code=401)
     start = datetime.now(timezone.utc)
     cid = correlation_id(request)
     response = await call_next(request)
@@ -234,6 +244,8 @@ def login(payload: LoginRequest, response: Response, request: Request, session: 
         session.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials") from exc
     totp = session.execute(select(models.TotpSetting).where(models.TotpSetting.user_id == user.id)).scalars().first()
+    if totp and totp.enabled and not payload.totp_code:
+        raise HTTPException(status_code=401, detail="TOTP code required")
     if payload.totp_code and totp:
         secret = totp.secret_encrypted.removeprefix("local-demo:")
         if not pyotp.TOTP(secret).verify(payload.totp_code):
@@ -255,17 +267,7 @@ def public_content(session: Session = Depends(get_session)):
 
 @app.get("/api/v1/functions")
 def functions():
-    return {
-        "items": [
-            {"code": "MACRO", "title": "Macro Dashboard", "route": "/macro", "status": "AVAILABLE"},
-            {"code": "PORT", "title": "Portfolio", "route": "/portfolio", "status": "AVAILABLE"},
-            {"code": "RISK", "title": "Risk", "route": "/risk", "status": "AVAILABLE"},
-            {"code": "HEDGE", "title": "Hedge", "route": "/hedge", "status": "AVAILABLE"},
-            {"code": "BT", "title": "Backtests", "route": "/backtests", "status": "AVAILABLE"},
-            {"code": "DROP", "title": "Data Drop", "route": "/data-drop", "status": "AVAILABLE"},
-            {"code": "PINE", "title": "TradingView Pine Export", "route": "/tradingview", "status": "AVAILABLE"},
-        ]
-    }
+    return {"items": [{**item, "code": item["mnemonic"], "title": item["name"], "status": item["implementationStatus"].upper()} for item in FUNCTIONS]}
 
 
 @app.get("/api/v1/search")
@@ -410,12 +412,12 @@ def recalculate_portfolio(session: Session = Depends(get_session)):
 
 @app.get("/api/v1/performance/default")
 def performance(session: Session = Depends(get_session)):
-    return PerformanceService(session).latest()
+    return portfolio_analytics(session)["performance"]
 
 
 @app.get("/api/v1/risk/default")
 def risk(session: Session = Depends(get_session)):
-    return RiskService(session).latest()
+    return portfolio_analytics(session)["risk"]
 
 
 @app.get("/api/v1/stress/default")
@@ -528,7 +530,8 @@ def report_download(report_id: str, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Report not found")
     local_path = report.get("local_path")
     if not local_path:
-        raise HTTPException(status_code=404, detail="Report is stored outside this API process")
+        data = ReportService(session).storage.get_bytes(report["object_key"])
+        return Response(data, media_type=report["content_type"], headers={"Content-Disposition": f'attachment; filename="{report["filename"]}"'})
     return FileResponse(local_path, filename=report["filename"], media_type=report["content_type"])
 
 

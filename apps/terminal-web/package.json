@@ -9,9 +9,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"terminal-web: interaction smoke tests covered by build\""
+    "test": "vitest run tests"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "3.11.2",
+    "react-resizable-panels": "2.1.7",
+    "fuse.js": "7.1.0",
     "@knk/design-system": "workspace:*",
     "@knk/api-client": "workspace:*",
     "@knk/domain": "workspace:*",

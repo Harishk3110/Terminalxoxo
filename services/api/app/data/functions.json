@@ -1,0 +1,1855 @@
+[
+  {
+    "mnemonic": "HOME",
+    "name": "Market Pulse",
+    "description": "Market Pulse.",
+    "category": "markets",
+    "keywords": [
+      "market pulse"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/overview",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "Q",
+    "name": "Quote",
+    "description": "Quote for the active security.",
+    "category": "markets",
+    "keywords": [
+      "quote"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/quote/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "GP",
+    "name": "Price Chart",
+    "description": "Price Chart for the active security.",
+    "category": "markets",
+    "keywords": [
+      "price chart"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/chart/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "TECH",
+    "name": "Technical Analysis",
+    "description": "Daily closes with calculated 20-day and 50-day simple moving averages.",
+    "category": "markets",
+    "keywords": [
+      "technical analysis"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/technicals/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "BREADTH",
+    "name": "Market Breadth",
+    "description": "Market Breadth.",
+    "category": "markets",
+    "keywords": [
+      "market breadth"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/markets",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "HEAT",
+    "name": "Heatmap",
+    "description": "Heatmap.",
+    "category": "markets",
+    "keywords": [
+      "heatmap"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/heatmap",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "SECTOR",
+    "name": "Sector Monitor",
+    "description": "Sector Monitor.",
+    "category": "markets",
+    "keywords": [
+      "sector monitor"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/sectors",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "DES",
+    "name": "Security Description",
+    "description": "Security Description for the active security.",
+    "category": "equities",
+    "keywords": [
+      "security description"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/security/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "FIN",
+    "name": "Financial Statements",
+    "description": "Financial Statements for the active security.",
+    "category": "equities",
+    "keywords": [
+      "financial statements"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/financials/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "VAL",
+    "name": "Valuation",
+    "description": "Valuation for the active security.",
+    "category": "equities",
+    "keywords": [
+      "valuation"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/valuation/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "DCF",
+    "name": "Discounted Cash Flow",
+    "description": "Discounted Cash Flow for the active security.",
+    "category": "equities",
+    "keywords": [
+      "discounted cash flow"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/dcf/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "WACC",
+    "name": "Weighted Average Cost of Capital",
+    "description": "Weighted Average Cost of Capital for the active security.",
+    "category": "equities",
+    "keywords": [
+      "weighted average cost of capital"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/wacc",
+    "implementationStatus": "in_development",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "COMP",
+    "name": "Comparable Companies",
+    "description": "Comparable Companies for the active security.",
+    "category": "equities",
+    "keywords": [
+      "comparable companies"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/comparables/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "EST",
+    "name": "Analyst Estimates",
+    "description": "Analyst Estimates for the active security.",
+    "category": "equities",
+    "keywords": [
+      "analyst estimates"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/est",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "EARN",
+    "name": "Earnings",
+    "description": "Earnings for the active security.",
+    "category": "equities",
+    "keywords": [
+      "earnings"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/earn",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "SCREEN",
+    "name": "Equity Screener",
+    "description": "Equity Screener.",
+    "category": "equities",
+    "keywords": [
+      "equity screener"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/security-master",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "RELVAL",
+    "name": "Relative Valuation",
+    "description": "Relative Valuation for the active security.",
+    "category": "equities",
+    "keywords": [
+      "relative valuation"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/comparables/{instrumentId}",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "OWN",
+    "name": "Ownership",
+    "description": "Ownership for the active security.",
+    "category": "equities",
+    "keywords": [
+      "ownership"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/own",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "SHORT",
+    "name": "Short Interest",
+    "description": "Short Interest for the active security.",
+    "category": "equities",
+    "keywords": [
+      "short interest"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/short",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "DIV",
+    "name": "Dividends",
+    "description": "Dividends for the active security.",
+    "category": "equities",
+    "keywords": [
+      "dividends"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/div",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "CA",
+    "name": "Corporate Actions",
+    "description": "Corporate Actions for the active security.",
+    "category": "equities",
+    "keywords": [
+      "corporate actions"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/ca",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "OPT",
+    "name": "Options Chain",
+    "description": "Options Chain for the active security.",
+    "category": "options",
+    "keywords": [
+      "options chain"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/opt",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "DELTA",
+    "name": "Delta",
+    "description": "Delta for the active security.",
+    "category": "options",
+    "keywords": [
+      "delta"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/delta",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "GAMMA",
+    "name": "Gamma",
+    "description": "Gamma for the active security.",
+    "category": "options",
+    "keywords": [
+      "gamma"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/gamma",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "THETA",
+    "name": "Theta",
+    "description": "Theta for the active security.",
+    "category": "options",
+    "keywords": [
+      "theta"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/theta",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "VEGA",
+    "name": "Vega",
+    "description": "Vega for the active security.",
+    "category": "options",
+    "keywords": [
+      "vega"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/vega",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "RHO",
+    "name": "Rho",
+    "description": "Rho for the active security.",
+    "category": "options",
+    "keywords": [
+      "rho"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/rho",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "GREEKS",
+    "name": "Option Greeks",
+    "description": "Option Greeks for the active security.",
+    "category": "options",
+    "keywords": [
+      "option greeks"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/greeks",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "ADV GREEKS",
+    "name": "Advanced Greeks",
+    "description": "Advanced Greeks for the active security.",
+    "category": "options",
+    "keywords": [
+      "advanced greeks"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/adv-greeks",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "GEX",
+    "name": "Gamma Exposure",
+    "description": "Gamma Exposure for the active security.",
+    "category": "options",
+    "keywords": [
+      "gamma exposure",
+      "gamma",
+      "gama"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/gex",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "DEX",
+    "name": "Delta Exposure",
+    "description": "Delta Exposure for the active security.",
+    "category": "options",
+    "keywords": [
+      "delta exposure"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/dex",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "IV",
+    "name": "Implied Volatility",
+    "description": "Implied Volatility for the active security.",
+    "category": "options",
+    "keywords": [
+      "implied volatility"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/iv",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "IVS",
+    "name": "Volatility Surface",
+    "description": "Volatility Surface for the active security.",
+    "category": "options",
+    "keywords": [
+      "volatility surface"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/ivs",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "SKEW",
+    "name": "Volatility Skew",
+    "description": "Volatility Skew for the active security.",
+    "category": "options",
+    "keywords": [
+      "volatility skew"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/skew",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "PCR",
+    "name": "Put/Call Ratio",
+    "description": "Put/Call Ratio for the active security.",
+    "category": "options",
+    "keywords": [
+      "put/call ratio"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/pcr",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "MAXPAIN",
+    "name": "Max Pain",
+    "description": "Max Pain for the active security.",
+    "category": "options",
+    "keywords": [
+      "max pain"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/maxpain",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "OIFLOW",
+    "name": "Options Flow",
+    "description": "Options Flow for the active security.",
+    "category": "options",
+    "keywords": [
+      "options flow"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/oiflow",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "PAYOFF",
+    "name": "Payoff Analysis",
+    "description": "Payoff Analysis for the active security.",
+    "category": "options",
+    "keywords": [
+      "payoff analysis"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/payoff",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "OPTSTRAT",
+    "name": "Options Strategy Builder",
+    "description": "Options Strategy Builder for the active security.",
+    "category": "options",
+    "keywords": [
+      "options strategy builder"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/optstrat",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "EMOVE",
+    "name": "Expected Move",
+    "description": "Expected Move for the active security.",
+    "category": "options",
+    "keywords": [
+      "expected move"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/emove",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "VOLCONE",
+    "name": "Volatility Cone",
+    "description": "Volatility Cone for the active security.",
+    "category": "options",
+    "keywords": [
+      "volatility cone"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/volcone",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Options market data"
+    ]
+  },
+  {
+    "mnemonic": "MACRO",
+    "name": "Macro Dashboard",
+    "description": "Macro Dashboard.",
+    "category": "macro",
+    "keywords": [
+      "macro dashboard"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/macro",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CAL",
+    "name": "Economic Calendar",
+    "description": "Economic Calendar.",
+    "category": "macro",
+    "keywords": [
+      "economic calendar"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/cal",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "CB",
+    "name": "Central Banks",
+    "description": "Central Banks.",
+    "category": "macro",
+    "keywords": [
+      "central banks"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/cb",
+    "implementationStatus": "provider_required",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CURVE",
+    "name": "Yield Curves",
+    "description": "Yield Curves.",
+    "category": "macro",
+    "keywords": [
+      "yield curves"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/macro",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "BONDS",
+    "name": "Bond Monitor",
+    "description": "Bond Monitor.",
+    "category": "fixed-income",
+    "keywords": [
+      "bond monitor"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/bonds",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "RATES",
+    "name": "Rates Monitor",
+    "description": "Rates Monitor.",
+    "category": "fixed-income",
+    "keywords": [
+      "rates monitor"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/macro",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CREDIT",
+    "name": "Credit Spreads",
+    "description": "Credit Spreads.",
+    "category": "fixed-income",
+    "keywords": [
+      "credit spreads"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/macro",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "DURATION",
+    "name": "Duration Analysis",
+    "description": "Duration Analysis.",
+    "category": "fixed-income",
+    "keywords": [
+      "duration analysis"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/duration",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "FX",
+    "name": "FX Monitor",
+    "description": "FX Monitor.",
+    "category": "fx",
+    "keywords": [
+      "fx monitor"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/fx",
+    "implementationStatus": "provider_required",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CARRY",
+    "name": "FX Carry",
+    "description": "FX Carry.",
+    "category": "fx",
+    "keywords": [
+      "fx carry"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/carry",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "FXVOL",
+    "name": "FX Volatility",
+    "description": "FX Volatility.",
+    "category": "fx",
+    "keywords": [
+      "fx volatility"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/fxvol",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "CRYPTO",
+    "name": "Crypto Monitor",
+    "description": "Crypto Monitor.",
+    "category": "crypto",
+    "keywords": [
+      "crypto monitor"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/crypto",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "PORT",
+    "name": "Portfolio",
+    "description": "Portfolio.",
+    "category": "portfolio",
+    "keywords": [
+      "portfolio"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/portfolio",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "POSITIONS",
+    "name": "Positions",
+    "description": "Positions.",
+    "category": "portfolio",
+    "keywords": [
+      "positions"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/positions",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "PERF",
+    "name": "Performance",
+    "description": "Performance.",
+    "category": "portfolio",
+    "keywords": [
+      "performance"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/performance",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "ATTR",
+    "name": "Attribution",
+    "description": "Attribution.",
+    "category": "portfolio",
+    "keywords": [
+      "attribution"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/attr",
+    "implementationStatus": "in_development",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "RISK",
+    "name": "Portfolio Risk",
+    "description": "Portfolio Risk.",
+    "category": "portfolio",
+    "keywords": [
+      "portfolio risk"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/risk",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "VAR",
+    "name": "Value at Risk",
+    "description": "Value at Risk.",
+    "category": "portfolio",
+    "keywords": [
+      "value at risk"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/risk",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "STRESS",
+    "name": "Stress Testing",
+    "description": "Stress Testing.",
+    "category": "portfolio",
+    "keywords": [
+      "stress testing"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/stress-tests",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "PORT GREEKS",
+    "name": "Portfolio Greeks",
+    "description": "Portfolio Greeks.",
+    "category": "portfolio",
+    "keywords": [
+      "portfolio greeks"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/port-greeks",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "HEDGE",
+    "name": "Hedge Recommendations",
+    "description": "Hedge Recommendations.",
+    "category": "portfolio",
+    "keywords": [
+      "hedge recommendations"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/hedge",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "REBAL",
+    "name": "Rebalance Recommendations",
+    "description": "Rebalance Recommendations.",
+    "category": "portfolio",
+    "keywords": [
+      "rebalance recommendations"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/rebal",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed market data"
+    ]
+  },
+  {
+    "mnemonic": "QUANT",
+    "name": "Quant Lab",
+    "description": "Quant Lab.",
+    "category": "quant",
+    "keywords": [
+      "quant lab"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/quant",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "BACKTEST",
+    "name": "Backtesting",
+    "description": "Backtesting.",
+    "category": "quant",
+    "keywords": [
+      "backtesting"
+    ],
+    "aliases": [
+      "BT"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/backtests",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "SIGNAL",
+    "name": "Signal Engine",
+    "description": "Signal Engine.",
+    "category": "quant",
+    "keywords": [
+      "signal engine"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/signal",
+    "implementationStatus": "in_development",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CORR",
+    "name": "Correlation",
+    "description": "Correlation.",
+    "category": "quant",
+    "keywords": [
+      "correlation"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [],
+    "route": "/risk",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "BETA",
+    "name": "Beta",
+    "description": "Beta.",
+    "category": "quant",
+    "keywords": [
+      "beta"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/risk",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "FACTOR",
+    "name": "Factor Lab",
+    "description": "Factor Lab.",
+    "category": "quant",
+    "keywords": [
+      "factor lab"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [],
+    "route": "/factor-lab",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "PAIR",
+    "name": "Pair Analysis",
+    "description": "Pair Analysis.",
+    "category": "quant",
+    "keywords": [
+      "pair analysis"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/pair",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "REG",
+    "name": "Regression",
+    "description": "Regression.",
+    "category": "quant",
+    "keywords": [
+      "regression"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [],
+    "route": "/functions/reg",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "STATS",
+    "name": "Statistics",
+    "description": "Statistics.",
+    "category": "quant",
+    "keywords": [
+      "statistics"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": true,
+    "supportedAssetClasses": [],
+    "route": "/factor-lab",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "WALK",
+    "name": "Walk-Forward Analysis",
+    "description": "Walk-Forward Analysis.",
+    "category": "quant",
+    "keywords": [
+      "walk-forward analysis"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/walk",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "MC",
+    "name": "Monte Carlo",
+    "description": "Monte Carlo.",
+    "category": "quant",
+    "keywords": [
+      "monte carlo"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/mc",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "EDGE",
+    "name": "Edge Lab",
+    "description": "Edge Lab.",
+    "category": "quant",
+    "keywords": [
+      "edge lab"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/edge",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "MODEL",
+    "name": "Model Lab",
+    "description": "Model Lab.",
+    "category": "quant",
+    "keywords": [
+      "model lab"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/model",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "RESEARCH",
+    "name": "Research Workspace",
+    "description": "Research Workspace.",
+    "category": "research",
+    "keywords": [
+      "research workspace"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/research",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "THESIS",
+    "name": "Investment Thesis",
+    "description": "Private free-form thesis notes; structured valuation and catalyst fields are not implemented.",
+    "category": "research",
+    "keywords": [
+      "investment thesis"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/thesis",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "IDEA",
+    "name": "Idea Tracker",
+    "description": "Idea Tracker.",
+    "category": "research",
+    "keywords": [
+      "idea tracker"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/ideas",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "NEWS",
+    "name": "News",
+    "description": "News for the active security.",
+    "category": "research",
+    "keywords": [
+      "news"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/news",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed research provider"
+    ]
+  },
+  {
+    "mnemonic": "SENT",
+    "name": "Sentiment",
+    "description": "Sentiment.",
+    "category": "research",
+    "keywords": [
+      "sentiment"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/sent",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed research provider"
+    ]
+  },
+  {
+    "mnemonic": "FILINGS",
+    "name": "Regulatory Filings",
+    "description": "Regulatory Filings for the active security.",
+    "category": "research",
+    "keywords": [
+      "regulatory filings"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/filings",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed research provider"
+    ]
+  },
+  {
+    "mnemonic": "TRANSCRIPTS",
+    "name": "Earnings Transcripts",
+    "description": "Earnings Transcripts for the active security.",
+    "category": "research",
+    "keywords": [
+      "earnings transcripts"
+    ],
+    "aliases": [],
+    "requiresSecurity": true,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [
+      "Equity",
+      "ETF"
+    ],
+    "route": "/functions/transcripts",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "Licensed research provider"
+    ]
+  },
+  {
+    "mnemonic": "DATA",
+    "name": "Data Explorer",
+    "description": "Data Explorer.",
+    "category": "data",
+    "keywords": [
+      "data explorer"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/data-catalogue",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "DROP",
+    "name": "Data Drop",
+    "description": "Data Drop.",
+    "category": "data",
+    "keywords": [
+      "data drop"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/data-drop",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CATALOGUE",
+    "name": "Data Catalogue",
+    "description": "Data Catalogue.",
+    "category": "data",
+    "keywords": [
+      "data catalogue"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/data-catalogue",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "JOBS",
+    "name": "Data Jobs",
+    "description": "Data Jobs.",
+    "category": "data",
+    "keywords": [
+      "data jobs"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/data-jobs",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "API",
+    "name": "API Monitor",
+    "description": "API Monitor.",
+    "category": "data",
+    "keywords": [
+      "api monitor"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/api-monitor",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "EXCEL",
+    "name": "Excel Studio",
+    "description": "Excel Studio.",
+    "category": "reports",
+    "keywords": [
+      "excel studio"
+    ],
+    "aliases": [
+      "XLS"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/excel-studio",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "DECK",
+    "name": "Deck Builder",
+    "description": "Deck Builder.",
+    "category": "reports",
+    "keywords": [
+      "deck builder"
+    ],
+    "aliases": [
+      "PPT"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/deck",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "PDF",
+    "name": "PDF Reports",
+    "description": "PDF Reports.",
+    "category": "reports",
+    "keywords": [
+      "pdf reports"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/pdf",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "PINE",
+    "name": "Pine Script Studio",
+    "description": "Pine Script Studio.",
+    "category": "tradingview",
+    "keywords": [
+      "pine script studio"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/tradingview",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "TV ALERTS",
+    "name": "TradingView Alert Inbox",
+    "description": "TradingView Alert Inbox.",
+    "category": "tradingview",
+    "keywords": [
+      "tradingview alert inbox"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/tv-alerts",
+    "implementationStatus": "in_development",
+    "providerRequirements": [
+      "Implementation pending"
+    ]
+  },
+  {
+    "mnemonic": "WATCH",
+    "name": "Watchlists",
+    "description": "Watchlists.",
+    "category": "system",
+    "keywords": [
+      "watchlists"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/watchlists",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "ALERT",
+    "name": "Alerts",
+    "description": "Alerts.",
+    "category": "system",
+    "keywords": [
+      "alerts"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/alerts",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "HEALTH",
+    "name": "System Health",
+    "description": "System Health.",
+    "category": "system",
+    "keywords": [
+      "system health"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/system-health",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "RECON",
+    "name": "Reconciliation",
+    "description": "Reconciliation.",
+    "category": "system",
+    "keywords": [
+      "reconciliation"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/reconciliation",
+    "implementationStatus": "provider_required",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "SETTINGS",
+    "name": "Settings",
+    "description": "Settings.",
+    "category": "system",
+    "keywords": [
+      "settings"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/settings/connections",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "CONN",
+    "name": "Connections",
+    "description": "Connections.",
+    "category": "system",
+    "keywords": [
+      "connections"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/settings/connections",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "SECURITY",
+    "name": "Security Settings",
+    "description": "Security Settings.",
+    "category": "system",
+    "keywords": [
+      "security settings"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/settings/security",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "FUNC",
+    "name": "Function Directory",
+    "description": "Function Directory.",
+    "category": "system",
+    "keywords": [
+      "function directory"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "AI",
+    "name": "KnK AI",
+    "description": "KnK AI.",
+    "category": "ai",
+    "keywords": [
+      "knk ai"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/functions/ai",
+    "implementationStatus": "provider_required",
+    "providerRequirements": [
+      "AI provider"
+    ]
+  }
+]

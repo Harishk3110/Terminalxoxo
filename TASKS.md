@@ -1,5 +1,28 @@
 # TASKS
 
+## Terminal UI V2 / 2026-09-06
+
+- [x] Audit the stacked layout and replace it with the requested terminal information architecture.
+- [x] Command header, quote context, tabs, rail, main workspace, inspector and actual status probes.
+- [x] Persistent workspaces, tab order/security, filters/configuration, import/export and reset.
+- [x] Canonical registry, fuzzy commands, aliases, security context menu and honest unsupported routes.
+- [x] Dense shared tables/charts, virtualized rows, first-column pinning, saved table views, CSV and report exports.
+- [x] Rebuild Overview, Macro, Portfolio, Performance, Risk, Stress, Hedge and Backtest views.
+- [x] Dynamic immutable stress jobs and configurable dataset-backed backtests.
+- [x] Financial statements, DCF/comparables, SMA charts, watchlist and market inspection.
+- [x] Validated CSV/JSON/XLSX import, catalogue/jobs, private notes and workbook/Pine workflows.
+- [x] Add focused backend/unit/browser tests and four-size screenshot checks.
+- [x] Pass the final fresh-database browser run: 10 tests and 33 existing screenshot comparisons, including mobile text containment.
+- [ ] Complete specialist functions currently marked provider_required or in_development.
+- [ ] Full panel docking, link groups, dataset/note/job command search and conflict-aware workspace syncing.
+- [ ] Attribution, WACC builder, structured theses, factor IC/walk-forward and custom sandboxed strategy execution.
+- [ ] Options repricing, real covariance stress, multi-asset hedge optimization, broker reconciliation and live data credentials.
+- [ ] PDF/deck generation, arbitrary sheet previews, XLS/Parquet/Arrow/ZIP parsing and richer table exports.
+- [ ] Production auth/CSRF/rate limits, encrypted TOTP secrets, per-user authorization and worker supervision.
+- [ ] Full container startup and remote provider checks in a configured environment.
+
+The older V1 checklist below is historical. Current capabilities and verification are in STATUS.md and docs/VISUAL_ACCEPTANCE.md.
+
 ## Directive Tracking
 
 - [x] Continue in the current repository, branch, and remote.

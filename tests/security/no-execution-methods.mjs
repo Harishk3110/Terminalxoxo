@@ -4,7 +4,7 @@ import { readdirSync, statSync } from "node:fs";
 
 const root = process.cwd();
 const scanRoots = ["apps", "packages", "services"];
-const skipped = new Set(["node_modules", ".next", "dist", "coverage", "__pycache__", "tests"]);
+const skipped = new Set(["node_modules", ".next", ".next-prod", ".next-build", "logs", "dist", "coverage", "__pycache__", "tests"]);
 const extensions = new Set([".ts", ".tsx", ".js", ".mjs", ".py", ".json", ".md"]);
 const forbidden = [
   "place" + "Order",

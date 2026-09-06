@@ -1,5 +1,7 @@
 # Build Evidence
 
+This is the archived V1 evidence. Current terminal V2 results are in STATUS.md and docs/VISUAL_ACCEPTANCE.md.
+
 Date: 2026-09-05
 
 Base commit at validation start: `de69cd7`

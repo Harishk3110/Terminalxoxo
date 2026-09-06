@@ -6,6 +6,7 @@ import json
 import uuid
 from datetime import date, datetime, timezone
 from datetime import timedelta
+from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -393,6 +394,16 @@ class PortfolioService:
         }
 
     def add_manual_transaction(self, payload: dict) -> dict:
+        if payload["transaction_type"] not in {"BUY", "SELL", "DIVIDEND", "FEE", "DEPOSIT"}:
+            raise ValueError("Unsupported manual ledger transaction")
+        for field in ("quantity", "price", "fee", "fx_rate_to_base"):
+            value = Decimal(str(payload.get(field, "0")))
+            if not value.is_finite() or value < 0:
+                raise ValueError(f"{field} must be finite and non-negative")
+        if Decimal(str(payload.get("fx_rate_to_base", 1))) <= 0:
+            raise ValueError("FX rate must be positive")
+        if payload["transaction_type"] in {"BUY", "SELL"} and (not payload.get("symbol") or Decimal(str(payload.get("quantity", 0))) <= 0 or Decimal(str(payload.get("price", 0))) <= 0):
+            raise ValueError("Security, positive quantity and positive price are required")
         portfolio = self.repo.default_portfolio()
         if not portfolio:
             raise ValueError("Default portfolio not seeded")
@@ -401,6 +412,19 @@ class PortfolioService:
             instrument = InstrumentRepository(self.session).by_symbol(payload["symbol"])
             if instrument is None:
                 raise ValueError(f"Unknown instrument {payload['symbol']}")
+            if payload.get("currency") != instrument.currency:
+                raise ValueError("Transaction currency must match the security currency")
+        if payload["transaction_type"] == "SELL":
+            trade_date = date.fromisoformat(payload["trade_date"])
+            balance = Decimal("0")
+            for existing in self.repo.transactions(portfolio.id):
+                if existing.instrument_id == instrument.id and existing.trade_date <= trade_date:
+                    if existing.transaction_type == "BUY":
+                        balance += existing.quantity
+                    elif existing.transaction_type == "SELL":
+                        balance -= existing.quantity
+            if Decimal(str(payload["quantity"])) > balance:
+                raise ValueError("Sale exceeds recorded holdings on the trade date; short selling is not supported")
         txn = self.repo.add_transaction(
             portfolio_id=portfolio.id,
             account_id=None,
@@ -435,7 +459,7 @@ class PortfolioService:
             fee = Decimal(txn.fee)
             currency = txn.currency
             if txn.transaction_type == "DEPOSIT":
-                cash[currency] = cash.get(currency, Decimal("0")) + Decimal(portfolio.reference_capital)
+                cash[currency] = cash.get(currency, Decimal("0")) + (quantity * price or Decimal(portfolio.reference_capital))
             elif txn.transaction_type == "BUY" and txn.instrument_id:
                 state = holdings.setdefault(txn.instrument_id, {"qty": Decimal("0"), "cost": Decimal("0")})
                 gross_native = quantity * price
@@ -794,16 +818,20 @@ def infer_tabular(data: bytes, suffix: str) -> tuple[list[dict], list[dict]]:
         raise ValueError("Only CSV and JSON parsing is enabled in the API process; XLSX/Parquet are routed to worker jobs")
     if suffix == "json":
         payload = json.loads(data.decode("utf-8"))
+        if not isinstance(payload, (list, dict)):
+            raise ValueError("JSON must contain an array of row objects")
         rows = payload if isinstance(payload, list) else payload.get("rows", [])
     else:
         sample = data[:4096].decode("utf-8-sig")
         dialect = csv.Sniffer().sniff(sample)
         reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig")), dialect=dialect)
         rows = list(reader)
+    if not isinstance(rows, list) or any(not isinstance(row, dict) or any(not isinstance(key, str) for key in row) for row in rows):
+        raise ValueError("Each data row must be an object with named columns")
     columns = []
     for name in (rows[0].keys() if rows else []):
         values = [row.get(name) for row in rows[:50]]
-        inferred = "number" if all(_is_number(value) for value in values if value not in {None, ""}) else "string"
+        inferred = "number" if all(_is_number(value) for value in values if value not in (None, "")) else "string"
         if "date" in name.lower():
             inferred = "date"
         columns.append({"name": name, "type": inferred, "role": None})
@@ -894,6 +922,12 @@ class BacktestService:
         return to_jsonable({"id": run.id, "status": run.status, "initial_capital": run.initial_capital, "final_equity": run.final_equity, "parameters": run.parameters, "quality": run.quality, "metrics": metrics, "equity_curve": [{"date": item.date, "equity": item.equity, "drawdown": item.drawdown} for item in curve]})
 
 
+@dataclass(frozen=True)
+class ReportFormula:
+    expression: str
+    cached_value: float
+
+
 class ReportService:
     def __init__(self, session: Session, storage: ObjectStorage | None = None):
         self.session = session
@@ -973,6 +1007,14 @@ class ReportService:
         return self._write_workbook("macro-dashboard", sheets)
 
     def get_report(self, report_id: str) -> dict | None:
+        try:
+            uuid.UUID(report_id)
+        except ValueError:
+            return None
+        try:
+            return json.loads(self.storage.get_bytes(f"reports/{report_id}/manifest.json"))
+        except Exception:
+            pass
         root = self.storage.local_path(f"reports/{report_id}") if hasattr(self.storage, "local_path") else None
         if not root or not root.is_dir():
             return None
@@ -1017,9 +1059,14 @@ class ReportService:
         data = output.getvalue()
         key = f"reports/{report_id}/{filename}"
         stored = self.storage.put_bytes(key=key, data=data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        return {"report_id": report_id, "object_key": stored.object_key, "content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "filename": filename, "status": "SUCCEEDED", "quality": QUALITY_DEMO}
+        result = {"report_id": report_id, "object_key": stored.object_key, "content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "filename": filename, "status": "SUCCEEDED", "quality": QUALITY_DEMO, "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "download_url": f"/api/v1/reports/{report_id}/download"}
+        self.storage.put_bytes(key=f"reports/{report_id}/manifest.json", data=json.dumps(result).encode(), content_type="application/json")
+        return result
 
     def _write_cell(self, sheet: Any, row: int, column: int, value: Any, currency: Any, pct: Any, default_format: Any) -> None:
+        if isinstance(value, ReportFormula):
+            sheet.write_formula(row, column, value.expression, default_format, value.cached_value)
+            return
         if isinstance(value, Decimal):
             number = float(value)
             sheet.write_number(row, column, number, pct if abs(number) <= 1 else currency)

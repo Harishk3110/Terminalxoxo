@@ -35,6 +35,7 @@ class ObjectStorage:
             )
 
     def put_bytes(self, *, key: str, data: bytes, content_type: str) -> StoredObject:
+        self._validate_key(key)
         digest = hashlib.sha256(data).hexdigest()
         if self._s3:
             self._s3.put_object(Bucket=self.settings.object_storage_bucket, Key=key, Body=data, ContentType=content_type)
@@ -45,13 +46,20 @@ class ObjectStorage:
         return StoredObject(object_key=key, content_hash=digest, size_bytes=len(data))
 
     def get_bytes(self, key: str) -> bytes:
+        self._validate_key(key)
         if self._s3:
             response = self._s3.get_object(Bucket=self.settings.object_storage_bucket, Key=key)
             return response["Body"].read()
         return (self.local_root / key).read_bytes()
 
     def local_path(self, key: str) -> Path | None:
+        self._validate_key(key)
         if self._s3:
             return None
         path = self.local_root / key
         return path if path.exists() else None
+
+    def _validate_key(self, key: str) -> None:
+        target = (self.local_root / key).resolve()
+        if not target.is_relative_to(self.local_root.resolve()) or ".." in key.replace("\\", "/").split("/"):
+            raise ValueError("Invalid object key")

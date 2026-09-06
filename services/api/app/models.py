@@ -796,3 +796,31 @@ class RecentCommand(IdMixin, Base):
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
     command: Mapped[str] = mapped_column(String(160), nullable=False)
     route: Mapped[str] = mapped_column(String(240), nullable=False)
+
+
+class WorkspaceState(IdMixin, Base):
+    __tablename__ = "workspace_states"
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), unique=True, nullable=False)
+    configuration: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class AnalysisRun(IdMixin, Base):
+    __tablename__ = "analysis_runs"
+    kind: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="QUEUED", nullable=False)
+    parameters: Mapped[dict] = mapped_column(JSON, nullable=False)
+    result: Mapped[dict | None] = mapped_column(JSON)
+    history: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class FundamentalSnapshot(IdMixin, Base):
+    __tablename__ = "fundamental_snapshots"
+    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, unique=True)
+    source: Mapped[str] = mapped_column(String(120), nullable=False)
+    quality: Mapped[str] = mapped_column(String(40), nullable=False)
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    statements: Mapped[dict] = mapped_column(JSON, nullable=False)
