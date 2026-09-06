@@ -521,6 +521,7 @@ export default function TerminalShell({ route }: { route: string }) {
             ["PORTFOLIO", "/overview"],
             ["EQUITY", "/equity"],
             ["QUANT", "/quant-dashboard"],
+            ["OPTIONS", "/options"],
             ["RISK & TRADE", "/risk-trade-monitor"],
             ["RESEARCH", "/research"],
             ["DATA", "/data-drop"],

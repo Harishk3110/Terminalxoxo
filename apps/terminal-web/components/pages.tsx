@@ -52,8 +52,18 @@ const ThesisWorkspace = dynamic(() =>
 const MarketSecurityWorkspace = dynamic(() =>
   import("./market-security-page").then((m) => m.MarketSecurityWorkspace),
 );
+const OptionsWorkspace = dynamic(() =>
+  import("./options-page").then((m) => m.OptionsWorkspace),
+);
 
 export function PageRouter({ route }: { route: string }) {
+  if (
+    route.startsWith("/options") ||
+    /^\/functions\/(opt|delta|gamma|theta|vega|rho|greeks|adv-greeks|gex|dex|iv|ivs|skew|pcr|maxpain|payoff|optstrat|emove|port-greeks)$/.test(
+      route,
+    )
+  )
+    return <OptionsWorkspace route={route} />;
   if (route === "/broker-monitor") return <BrokerMonitorPage />;
   if (route === "/price-sources") return <SourcePreferencesPage />;
   if (["/overview", "/home", "/"].includes(route)) return <PortfolioHomePage />;

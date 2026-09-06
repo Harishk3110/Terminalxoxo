@@ -1,5 +1,15 @@
 # Terminal Acceptance
 
+## Options Checkpoint
+
+- 23 focused tests passed: BSM reference/IV/advanced Greeks, GEX signs, quote
+  exclusions, provider units, owned quantities, imports and source integrity.
+- Production build and new-module Ruff passed.
+- Browser chain/GEX/Greeks/IV/payoff/history workflow passed; ledger transactions
+  and NAV were unchanged. Canvas pixels and desktop/mobile width were checked.
+- 1440px/390px screenshots inspected. Production providers and complete multi-
+  underlying portfolio derivatives risk are not certified by the synthetic fixture.
+
 This document records measured checks, not a claim that all nine milestones pass.
 
 ## Terminal-only Checkpoint

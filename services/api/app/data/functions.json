@@ -430,8 +430,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/opt",
-    "implementationStatus": "provider_required",
+    "route": "/options",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -451,8 +451,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/delta",
-    "implementationStatus": "provider_required",
+    "route": "/options/delta",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -472,8 +472,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/gamma",
-    "implementationStatus": "provider_required",
+    "route": "/options/gamma",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -493,8 +493,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/theta",
-    "implementationStatus": "provider_required",
+    "route": "/options/theta",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -514,8 +514,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/vega",
-    "implementationStatus": "provider_required",
+    "route": "/options/vega",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -535,8 +535,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/rho",
-    "implementationStatus": "provider_required",
+    "route": "/options/rho",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -556,8 +556,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/greeks",
-    "implementationStatus": "provider_required",
+    "route": "/options/greeks",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -577,8 +577,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/adv-greeks",
-    "implementationStatus": "provider_required",
+    "route": "/options/adv-greeks",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -600,8 +600,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/gex",
-    "implementationStatus": "provider_required",
+    "route": "/options/gex",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -621,8 +621,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/dex",
-    "implementationStatus": "provider_required",
+    "route": "/options/dex",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -642,8 +642,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/iv",
-    "implementationStatus": "provider_required",
+    "route": "/options/iv",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -663,8 +663,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/ivs",
-    "implementationStatus": "provider_required",
+    "route": "/options/ivs",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -684,8 +684,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/skew",
-    "implementationStatus": "provider_required",
+    "route": "/options/skew",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -705,8 +705,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/pcr",
-    "implementationStatus": "provider_required",
+    "route": "/options/pcr",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -726,8 +726,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/maxpain",
-    "implementationStatus": "provider_required",
+    "route": "/options/maxpain",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -768,8 +768,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/payoff",
-    "implementationStatus": "provider_required",
+    "route": "/options/payoff",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -789,8 +789,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/optstrat",
-    "implementationStatus": "provider_required",
+    "route": "/options/optstrat",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -810,8 +810,8 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/emove",
-    "implementationStatus": "provider_required",
+    "route": "/options/emove",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Options market data"
     ]
@@ -1165,8 +1165,8 @@
     "requiresSecurity": false,
     "supportsMultipleSecurities": false,
     "supportedAssetClasses": [],
-    "route": "/functions/port-greeks",
-    "implementationStatus": "provider_required",
+    "route": "/options/port-greeks",
+    "implementationStatus": "available",
     "providerRequirements": [
       "Licensed market data"
     ]

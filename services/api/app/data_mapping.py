@@ -33,6 +33,7 @@ ALIASES = {
     "rate": ["rate", "fx rate", "exchange rate"], "average_cost": ["average cost", "avg cost", "cost price"],
 }
 SPECS = {
+    "GENERIC_OPTIONS_CHAIN": "options_chain",
     "KOYFIN_PRICE_HISTORY": "ohlcv", "KOYFIN_EQUITY_SNAPSHOT": "snapshot",
     "KOYFIN_WATCHLIST_EXPORT": "snapshot", "KOYFIN_TECHNICAL_EXPORT": "technical",
     "KOYFIN_FUND_EXPORT": "fundamentals_wide", "KOYFIN_MACRO_EXPORT": "macro",
@@ -42,6 +43,7 @@ SPECS = {
     "GENERIC_FX_HISTORY": "fx",
 }
 REQUIRED = {
+    "options_chain": ["symbol", "option_symbol", "expiry", "strike", "right", "multiplier", "exercise_style", "timestamp", "iv_unit"],
     "ohlcv": ["date", "close"], "snapshot": ["symbol", "close", "date"],
     "technical": ["symbol", "date"], "fundamentals_long": ["symbol", "period", "metric", "value"],
     "fundamentals_wide": ["symbol", "period"], "macro": ["date", "value"],
@@ -59,7 +61,11 @@ def seed_profiles(session):
     existing = set(session.scalars(select(models.MappingProfile.code)).all())
     for code, kind in SPECS.items():
         if code not in existing:
-            session.add(models.MappingProfile(code=code, version=1, source="KOYFIN FILE" if code.startswith("KOYFIN") else "EXTERNAL FILE", dataset_type=kind, approved=False, rules={"aliases": ALIASES, "required": REQUIRED[kind], "defaults": {}, "auto_import": False, "first_mapping_requires_approval": True}))
+            aliases = ALIASES
+            if kind == "options_chain":
+                from .options_data import OPTION_ALIASES
+                aliases = OPTION_ALIASES
+            session.add(models.MappingProfile(code=code, version=1, source="KOYFIN FILE" if code.startswith("KOYFIN") else "EXTERNAL FILE", dataset_type=kind, approved=False, rules={"aliases": aliases, "required": REQUIRED[kind], "defaults": {}, "auto_import": False, "first_mapping_requires_approval": True}))
     session.flush()
 
 
@@ -154,7 +160,12 @@ def normalize(rows, mapping, profile, instruments, metadata, defaults, resolutio
                     if day > datetime.now(timezone.utc).date():
                         raise ValueError(f"Future {field}")
                     row[field] = day.isoformat()
-            if kind in {"ohlcv", "snapshot"}:
+            if kind == "options_chain":
+                from .option_contracts import normalize_option
+                row = normalize_option(row)
+                key = (row["option_symbol"], row["timestamp"])
+                warnings.append("Option expiry time defaults to 20:00 UTC only when not explicitly mapped. Provider Greeks require explicit STANDARD units; options files do not alter ledger positions.")
+            elif kind in {"ohlcv", "snapshot"}:
                 if not item:
                     raise ValueError("Map a security or supply a filename symbol")
                 for field in ("open", "high", "low", "close", "adjusted_close"):

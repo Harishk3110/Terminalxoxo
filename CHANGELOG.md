@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Options and Gamma
+
+- Add hash-pinned options imports, explicit demo generation, vollib European
+  pricing/IV/Greeks and separate provider Greek provenance.
+- Add strike/expiry GEX/DEX, fixed-IV spot profiles, observed surface/skew,
+  max-pain/expected-move estimates and selected-underlying owned/hypothetical Greeks.
+- Add private responsive options workspace, saved histories and tests proving
+  hypothetical payoff does not mutate the ledger. Document all model limits.
+
 ## Source-Pinned Equity Research
 
 - Added annual/quarterly/TTM statements, ratio guards and metric-level import provenance.

@@ -380,6 +380,50 @@
   align-items: center;
   gap: 8px;
 }
+.options-workspace > .terminal-panel {
+  height: 340px;
+}
+.options-workspace > .page-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.options-workspace .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+.options-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.options-leg {
+  display: grid;
+  grid-template-columns: minmax(140px, 2fr) minmax(90px, 1fr) minmax(
+      90px,
+      1fr
+    ) 30px;
+  gap: 8px;
+  align-items: end;
+  padding: 5px;
+}
+.options-leg select,
+.options-leg input {
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 800px) {
+  .options-workspace > .page-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .options-leg {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .options-leg > :first-child {
+    grid-column: 1 / -1;
+  }
+}
 .equity-workspace .toolbar {
   display: flex;
   flex-wrap: wrap;

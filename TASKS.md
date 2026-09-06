@@ -17,7 +17,8 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Complete corporate-action/weekly/intraday backtests, point-in-time fundamental factors, detailed alpha attribution and general strategy walk-forward optimisation.
 - [x] Verify annual/quarterly/TTM, saved FCFF/WACC/comparables, structured theses and security views.
 - [ ] Complete verified segments, ROIC, historical/forward multiples and provider-driven earnings/ownership/short-interest/events.
-- [ ] Complete options-chain/Greeks/gamma/GEX acceptance.
+- [x] Verify imported/synthetic chains, Greeks, GEX/DEX, observed IV, saved analyses and hypothetical payoff without ledger mutation.
+- [ ] Extend options beyond European pricing and selected-underlying positions; historical OI flow/cones require datasets.
 - [ ] Complete provider/file-source/freshness acceptance.
 - [ ] Complete internal Excel/decks/PDF/Pine acceptance.
 - [ ] Verify all operations components and final regression suite.

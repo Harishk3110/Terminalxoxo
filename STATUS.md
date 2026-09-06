@@ -24,6 +24,14 @@ portfolio endpoints returned 401. The real database remains in place.
 
 ## Continuing Work
 
+Options checkpoint: 23 focused pricing/analytics/API/import tests passed. Node 22
+production build and new-module Ruff passed. Browser synthetic-chain/GEX-sign/
+Greek/IV/payoff/save-refresh checks passed, including unchanged ledger transactions
+and NAV. Canvas pixel checks and inspected 1440px/390px screenshots passed.
+European BSM, provider-unit requirements, expiry-time convention, missing-chain
+states and selected-underlying limits are explicit in OPTIONS_DATA.md and
+GAMMA_GEX_METHODOLOGY.md. No real options provider or broker execution is connected.
+
 The guarded SGD 100,000 demo correction is applied and its SQLite backup verified.
 Original 16 transactions, 9 transaction details, 23 valuation runs and 1 analysis
 run are unchanged. NAV at the coherent demo close is SGD 100,597.57, BALANCED.
