@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Private Data Connections
+
+- Add recorded SEC/OpenFIGI/market/options adapter controls, read-only imports,
+  source versions, bounded requests, safe failures and reviewed FIGI assignment.
+- Add XLS/Parquet/JSONL, configurable folder-agent upload/archive controls and
+  private PDF/image attachments linked to thesis records.
+- Preserve Koyfin file attribution, source precedence and explicit approval.
+- Correct asynchronous connection toggles and stale function-count assertions.
+
 ## Options and Gamma
 
 - Add hash-pinned options imports, explicit demo generation, vollib European

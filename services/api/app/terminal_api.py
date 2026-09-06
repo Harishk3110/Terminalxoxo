@@ -455,7 +455,7 @@ def terminal_health(session: Session = Depends(get_session)):
     from .broker_api import current_snapshot
     broker, broker_active = current_snapshot(session, profile.portfolio_id) if profile else (None, False)
     rows.append({"service": "IBKR paper agent", "state": "READ_ONLY" if broker_active else "OFFLINE", "as_of": broker.as_of.isoformat() if broker else None, "detail": "Observed paired paper snapshot" if broker else "No broker snapshot received"})
-    for name in ("SEC EDGAR", "OpenFIGI", "AI provider", "News provider", "Options provider", "Email alerts", "Telegram", "Sentry", "Backup", "Public web", "Report service", "Workflow orchestrator"):
+    for name in ("SEC EDGAR", "OpenFIGI", "AI provider", "News provider", "Options provider", "Email alerts", "Telegram", "Sentry", "Backup", "Report service", "Workflow orchestrator"):
         rows.append({"service": name, "state": "NOT_VERIFIED", "as_of": now, "detail": "No current heartbeat or configured probe"})
     try:
         commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL, timeout=2).decode().strip()

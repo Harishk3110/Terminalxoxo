@@ -25,6 +25,16 @@ class Settings(BaseSettings):
     fred_base_url: str = Field(default="https://api.stlouisfed.org/fred", alias="FRED_BASE_URL")
     fred_request_timeout_seconds: float = Field(default=15.0, alias="FRED_REQUEST_TIMEOUT_SECONDS")
     fred_max_retries: int = Field(default=3, alias="FRED_MAX_RETRIES")
+    sec_enabled: bool = Field(default=False, alias="SEC_ENABLED")
+    sec_user_agent: str | None = Field(default=None, alias="SEC_USER_AGENT")
+    openfigi_enabled: bool = Field(default=False, alias="OPENFIGI_ENABLED")
+    openfigi_api_key: str | None = Field(default=None, alias="OPENFIGI_API_KEY")
+    market_enabled: bool = Field(default=False, alias="MARKET_DATA_ENABLED")
+    market_base_url: str | None = Field(default=None, alias="MARKET_DATA_BASE_URL")
+    market_api_key: str | None = Field(default=None, alias="MARKET_DATA_API_KEY")
+    options_enabled: bool = Field(default=False, alias="OPTIONS_DATA_ENABLED")
+    options_base_url: str | None = Field(default=None, alias="OPTIONS_DATA_BASE_URL")
+    options_api_key: str | None = Field(default=None, alias="OPTIONS_DATA_API_KEY")
 
 
 @lru_cache

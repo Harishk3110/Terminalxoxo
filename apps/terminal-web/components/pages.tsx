@@ -1,5 +1,6 @@
 "use client";
 import { PerformanceWorkspace } from "./performance-page";
+import { ConnectionsWorkspace } from "./connections-page";
 import { HedgeWorkspace } from "./hedge-page";
 import { MonteCarloWorkspace } from "./monte-carlo-page";
 import dynamic from "next/dynamic";
@@ -15,7 +16,6 @@ import { PortfolioPage, RiskPage, StressPage, MacroPage } from "./core-pages";
 import {
   AuthPage,
   AlertsPage,
-  ConnectionsPage,
   FunctionDirectory,
   HealthPage,
   ReconciliationPage,
@@ -94,7 +94,9 @@ export function PageRouter({ route }: { route: string }) {
   if (route === "/tradingview") return <PinePage />;
   if (route === "/excel-studio") return <ExcelPage />;
   if (["/settings/connections", "/settings"].includes(route))
-    return <ConnectionsPage />;
+    return <ConnectionsWorkspace />;
+  if (["/filings", "/functions/filings"].includes(route))
+    return <ConnectionsWorkspace filingsOnly />;
   if (["/system-health", "/api-monitor"].includes(route)) return <HealthPage />;
   if (route === "/alerts") return <AlertsPage />;
   if (["/settings/security", "/login"].includes(route)) return <AuthPage />;

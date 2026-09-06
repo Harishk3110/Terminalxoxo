@@ -812,7 +812,7 @@ export function DataDropOperationsPage() {
             aria-label="Upload data files"
             type="file"
             multiple
-            accept=".csv,.xlsx,.json"
+            accept=".csv,.xlsx,.xls,.json,.jsonl,.parquet"
             disabled={uploading}
             onChange={(e) => uploadFiles(e.target.files)}
           />

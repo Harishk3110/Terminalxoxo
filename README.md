@@ -13,6 +13,7 @@ Use Node.js 22, pnpm 9.15.4 and Python 3.12. Install frontend and Python depende
 
 ```powershell
 corepack pnpm install --frozen-lockfile
+python -m pip install -r services/api/requirements.txt
 python -m pip install -r requirements-dev.txt
 ```
 
@@ -43,6 +44,12 @@ registration is disabled; provision the first administrator from the backend
 console with `python services/api/scripts/create_admin.py`.
 
 ## Production Build
+
+Private data connections and required server configuration are documented in
+[Provider Connections](docs/PROVIDER_CONNECTIONS.md). Lawful Koyfin exports,
+folder-agent controls and private attachments are covered in
+[Koyfin File Import](docs/KOYFIN_FILE_IMPORT.md). No connected provider changes
+unrelated demo figures to LIVE.
 
 ```powershell
 $env:NEXT_PUBLIC_APP_ENV='local'

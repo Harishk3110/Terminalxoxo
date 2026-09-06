@@ -1515,7 +1515,7 @@
   {
     "mnemonic": "FILINGS",
     "name": "Regulatory Filings",
-    "description": "Regulatory Filings for the active security.",
+    "description": "Private SEC filing archive with document links and source versions.",
     "category": "research",
     "keywords": [
       "regulatory filings"
@@ -1527,10 +1527,10 @@
       "Equity",
       "ETF"
     ],
-    "route": "/functions/filings",
-    "implementationStatus": "provider_required",
+    "route": "/filings",
+    "implementationStatus": "available",
     "providerRequirements": [
-      "Licensed research provider"
+      "SEC contact identity and imported filings"
     ]
   },
   {

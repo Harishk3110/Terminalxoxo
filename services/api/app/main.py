@@ -33,6 +33,8 @@ from .risk_api import router as risk_router
 from .alpha_api import router as alpha_router
 from .equity_api import router as equity_router
 from .options_api import router as options_router
+from .provider_api import router as provider_router
+from .attachments_api import router as attachments_router
 from .terminal_analytics import FUNCTIONS, portfolio_analytics
 
 try:
@@ -66,6 +68,8 @@ app.include_router(risk_router)
 app.include_router(alpha_router)
 app.include_router(equity_router)
 app.include_router(options_router)
+app.include_router(provider_router)
+app.include_router(attachments_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,7 +112,7 @@ class TransactionRequest(BaseModel):
 
 
 class BackfillRequest(BaseModel):
-    series_ids: list[str] = Field(default_factory=lambda: ["FEDFUNDS", "DGS2", "DGS10", "CPIAUCSL", "UNRATE"])
+    series_ids: list[str] = Field(default_factory=lambda: ["FEDFUNDS", "DGS2", "DGS10", "CPIAUCSL", "UNRATE"], min_length=1, max_length=25)
     observation_start: str | None = "2016-01-01"
 
 
@@ -324,11 +328,10 @@ def providers(session: Session = Depends(get_session)):
 
 @app.post("/api/v1/providers/fred/test")
 async def fred_test(request: Request, session: Session = Depends(get_session)):
-    provider = FredProvider(settings)
-    status = await provider.test_connection(correlation_id(request))
-    ProviderRepository(session).upsert_connection(provider_name="FRED", provider_type="macro", enabled=settings.fred_enabled, configured=provider.configured, state=status.connection_state.value, capabilities=provider.capabilities, last_error=status.last_error)
+    from .provider_api import test_connection
+    result = await test_connection("fred", request, session)
     session.commit()
-    return to_jsonable(status.__dict__)
+    return result
 
 
 @app.get("/api/v1/providers/fred/status")
@@ -373,7 +376,7 @@ async def macro_refresh(series_id: str, request: Request, session: Session = Dep
     result = await FredIngestionService(session, FredProvider(settings)).refresh_series(series_id, cid)
     job = JobRepository(session).get(job.id)
     if job:
-        JobRepository(session).update(job, status=result["state"] if result["state"] != "NOT_CONFIGURED" else "FAILED", progress=Decimal("1"), records_received=result["records_received"], records_accepted=result["records_accepted"], finished_at=datetime.now(timezone.utc), error_category=None if result["state"] == "SUCCEEDED" else "PROVIDER_NOT_CONFIGURED")
+        JobRepository(session).update(job, status="SUCCEEDED" if result["state"] == "SUCCEEDED" else "FAILED", progress=Decimal("1"), records_received=result["records_received"], records_accepted=result["records_accepted"], finished_at=datetime.now(timezone.utc), error_category=None if result["state"] == "SUCCEEDED" else result["state"])
         session.commit()
     DATA_RECORDS_INGESTED.labels("FRED", series_id).inc(result["records_accepted"])
     return {"job_id": job.id if job else None, **result}
@@ -394,7 +397,7 @@ async def macro_backfill(payload: BackfillRequest, request: Request, session: Se
         received += result["records_received"]
     job = JobRepository(session).get(job.id)
     if job:
-        state = "SUCCEEDED" if accepted else "FAILED"
+        state = "SUCCEEDED" if states and all(next(iter(item.values())) == "SUCCEEDED" for item in states) else "FAILED"
         JobRepository(session).update(job, status=state, progress=Decimal("1"), records_received=received, records_accepted=accepted, finished_at=datetime.now(timezone.utc), error_category=None if accepted else "PROVIDER_NOT_CONFIGURED")
         session.commit()
     return {"job_id": job.id if job else None, "records_received": received, "records_accepted": accepted, "series_states": states}

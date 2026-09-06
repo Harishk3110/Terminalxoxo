@@ -1,5 +1,16 @@
 # Terminal Acceptance
 
+## Data Checkpoint
+
+- 740 sprint, 98 API, 231 frontend and five shared-package tests passed.
+- Focused provider/FRED rerun: 18 passed, including atomic storage-failure rollback.
+- Koyfin CSV approval, source fallback, portfolio revalue and saved review browser
+  workflow passed. Connection enable/revoke/refresh passed after a checkbox fix.
+- Source/hash/PII isolation, failed requests, Parquet/XLS/JSONL, attachments and
+  disabled FRED legacy ingestion have substantive tests.
+- No live SEC/OpenFIGI/vendor connectivity was certified by mocked transports.
+- New docs record file-agent settings, model limits and broker read-only boundaries.
+
 ## Options Checkpoint
 
 - 23 focused tests passed: BSM reference/IV/advanced Greeks, GEX signs, quote

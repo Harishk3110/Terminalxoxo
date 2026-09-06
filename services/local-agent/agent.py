@@ -17,7 +17,7 @@ import keyring
 
 VERSION = "1.0.0"
 SERVICE = "KnK Capital Data Drop"
-FOLDERS = ["inbox/koyfin", "inbox/prices", "inbox/fundamentals", "inbox/macro", "inbox/portfolio", "inbox/custom", "processing", "review", "processed", "rejected", "logs"]
+FOLDERS = ["inbox/koyfin", "inbox/prices", "inbox/fundamentals", "inbox/macro", "inbox/portfolio", "inbox/positions", "inbox/transactions", "inbox/options", "inbox/custom", "processing", "review", "processed", "rejected", "quarantine", "logs"]
 
 
 def safe_path(root, value):
@@ -58,11 +58,13 @@ class Agent:
         self.client = httpx.Client(base_url=url, headers={"Authorization": f"Bearer {token}"}, timeout=30, follow_redirects=False)
         self.observed = {}
         self.errors = 0
+        self.auto_upload = os.environ.get("KNK_DATA_DROP_AUTO_UPLOAD", "true").lower() == "true"
+        self.archive_processed = os.environ.get("KNK_DATA_DROP_ARCHIVE_PROCESSED", "true").lower() == "true"
         logging.basicConfig(filename=self.root / "logs" / "agent.log", level=logging.INFO, format="%(asctime)s %(message)s")
 
     def scan(self):
         for path in (self.root / "inbox").rglob("*"):
-            if path.is_symlink() or not path.is_file() or path.suffix.lower() not in {".csv", ".json", ".xlsx"}:
+            if path.is_symlink() or not path.is_file() or path.suffix.lower() not in {".csv", ".json", ".jsonl", ".xlsx", ".xls", ".parquet"}:
                 continue
             path = safe_path(self.root, path)
             stat = path.stat()
@@ -137,8 +139,10 @@ class Agent:
                 continue
             remote = item["state"]
             if remote in {"IMPORTED", "ARCHIVED", "DUPLICATE", "REJECTED", "QUARANTINED"}:
+                if not self.archive_processed:
+                    continue
                 path = safe_path(self.root, filename)
-                folder = "rejected" if remote in {"REJECTED", "QUARANTINED"} else datetime.now().strftime("processed/%Y/%m")
+                folder = "quarantine" if remote == "QUARANTINED" else "rejected" if remote == "REJECTED" else datetime.now().strftime("processed/%Y/%m")
                 target = safe_path(self.root, self.root / folder / path.name)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 if path.exists() and not target.exists():
@@ -159,7 +163,8 @@ class Agent:
         self.client.post("/agent/v1/heartbeat", json={"paused": paused, "queued": queued, "errors": self.errors, "version": VERSION}).raise_for_status()
         if not paused:
             self.scan()
-            self.upload()
+            if self.auto_upload:
+                self.upload()
             self.sync()
 
     def close(self):
@@ -175,6 +180,11 @@ def main():
     parser.add_argument("--allow-loopback-http", action="store_true")
     parser.add_argument("--name", default="KnK Local Data Agent")
     args = parser.parse_args()
+    interval = float(os.environ.get("KNK_DATA_DROP_SCAN_INTERVAL_SECONDS", "5"))
+    if not 1 <= interval <= 3600:
+        parser.error("KNK_DATA_DROP_SCAN_INTERVAL_SECONDS must be between 1 and 3600")
+    if os.environ.get("KNK_DATA_DROP_AUTO_IMPORT_APPROVED_SCHEMAS", "false").lower() != "false":
+        parser.error("Automatic import is not enabled; each dataset version requires approval")
     if not args.root:
         parser.error("Set KNK_DATA_DROP_ROOT or --root")
     root = Path(args.root).expanduser().resolve()
@@ -212,7 +222,7 @@ def main():
                 time.sleep(2)
                 agent.tick()
                 break
-            time.sleep(5)
+            time.sleep(interval)
     except KeyboardInterrupt:
         pass
     finally:

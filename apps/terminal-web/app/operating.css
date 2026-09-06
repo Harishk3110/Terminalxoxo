@@ -400,10 +400,9 @@
 }
 .options-leg {
   display: grid;
-  grid-template-columns: minmax(140px, 2fr) minmax(90px, 1fr) minmax(
-      90px,
-      1fr
-    ) 30px;
+  grid-template-columns:
+    minmax(140px, 2fr) minmax(90px, 1fr) minmax(90px, 1fr)
+    30px;
   gap: 8px;
   align-items: end;
   padding: 5px;
@@ -487,4 +486,70 @@
   .model-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.connection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
+  gap: 8px;
+}
+.connection-item {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: #0a0a0a;
+}
+.connection-item header,
+.connection-item footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.connection-item h2 {
+  font-size: 13px;
+  margin: 0;
+}
+.connection-item dl {
+  margin: 10px 0;
+}
+.connection-item dl > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 8px;
+  padding: 3px 0;
+}
+.connection-item dt {
+  color: #a8a8a8;
+}
+.connection-item dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.connection-toggle {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+}
+.connections-workspace .research-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  padding: 8px;
+}
+.connections-workspace .research-controls > label {
+  flex: 0 1 190px;
+  min-width: 0;
+}
+.connections-workspace .research-controls .mono {
+  overflow-wrap: anywhere;
+}
+.connections-workspace > .panel {
+  min-height: 180px;
+}
+.connections-workspace > .page-grid {
+  height: 470px;
+  flex: 0 0 470px;
 }

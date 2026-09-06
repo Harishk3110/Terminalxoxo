@@ -70,6 +70,21 @@ export function ThesisWorkspace() {
   );
   const set = (key: string, value: string) =>
     setForm({ ...form, [key]: value });
+  const attachment = useMutation({
+    mutationFn: (file: File) => {
+      const body = new FormData();
+      body.append("file", file);
+      return knkApi.post<Row>("/api/v1/attachments", body);
+    },
+    onSuccess: (result) =>
+      set(
+        "attachment_ids",
+        [
+          ...form.attachment_ids.split(",").filter(Boolean),
+          String(result.id),
+        ].join(","),
+      ),
+  });
   const save = useMutation({
     mutationFn: () =>
       knkApi.post<Row>("/api/v1/equity/theses", {
@@ -309,6 +324,26 @@ export function ThesisWorkspace() {
               onChange={(e) => set("attachment_ids", e.target.value)}
             />
           </Field>
+          <Field label="Research attachment / PDF or image">
+            <input
+              type="file"
+              aria-label="Upload thesis attachment"
+              accept=".pdf,.png,.jpg,.jpeg,.webp"
+              disabled={attachment.isPending}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) attachment.mutate(file);
+              }}
+            />
+          </Field>
+          {attachment.error && <p role="alert">{attachment.error.message}</p>}
+          {attachment.data && (
+            <a
+              href={`/backend/api/v1/attachments/${attachment.data.id}/download`}
+            >
+              {String(attachment.data.filename)} <Download size={11} />
+            </a>
+          )}
           <Field label="Linked valuation">
             <select
               aria-label="Thesis linked DCF"

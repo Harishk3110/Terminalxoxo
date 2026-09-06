@@ -85,9 +85,47 @@ def parse_file(data, filename):
             rows = [dict(zip(columns, (v.isoformat() if isinstance(v, (date, datetime)) else v for v in values))) for values in iterator if any(v is not None for v in values)]
         finally:
             workbook.close()
+    elif suffix == ".xls":
+        import xlrd
+        workbook = xlrd.open_workbook(file_contents=data, on_demand=True)
+        try:
+            sheet = workbook.sheet_by_index(0)
+            if not 1 < sheet.nrows <= 100001 or sheet.ncols > 1000:
+                raise ValueError("XLS requires at most 100,000 data rows and 1,000 columns")
+            columns = [str(value).strip() for value in sheet.row_values(0)]
+            if not all(columns) or len(set(columns)) != len(columns):
+                raise ValueError("XLS headers must be nonempty and unique")
+            rows = []
+            for index in range(1, sheet.nrows):
+                values = []
+                for cell in sheet.row(index):
+                    if cell.ctype == xlrd.XL_CELL_ERROR:
+                        raise ValueError("XLS contains an error cell")
+                    value = xlrd.xldate_as_datetime(cell.value, workbook.datemode).isoformat() if cell.ctype == xlrd.XL_CELL_DATE else cell.value
+                    values.append(value)
+                if any(value not in (None, "") for value in values):
+                    rows.append(dict(zip(columns, values, strict=True)))
+        finally:
+            workbook.release_resources()
+    elif suffix == ".jsonl":
+        rows = [json.loads(line) for line in data.decode("utf-8-sig").splitlines() if line.strip()]
     elif suffix == ".json":
         payload = json.loads(data.decode("utf-8-sig"))
         rows = payload.get("rows") if isinstance(payload, dict) else payload
+    elif suffix == ".parquet":
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        from decimal import Decimal
+        parquet = pq.ParquetFile(io.BytesIO(data))
+        metadata = parquet.metadata
+        if metadata.num_rows > 100000 or sum(metadata.row_group(i).total_byte_size for i in range(metadata.num_row_groups)) > 100_000_000:
+            raise ValueError("Parquet exceeds 100,000 rows or 100 MB expanded data")
+        if len(set(parquet.schema_arrow.names)) != len(parquet.schema_arrow.names):
+            raise ValueError("Parquet headers must be unique")
+        for field in parquet.schema_arrow:
+            if not (pa.types.is_string(field.type) or pa.types.is_integer(field.type) or pa.types.is_floating(field.type) or pa.types.is_decimal(field.type) or pa.types.is_date(field.type) or pa.types.is_timestamp(field.type) or pa.types.is_boolean(field.type) or pa.types.is_null(field.type)):
+                raise ValueError("Parquet requires scalar text, numeric or date columns")
+        rows = [{key: value.isoformat() if isinstance(value, (date, datetime)) else str(value) if isinstance(value, Decimal) else value for key, value in row.items()} for row in parquet.read().to_pylist()]
     elif suffix == ".csv":
         content = data.decode("utf-8-sig")
         try:
@@ -99,7 +137,7 @@ def parse_file(data, filename):
             raise ValueError("CSV headers must be unique")
         rows = list(reader)
     else:
-        raise ValueError("Supported formats: CSV, XLSX, JSON")
+        raise ValueError("Supported formats: CSV, XLSX, XLS, JSON, JSONL, Parquet")
     if not isinstance(rows, list) or not rows or any(not isinstance(r, dict) or any(not isinstance(k, str) for k in r) for r in rows):
         raise ValueError("File must contain nonempty rows with named columns")
     if len(rows) > 100000:

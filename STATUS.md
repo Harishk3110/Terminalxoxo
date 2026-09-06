@@ -24,6 +24,15 @@ portfolio endpoints returned 401. The real database remains in place.
 
 ## Continuing Work
 
+Data checkpoint: 740 sprint tests, 98 API tests, 231 frontend tests and five shared
+package tests passed. Subsequent provider/FRED selection passed 18 tests including
+storage rollback. The Koyfin file/import/revalue/review browser workflow passed.
+Connection persistence passed after correcting a delayed checkbox state; desktop/
+mobile screenshots were inspected. Node 22 builds and broker-action scan passed.
+Dedicated live vendors, SEC history/financial curation and separate FX precedence
+remain unverified or incomplete as documented in PROVIDER_CONNECTIONS.md.
+No user-facing 3001 deployment is claimed by these isolated browser tests.
+
 Options checkpoint: 23 focused pricing/analytics/API/import tests passed. Node 22
 production build and new-module Ruff passed. Browser synthetic-chain/GEX-sign/
 Greek/IV/payoff/save-refresh checks passed, including unchanged ledger transactions

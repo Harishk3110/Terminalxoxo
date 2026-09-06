@@ -767,6 +767,12 @@ class FredIngestionService:
         self.providers = ProviderRepository(session)
 
     async def refresh_series(self, series_id: str, correlation_id: str, observation_start: str | None = None) -> dict:
+        from .provider_data import connection, record_result
+        from .providers.http import ProviderError, Response
+        status = connection(self.session, "fred", self.provider.settings)
+        if not status.enabled or status.connection_state == "REVOKED":
+            return {"state": "DISABLED", "records_received": 0, "records_accepted": 0}
+        self.provider.settings = self.provider.settings.model_copy(update={"fred_enabled": status.enabled})
         if not self.provider.configured:
             self.providers.upsert_connection(
                 provider_name="FRED",
@@ -781,9 +787,15 @@ class FredIngestionService:
             self.session.commit()
             return {"state": "NOT_CONFIGURED", "records_received": 0, "records_accepted": 0}
 
-        metadata_payload = await self.provider.series_metadata(series_id, correlation_id)
-        observations_payload = await self.provider.observations(series_id, correlation_id, observation_start)
-        vintages_payload = await self.provider.vintage_dates(series_id, correlation_id)
+        try:
+            metadata_payload = await self.provider.series_metadata(series_id, correlation_id)
+            observations_payload = await self.provider.observations(series_id, correlation_id, observation_start)
+            vintages_payload = await self.provider.vintage_dates(series_id, correlation_id)
+        except (ProviderError, ValueError) as exc:
+            error = exc if isinstance(exc, ProviderError) else ProviderError("FRED response validation failed")
+            record_result(self.session, status, error=error, action="sync")
+            self.session.commit()
+            return {"state": error.state, "records_received": 0, "records_accepted": 0}
         metadata_raw = self._store_raw(series_id, "metadata", metadata_payload, correlation_id)
         observations_raw = self._store_raw(series_id, "observations", observations_payload, correlation_id)
         vintages_raw = self._store_raw(series_id, "vintages", vintages_payload, correlation_id)
@@ -833,7 +845,8 @@ class FredIngestionService:
         for vintage in parsed_vintages.vintage_dates:
             if not self.session.execute(select(models.MacroVintage).where(and_(models.MacroVintage.series_id == series.id, models.MacroVintage.vintage_date == date.fromisoformat(vintage), models.MacroVintage.provider == "FRED"))).scalars().first():
                 self.session.add(models.MacroVintage(series_id=series.id, vintage_date=date.fromisoformat(vintage), provider="FRED", raw_object_id=vintages_raw.id))
-        self.providers.upsert_connection(provider_name="FRED", provider_type="macro", enabled=True, configured=True, state="CONNECTED", capabilities=self.provider.capabilities, masked_identifier="fred-key-***")
+        record_result(self.session, status, response=Response(observations_payload, b"", "FRED observations", observations_payload.get("_knk_latency_ms", 0), None), action="sync")
+        status.last_data_sync = datetime.now(timezone.utc)
         self.session.commit()
         return {"state": "SUCCEEDED", "records_received": len(parsed_observations.observations), "records_accepted": accepted}
 

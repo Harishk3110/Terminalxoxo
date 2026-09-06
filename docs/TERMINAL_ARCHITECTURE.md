@@ -30,3 +30,9 @@ Equity research uses immutable AnalysisRun results for Decimal FCFF/WACC,
 source-pinned peer comparisons and structured thesis revisions. Matching thesis
 references preserve legacy ledger foreign keys; no historical research is removed.
 Imported financials preserve metric-level source lineage and frequency semantics.
+
+Options use hash-pinned chain versions and saved, assumption-labelled vollib
+calculations. Provider adapters store immutable raw/curated versions and actual
+connection outcomes. Read-only SEC/OpenFIGI and vendor-neutral market/options JSON
+requests are server-side. Research attachments use private integrity-checked
+downloads, never public static paths. Koyfin remains a file/attachment workflow.

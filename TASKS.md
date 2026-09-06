@@ -19,7 +19,8 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Complete verified segments, ROIC, historical/forward multiples and provider-driven earnings/ownership/short-interest/events.
 - [x] Verify imported/synthetic chains, Greeks, GEX/DEX, observed IV, saved analyses and hypothetical payoff without ledger mutation.
 - [ ] Extend options beyond European pricing and selected-underlying positions; historical OI flow/cones require datasets.
-- [ ] Complete provider/file-source/freshness acceptance.
+- [x] Verify Data Drop formats, Koyfin approval/revaluation, private attachments, provider controls and SEC/OpenFIGI/JSON adapter tests.
+- [ ] Verify licensed live vendors, full SEC history/curation, separate FX priority and remaining specialized data adapters.
 - [ ] Complete internal Excel/decks/PDF/Pine acceptance.
 - [ ] Verify all operations components and final regression suite.
 

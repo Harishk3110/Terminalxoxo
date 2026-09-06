@@ -26,3 +26,12 @@ security quote views.
 Price Sources & Portfolio Controls is available from Data Drop. API:
 GET/POST /api/v1/operations/sources/{symbol}. History is restated from accepted
 source versions; use pinned dataset versions for reproducible research.
+
+Validated JSON-provider price imports append PROVIDER observations with exact
+timestamps, state and version. They do not overwrite FILE/DEMO records or mutate
+transactions. Connection success is distinct from market-data freshness.
+SEC submissions/XBRL facts are a separate immutable archive, not yet curated FIN
+inputs. The requested SEC-first fundamental selection is therefore not claimed;
+approved file financials retain their current metric-level precedence. FX uses
+existing resolver priority and stale provenance; independent per-pair priority
+configuration is not implemented. These remain explicit acceptance gaps.
