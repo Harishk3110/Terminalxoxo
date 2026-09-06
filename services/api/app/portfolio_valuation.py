@@ -19,13 +19,14 @@ from . import models
 from .portfolio_domain.types import AccountingPolicy
 from .portfolio_domain.postings import BalanceAdjustment, CurrencyMark, outstanding_postings, summarize_postings, transaction_postings
 from .portfolio_domain.transaction_cash import enrich_cash_effects
+from .portfolio_domain.position_pnl import PositionPnlSession
 from .transaction_context import context_payload
 from .ledger_revisions import apply_revisions
 from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, money, nav_total
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.2"
+VERSION = "knk-nav-4.3"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -259,10 +260,13 @@ class PortfolioValuationService:
         for day in days:
             at = min(close_of_day(day), now) if day == now.date() else close_of_day(day)
             flow_before = state.external_flows
-            daily_entries = []
+            daily_attribution = PositionPnlSession(
+                {key: lot.quantity for key, lot in state.lots.items()}, previous_position_values,
+            )
+            movement_start = len(state.cash_service.movements)
             while index < len(entries) and entries[index].day <= day:
                 state.apply(entries[index])
-                daily_entries.append(entries[index])
+                daily_attribution.record(entries[index])
                 index += 1
             state.advance(day)
             flows = state.external_flows - flow_before
@@ -337,23 +341,13 @@ class PortfolioValuationService:
             benchmark_return = benchmark_base / previous_benchmark - 1 if benchmark_base and previous_benchmark else ZERO
             benchmark_equity = (benchmark_equity + flows) * (1 + benchmark_return)
             previous_benchmark = benchmark_base
-            daily_contributions = {}
-            for instrument_id in set(previous_position_values) | set(position_values):
-                contribution = position_values.get(instrument_id, ZERO) - previous_position_values.get(instrument_id, ZERO)
-                for entry in daily_entries:
-                    if entry.instrument_id != instrument_id:
-                        continue
-                    if entry.kind in {"BUY", "COVER", "TRANSFER_IN"}:
-                        contribution -= entry.gross * entry.fx
-                    if entry.kind in {"SELL", "SHORT", "TRANSFER_OUT"}:
-                        contribution += entry.gross * entry.fx
-                    if entry.kind in {"DIVIDEND", "INTEREST"}:
-                        contribution += entry.gross * entry.fx
-                    contribution -= entry.charges * entry.fx
-                daily_contributions[instrument_id] = contribution
+            marked_values = {key: position_values.get(key) for key, lot in state.lots.items() if lot.quantity}
+            daily_details = daily_attribution.finish(marked_values, state.cash_service.movements[movement_start:])
+            daily_contributions = {key: detail.pnl for key, detail in daily_details.items()}
             for row in position_rows:
                 row["weight"] = Decimal(row["market_value"]) / nav if nav and row["market_value"] is not None else ZERO
                 row["daily_pnl"] = number(daily_contributions.get(row["instrument_id"], ZERO)) if nav is not None and previous_nav is not None else None
+                row["daily_pnl_details"] = daily_details[row["instrument_id"]].payload()
                 row["total_pnl"] = money((position_values.get(row["instrument_id"], ZERO) - state.lots[row["instrument_id"]].cost_base) + state.lots[row["instrument_id"]].realised + state.lots[row["instrument_id"]].income - state.lots[row["instrument_id"]].expensed_charges) if row["market_value"] is not None else None
                 row["return"] = number((position_values[row["instrument_id"]] - state.lots[row["instrument_id"]].cost_base) / abs(state.lots[row["instrument_id"]].cost_base)) if row["market_value"] is not None and state.lots[row["instrument_id"]].cost_base else None
             for instrument_id in ids:
@@ -373,7 +367,7 @@ class PortfolioValuationService:
                 "quality": "UNAVAILABLE" if missing else ("STALE" if any(p.get("stale") for p in sources) else "CALCULATED"),
             })
             previous_nav = nav
-            previous_position_values = position_values
+            previous_position_values = marked_values
             last_positions, last_cash, last_daily_contributions = position_rows, cash_rows, daily_contributions
             if day == end:
                 warnings.extend(missing)
@@ -440,7 +434,8 @@ class PortfolioValuationService:
             item = instruments[key]
             unrealised = position_values.get(key, ZERO) - lot.cost_base if key in position_values or lot.quantity == 0 else None
             contribution = lot.realised + unrealised + lot.income - lot.expensed_charges if unrealised is not None else None
-            attribution.append({"symbol": item.symbol, "sector": item.sector, "currency": item.currency, "realised": money(lot.realised), "unrealised": money(unrealised) if unrealised is not None else None, "income": money(lot.income), "fees": money(lot.charges), "daily_pnl": money(last_daily_contributions.get(key, ZERO)) if nav is not None else None, "total_pnl": money(contribution) if contribution is not None else None, "contribution": number(contribution / portfolio.reference_capital) if contribution is not None else None})
+            daily_value = last_daily_contributions.get(key, ZERO)
+            attribution.append({"symbol": item.symbol, "sector": item.sector, "currency": item.currency, "realised": money(lot.realised), "unrealised": money(unrealised) if unrealised is not None else None, "income": money(lot.income), "fees": money(lot.charges), "daily_pnl": money(daily_value) if nav is not None and daily_value is not None else None, "daily_pnl_details": daily_details[key].payload() if key in daily_details else None, "total_pnl": money(contribution) if contribution is not None else None, "contribution": number(contribution / portfolio.reference_capital) if contribution is not None else None})
         metric_metadata = {key: {"value": value, "portfolio": profile.code, "base_currency": portfolio.base_currency, "start": start.isoformat(), "end": end.isoformat(), "benchmark": profile.configuration.get("benchmark", "SPY"), "methodology": METHOD, "source": source_name, "calculated_at": now.isoformat(), "quality": quality} for key, value in {**performance, **risk}.items()}
         p = {
             "id": portfolio.id, "code": profile.code, "name": portfolio.name, "base_currency": portfolio.base_currency,

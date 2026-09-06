@@ -11,7 +11,8 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [x] Verify FIFO/policy, persisted lots, settlement, corrections and accounting subledgers (checkpoint evidence in docs/BUILD_EVIDENCE_25K.md).
 - [x] Verify historical component queries, balance reversals, saved-data copy preservation and desktop/mobile accounting workflows.
 - [x] Verify transaction context, replay cash effects, 19-kind entry UI and audit detail views (442 Python / 103 frontend / 18 browser tests; docs/BUILD_EVIDENCE_25K.md).
-- [ ] Complete remaining M1 storage precision, position metrics, corporate-action daily attribution and portfolio creation UI; verify live migration before certification.
+- [x] Verify cash-based daily position P&L, corporate-action reference transfers, closed-position income and unknown marks (470 Python / 18 browser tests; docs/BUILD_EVIDENCE_25K.md).
+- [ ] Complete remaining M1 storage precision, native/base position metrics, exposure detail and portfolio creation UI; verify live migration before certification.
 - [ ] Complete M2-M20 and all category LOC/acceptance gates.
 
 ## Full Directive Checklist
@@ -412,7 +413,7 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [ ] [L538] Realised P&L.
 - [ ] [L539] Unrealised P&L.
 - [ ] [L540] Total P&L.
-- [ ] [L541] Daily P&L.
+- [x] [L541] Daily P&L. (Recorded cash/marks; explicit corporate reference allocation; missing marks unavailable.)
 - [ ] [L542] Portfolio weight.
 - [ ] [L543] Sector weight.
 - [ ] [L544] Currency exposure.

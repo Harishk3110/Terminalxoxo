@@ -25,7 +25,7 @@
   "branch": "main",
   "categories": {
     "backend": {
-      "added": 1908,
+      "added": 2045,
       "minimum": 9000,
       "passed": false
     },
@@ -35,7 +35,7 @@
       "passed": false
     },
     "tests": {
-      "added": 2882,
+      "added": 3089,
       "minimum": 7000,
       "passed": false
     },
@@ -45,12 +45,12 @@
       "passed": false
     }
   },
-  "commit": "e5f5d43282d1f6f63c22e0eeec954155ee634eaf",
+  "commit": "c770947a04b3b169332f0ff6442780b5db06d99a",
   "current_inventory": {
     "backend": {
-      "eligible_lines": 8598,
-      "files": 56,
-      "physical_lines": 10373
+      "eligible_lines": 8766,
+      "files": 57,
+      "physical_lines": 10570
     },
     "frontend": {
       "eligible_lines": 10657,
@@ -58,9 +58,9 @@
       "physical_lines": 13164
     },
     "tests": {
-      "eligible_lines": 5872,
-      "files": 42,
-      "physical_lines": 7409
+      "eligible_lines": 6170,
+      "files": 44,
+      "physical_lines": 7796
     },
     "workers_agents_reports_infrastructure": {
       "eligible_lines": 1061,
@@ -68,7 +68,7 @@
       "physical_lines": 1297
     }
   },
-  "date": "2026-09-06T12:15:14.285060+00:00",
+  "date": "2026-09-06T12:26:41.367848+00:00",
   "files": [
     {
       "category": "frontend",
@@ -402,23 +402,30 @@
     {
       "category": "backend",
       "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/position_pnl.py",
+      "physical_lines": 202,
+      "qualifying_added": 132
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
       "path": "services/api/app/portfolio_domain/postings.py",
       "physical_lines": 260,
-      "qualifying_added": 160
+      "qualifying_added": 155
     },
     {
       "category": "backend",
       "over_1200_lines": false,
       "path": "services/api/app/portfolio_domain/transaction_cash.py",
       "physical_lines": 55,
-      "qualifying_added": 29
+      "qualifying_added": 28
     },
     {
       "category": "backend",
       "over_1200_lines": false,
       "path": "services/api/app/portfolio_domain/types.py",
       "physical_lines": 193,
-      "qualifying_added": 92
+      "qualifying_added": 91
     },
     {
       "category": "backend",
@@ -459,8 +466,8 @@
       "category": "backend",
       "over_1200_lines": false,
       "path": "services/api/app/portfolio_valuation.py",
-      "physical_lines": 546,
-      "qualifying_added": 83
+      "physical_lines": 541,
+      "qualifying_added": 95
     },
     {
       "category": "backend",
@@ -591,9 +598,23 @@
     {
       "category": "tests",
       "over_1200_lines": false,
+      "path": "tests/sprint/test_position_pnl.py",
+      "physical_lines": 280,
+      "qualifying_added": 155
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_position_pnl_resources.py",
+      "physical_lines": 107,
+      "qualifying_added": 56
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
       "path": "tests/sprint/test_transaction_cash.py",
       "physical_lines": 241,
-      "qualifying_added": 91
+      "qualifying_added": 87
     },
     {
       "category": "tests",
@@ -613,5 +634,5 @@
   "line_gates_passed": false,
   "minimum_total": 25000,
   "semantic_review_required": true,
-  "total": 6275
+  "total": 6619
 }

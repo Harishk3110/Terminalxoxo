@@ -20,6 +20,7 @@ credit. These conservative totals can be lower than ordinary added-line counts.
 | M1 checkpoint e25b94e / 2026-09-06 11:22 UTC | 1723 | 790 | 263 | 2164 | 4940 | NOT MET |
 | M1 storage-boundary follow-up / 2026-09-06 11:38 UTC | 1762 | 790 | 263 | 2239 | 5054 | NOT MET |
 | M1 transaction context and entry/detail workflows / 2026-09-06 12:15 UTC | 1908 | 1222 | 263 | 2882 | 6275 | NOT MET |
+| M1 position-period P&L / 2026-09-06 12:26 UTC | 2045 | 1222 | 263 | 3089 | 6619 | NOT MET |
 
 Interim command: `.venv-sprint/Scripts/python.exe scripts/count_25k_delta.py --output docs/25k/current-delta.json`.
 Exit 0 means the report was produced; it does not mean the gates passed. The report

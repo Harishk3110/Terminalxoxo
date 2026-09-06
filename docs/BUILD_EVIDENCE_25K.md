@@ -179,3 +179,40 @@ Remaining M1 gaps include full position metrics and corporate-action daily P&L,
 broader storage precision, portfolio-creation UI and permitted live migration.
 Trade timestamps are provenance only, not an intraday matching-order claim.
 No milestone or 25K acceptance certification is implied by this checkpoint.
+
+## Position-Period P&L, 2026-09-06 12:30 UTC
+
+Source predecessor: c770947a04b3b169332f0ff6442780b5db06d99a, pushed. The current
+position_pnl.py is integrated into every valuation interval under knk-nav-4.3.
+It replaces the transaction-label cash approximation with actual replay cash,
+external security capital and paired internal corporate-action transfers.
+Zero holdings and missing opening/closing marks are distinct. Closed-position
+income and cash merger consideration are retained in daily attribution.
+
+The declared attribution convention transfers reference value using the recorded
+cost-allocation fraction. Intraday buys enter reference value at gross recorded
+consideration; partial closes remove reference value proportionally to units.
+This is an explicit internal allocation convention, not a claim that cost fractions
+always equal fair-value fractions or that M2 Brinson attribution is implemented.
+Internal transfers sum to zero and cannot create portfolio P&L.
+
+- 24 domain tests passed, including Hypothesis conservation checks, shorts,
+  partial/full closes, standalone expenses, security transfers, stock/cash mergers,
+  spinoffs into new/existing positions, unknown marks and duplicate interval records.
+- Four API tests passed: merger attribution ties to NAV and saved payload;
+  spinoff value transfer is not treated as gain; income on a closed position is
+  retained; unavailable prior marks remain null rather than becoming zero.
+- Full combined Python/coverage command from the preceding section: exit 0,
+  470 passed, three existing warnings, 98% targeted coverage (1,308 statements,
+  26 missing). position_pnl.py coverage is 97%, with three defensive branches uncovered.
+- Strict mypy with silent imported legacy implementations: exit 0, 23 source files.
+  Ruff for the new module/tests and E9/F for the touched valuation module: exit 0.
+- Full Playwright suite: exit 0, 18 passed, run sprint25k-pnl-1, using the unchanged
+  final frontend build in logs/sprint-25k-build. Its version assertion is knk-nav-4.3.
+- LOC --check: expected exit 1, 6,619 qualifying lines; all category floors unmet.
+
+The migrated backup copy revalued at SGD 70,597.57, BALANCED, with four position
+component states AVAILABLE and latest daily P&L zero on the unchanged stale marks.
+All original immutable hashes survived; the copy now contains 25 valuation runs.
+Evidence: logs/sprint-position-pnl-preservation.json. No real database or user-facing
+service was migrated/restarted. M1 and the overall sprint remain incomplete.
