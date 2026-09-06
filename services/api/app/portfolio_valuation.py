@@ -11,7 +11,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import pyxirr
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
@@ -28,7 +27,7 @@ from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, 
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.6"
+VERSION = "knk-nav-4.7"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -95,59 +94,40 @@ def load_entries(session: Session, portfolio_id: str) -> tuple[list[Entry], list
 
 
 def metric_summary(curve, cash_flows, end, risk_free=0):
-    valid = [p for p in curve if p["return"] is not None]
-    complete = len(valid) == len(curve) and bool(curve)
-    warnings = []
-    data = pd.DataFrame(valid)
-    empty = {k: None for k in ("twr", "cagr", "mwr", "xirr", "mtd", "qtd", "ytd", "daily", "daily_volatility", "volatility", "sharpe", "sortino", "max_drawdown", "current_drawdown", "calmar", "beta", "alpha", "tracking_error", "information_ratio")}
-    if data.empty or not complete:
-        return {**empty, "observations": len(valid)}, ["Performance unavailable: incomplete historical valuations"]
-    returns = pd.Series([p["return"] for p in valid if date.fromisoformat(p["date"]).weekday() < 5], dtype=float)
-    all_returns = data["return"].astype(float)
-    days = (end - date.fromisoformat(valid[0]["date"])).days
-    twr = float((1 + all_returns).prod() - 1)
-    annual_ok = len(returns) >= 60
-    long_ok = days >= 365
-    std = float(returns.std(ddof=1)) if len(returns) > 1 else 0
-    downside = np.minimum(returns.to_numpy() - risk_free / 252, 0)
-    downside_dev = float(np.sqrt(np.mean(downside ** 2))) if len(downside) else 0
-    cagr = (1 + twr) ** (365 / days) - 1 if long_ok and twr > -1 else None
-    maximum_dd = min(float(p["drawdown"]) for p in valid)
-    result = {
-        **empty, "twr": twr, "cagr": cagr, "daily": float(valid[-1]["return"]),
-        "daily_volatility": std if len(returns) > 1 else None,
-        "volatility": std * math.sqrt(252) if annual_ok else None,
-        "sharpe": (float(returns.mean()) - risk_free / 252) / std * math.sqrt(252) if annual_ok and std else None,
-        "sortino": (float(returns.mean()) - risk_free / 252) / downside_dev * math.sqrt(252) if annual_ok and downside_dev else None,
-        "max_drawdown": maximum_dd, "current_drawdown": float(valid[-1]["drawdown"]),
-        "calmar": cagr / abs(maximum_dd) if cagr is not None and maximum_dd else None,
-        "observations": len(returns), "calendar_days": days,
-    }
-    boundaries = {"mtd": date(end.year, end.month, 1), "qtd": date(end.year, ((end.month - 1) // 3) * 3 + 1, 1), "ytd": date(end.year, 1, 1)}
-    for key, start in boundaries.items():
-        selected = [p["return"] for p in valid if date.fromisoformat(p["date"]) >= start]
-        result[key] = float(np.prod(1 + np.array(selected)) - 1) if selected else None
-    if not annual_ok:
-        warnings.append("INSUFFICIENT DATA: annual volatility, Sharpe, Sortino and risk ratios require 60 trading observations")
-    if not long_ok:
-        warnings.append("INSUFFICIENT DATA: CAGR, annual XIRR and Calmar require one year; MWR is shown for the actual period")
-    flows = defaultdict(Decimal)
-    for day, amount in cash_flows:
-        flows[day] -= amount
-    flows[end] += Decimal(str(valid[-1]["equity"]))
-    amounts = [(d, float(v)) for d, v in sorted(flows.items()) if v]
-    if days > 0 and any(v < 0 for _, v in amounts) and any(v > 0 for _, v in amounts):
-        try:
-            irr = pyxirr.xirr(amounts)
-            if irr is not None and math.isfinite(irr) and irr > -1:
-                result["mwr"] = (1 + irr) ** (days / 365) - 1
-                result["xirr"] = irr if long_ok else None
-            if not pyxirr.is_conventional_cash_flow([v for _, v in amounts]):
-                warnings.append("Non-conventional cash flows may have multiple IRR roots; the selected root is not unique")
-        except (ValueError, pyxirr.InvalidPaymentsError):
-            warnings.append("XIRR has no valid solution for the selected cash flows")
-    return result, warnings
+    from .performance_domain.contracts import FeeBasis, Frequency, PerformanceSettings, ReturnObservation
+    from .performance_domain.drawdowns import drawdowns
+    from .performance_domain.metrics import measured, period_returns, sample_statistics
+    from .performance_domain.money_weighted import money_weighted
+    from .performance_domain.series import periods
 
+    def value(row, exact, legacy):
+        item = row.get(exact, row.get(legacy))
+        return Decimal(str(item)) if item is not None else None
+
+    rows = [ReturnObservation(
+        date.fromisoformat(row["date"]), value(row, "net_return_exact", "return"),
+        value(row, "opening_nav_exact", "opening_nav"), value(row, "nav_exact", "equity"),
+        value(row, "external_flow_exact", "external_flow"), value(row, "pnl_exact", "daily_pnl"),
+        value(row, "fee_expense_exact", "fee_expense_exact"),
+        value(row, "benchmark_return_exact", "benchmark_return"), row["quality"],
+    ) for row in curve]
+    settings = PerformanceSettings(risk_free_rate=Decimal(str(risk_free)))
+    daily = periods(rows, Frequency.DAILY, FeeBasis.NET)
+    metrics = {**period_returns(rows, settings), **sample_statistics(daily, rows, settings),
+               **money_weighted(rows, None, FeeBasis.NET)}
+    dd = drawdowns(daily)
+    metrics["max_drawdown"] = measured(dd["maximum"], len(rows))
+    metrics["current_drawdown"] = measured(dd["current"], len(rows))
+    cagr = metrics["cagr"].value
+    metrics["calmar"] = measured(float(cagr) / abs(float(dd["maximum"])) if cagr is not None and dd["maximum"] else None, len(rows), "RATIO")
+    result = {key: number(metric.value) for key, metric in metrics.items()}
+    volatility = result["volatility"]
+    result["daily_volatility"] = volatility / math.sqrt(252) if volatility is not None else None
+    result["observations"] = sum(row.day.weekday() < 5 for row in rows)
+    result["calendar_days"] = (end - rows[0].day).days if rows else 0
+    result["metric_states"] = {key: {"state": metric.state, "reason": metric.reason, "observations": metric.observations} for key, metric in metrics.items()}
+    warnings = list(dict.fromkeys(f"{metric.state}: {metric.reason}" for metric in metrics.values() if metric.reason))
+    return result, warnings
 
 class PortfolioValuationService:
     def __init__(self, session: Session) -> None:
@@ -258,12 +238,14 @@ class PortfolioValuationService:
         days = sorted(d for d in days if start <= d <= end)
         state = LedgerState(policy=AccountingPolicy.from_config(profile.configuration))
         index, previous_nav, return_index, peak, previous_benchmark, benchmark_equity = 0, ZERO, ONE, ONE, None, ZERO
+        previous_accrued_fees = ZERO
         curve, histories, last_positions, last_cash, warnings = [], defaultdict(dict), [], [], []
         previous_position_values = {}
         last_daily_contributions = {}
         for day in days:
             at = min(close_of_day(day), now) if day == now.date() else close_of_day(day)
             flow_before = state.external_flows
+            fees_before = state.fees
             daily_attribution = PositionPnlSession(
                 {key: lot.quantity for key, lot in state.lots.items()}, previous_position_values,
             )
@@ -344,15 +326,17 @@ class PortfolioValuationService:
             totals = nav_total(settled_cash, list(position_values.values()), dict(balances), cash_components=settled_cash_components)
             nav = None if missing else totals["nav"]
             daily_pnl, daily_return = (None, None) if nav is None or previous_nav is None else daily_performance(previous_nav, nav, flows)
-            if daily_return is not None:
+            if daily_return is not None and return_index is not None:
                 return_index *= 1 + daily_return
                 peak = max(peak, return_index)
-            dd = float(return_index / peak - 1) if peak else 0
+            else:
+                return_index = None
+            dd = float(return_index / peak - 1) if peak and return_index is not None else None
             benchmark_price = prices.resolve(benchmark.id, at) if benchmark else None
             benchmark_fx, _ = fx.resolve(benchmark.currency, portfolio.base_currency, at) if benchmark else (None, {})
             benchmark_base = benchmark_price.value * benchmark_fx if benchmark_price and benchmark_fx else None
-            benchmark_return = benchmark_base / previous_benchmark - 1 if benchmark_base and previous_benchmark else ZERO
-            benchmark_equity = (benchmark_equity + flows) * (1 + benchmark_return)
+            benchmark_return = (benchmark_base / previous_benchmark - 1 if previous_benchmark else ZERO if not curve else None) if benchmark_base else None
+            benchmark_equity = (benchmark_equity + flows) * (1 + benchmark_return) if benchmark_equity is not None and benchmark_return is not None else None
             previous_benchmark = benchmark_base
             marked_values = {key: position_values.get(key) for key, lot in state.lots.items() if lot.quantity}
             daily_details = daily_attribution.finish(marked_values, state.cash_service.movements[movement_start:])
@@ -373,12 +357,17 @@ class PortfolioValuationService:
                 "opening_nav": number(money(previous_nav)) if previous_nav is not None else None,
                 "daily_pnl": number(money(daily_pnl)) if daily_pnl is not None else None,
                 "external_flow": number(money(flows)), "return": number(daily_return),
-                "benchmark": number(money(benchmark_equity)) if benchmark_base else None,
-                "benchmark_return": number(benchmark_return) if benchmark_base else None,
-                "drawdown": dd, "return_index": float(return_index),
+                "nav_exact": nav, "opening_nav_exact": previous_nav,
+                "pnl_exact": daily_pnl, "external_flow_exact": flows,
+                "net_return_exact": daily_return,
+                "fee_expense_exact": state.fees - fees_before + balances["accrued_fees"] - previous_accrued_fees if not missing else None,
+                "benchmark": number(money(benchmark_equity)) if benchmark_equity is not None else None,
+                "benchmark_return": number(benchmark_return), "benchmark_return_exact": benchmark_return,
+                "drawdown": dd, "return_index": number(return_index),
                 "quality": "UNAVAILABLE" if missing else ("STALE" if any(p.get("stale") for p in sources) else "CALCULATED"),
             })
             previous_nav = nav
+            previous_accrued_fees = balances["accrued_fees"]
             previous_position_values = marked_values
             last_positions, last_cash, last_daily_contributions = position_rows, cash_rows, daily_contributions
             if day == end:
@@ -396,13 +385,6 @@ class PortfolioValuationService:
         ], nav)
         for row in last_positions:
             row.update(position_weights[row["instrument_id"]])
-        paired = [(p["return"], p["benchmark_return"]) for p in curve if p["return"] is not None and p["benchmark_return"] is not None and date.fromisoformat(p["date"]).weekday() < 5]
-        if len(paired) >= 60:
-            pr, br = np.array(paired).T
-            tracking = float(np.std(pr - br, ddof=1))
-            beta = float(np.cov(pr, br, ddof=1)[0, 1] / np.var(br, ddof=1)) if np.var(br, ddof=1) else None
-            rf = float(profile.configuration.get("risk_free_rate", 0)) / 252
-            performance.update({"beta": beta, "alpha": (float(pr.mean()) - rf - beta * (float(br.mean()) - rf)) * 252 if beta is not None else None, "tracking_error": tracking * math.sqrt(252), "information_ratio": float(np.mean(pr - br)) / tracking * math.sqrt(252) if tracking else None})
         marked_exposure = exposure_service(last_positions, last_cash, balance_exposure_rows, nav)
         exposure = marked_exposure.groups()
         risk.update({
@@ -456,7 +438,8 @@ class PortfolioValuationService:
             contribution = lot.realised + unrealised + lot.income - lot.expensed_charges if unrealised is not None else None
             daily_value = last_daily_contributions.get(key, ZERO)
             attribution.append({"symbol": item.symbol, "sector": item.sector, "currency": item.currency, "realised": money(lot.realised), "unrealised": money(unrealised) if unrealised is not None else None, "income": money(lot.income), "fees": money(lot.charges), "daily_pnl": money(daily_value) if nav is not None and daily_value is not None else None, "daily_pnl_details": daily_details[key].payload() if key in daily_details else None, "total_pnl": money(contribution) if contribution is not None else None, "contribution": number(contribution / portfolio.reference_capital) if contribution is not None else None})
-        metric_metadata = {key: {"value": value, "portfolio": profile.code, "base_currency": portfolio.base_currency, "start": start.isoformat(), "end": end.isoformat(), "benchmark": profile.configuration.get("benchmark", "SPY"), "methodology": METHOD, "source": source_name, "calculated_at": now.isoformat(), "quality": quality} for key, value in {**performance, **risk}.items()}
+        states = performance.pop("metric_states")
+        metric_metadata = {key: {"value": value, "portfolio": profile.code, "base_currency": portfolio.base_currency, "start": start.isoformat(), "end": end.isoformat(), "benchmark": profile.configuration.get("benchmark", "SPY"), "methodology": METHOD, "source": source_name, "calculated_at": now.isoformat(), "quality": quality, **states.get(key, {"state": "AVAILABLE" if value is not None else "INSUFFICIENT_DATA"})} for key, value in {**performance, **risk}.items()}
         balance_sheet_difference = money(final_totals["gross_asset_value"] - final_totals["liabilities"] - nav, 8) if nav is not None else None
         if balance_sheet_difference:
             warnings.append("NAV BALANCE SHEET BREAK: assets less liabilities do not equal NAV")
@@ -469,6 +452,8 @@ class PortfolioValuationService:
             "market_value": money(final_totals["market_value"]) if all(p["market_value"] is not None for p in last_positions) else None,
             "gross_asset_value": money(final_totals["gross_asset_value"]) if nav is not None else None,
             "total_return": number(total_pnl / portfolio.reference_capital) if total_pnl is not None else None,
+            "cash_weight": number(total_cash / nav) if nav else None,
+            "invested_weight": number(final_totals["market_value"] / nav) if nav else None,
             "daily_pnl": curve[-1]["daily_pnl"], "opening_nav": curve[-1]["opening_nav"],
             "quality": quality, "as_of": as_of, "calculated_at": now.isoformat(),
             "view": "INTERNAL LEDGER", "execution_mode": "MANUAL", "broker_mode": "PAPER",
@@ -479,6 +464,7 @@ class PortfolioValuationService:
             "settlement_receivables": money(settlement_receivables) if nav is not None else None,
             "settlement_payables": money(settlement_payables) if nav is not None else None,
         }
+        metric_metadata.update({key: {"value": p[key], "portfolio": profile.code, "base_currency": portfolio.base_currency, "source": source_name, "as_of": as_of, "calculated_at": now.isoformat(), "quality": quality, "methodology": METHOD} for key in ("opening_capital", "nav", "cash", "market_value", "total_pnl", "daily_pnl", "cash_weight", "invested_weight")})
         monthly = []
         for month in sorted({p["date"][:7] for p in curve}):
             values = [p["return"] for p in curve if p["date"][:7] == month]

@@ -66,6 +66,20 @@ def periods(
     for group in groups:
         chosen = [row.selected_return(basis) for row in group]
         reasons = list(dict.fromkeys(reason for _, reason in chosen if reason))
+        first, last = pd.Timestamp(group[0].day), pd.Timestamp(group[-1].day)
+        if frequency == Frequency.WEEKLY:
+            boundary = last.to_period("W-FRI")
+            expected = pd.bdate_range(boundary.start_time, boundary.end_time)
+        elif frequency == Frequency.MONTHLY:
+            boundary = last.to_period("M")
+            expected = pd.bdate_range(boundary.start_time, boundary.end_time)
+        else:
+            expected = pd.bdate_range(first, last)
+        observed = {row.day for row in group if row.day.weekday() < 5}
+        complete = observed == {stamp.date() for stamp in expected} and bool(expected.size)
+        complete = complete and not any(
+            row.day.weekday() >= 5 and row.selected_return(basis)[0] != 0 for row in group
+        )
         result.append(
             ReturnPeriod(
                 group[0].day,
@@ -75,6 +89,7 @@ def periods(
                 len(group),
                 sum(value is None for value, _ in chosen),
                 "; ".join(reasons) or None,
+                complete,
             )
         )
     return result
@@ -98,7 +113,9 @@ def series_payload(rows: Sequence[ReturnPeriod]) -> list[dict[str, Any]]:
             result.append(
                 {
                     **asdict(row),
-                    "state": "AVAILABLE" if row.value is not None else "INCOMPLETE",
+                    "state": ("AVAILABLE" if row.statistical_ready else "PARTIAL_PERIOD")
+                    if row.value is not None
+                    else "INCOMPLETE",
                     "return_index": index,
                     "benchmark_index": benchmark,
                 }

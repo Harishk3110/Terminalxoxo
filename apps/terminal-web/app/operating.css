@@ -1,4 +1,18 @@
 /* Portfolio operating desks retain the compact terminal grid. */
+.performance-controls {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.performance-controls input,
+.performance-controls select {
+  min-width: 0;
+  max-width: 160px;
+  height: 27px;
+}
 .terminal-shell {
   grid-template-rows: 40px 28px 26px 30px minmax(0, 1fr) 23px;
 }
@@ -55,6 +69,18 @@
 }
 .operating-ribbon > div:last-child strong {
   font-size: 10px;
+}
+.operating-ribbon.command-metrics {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(115px, 1fr);
+  height: 52px;
+  min-height: 52px;
+}
+.command-metrics > div:last-child strong {
+  white-space: normal;
+  line-height: 12px;
+  overflow-wrap: anywhere;
 }
 .portfolio-command-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));

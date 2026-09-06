@@ -9,7 +9,7 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [x] Require API authentication in local demo and production.
 - [x] Disable indexing and test root/login/retired routes.
 - [ ] Remove ignored retired-app directory on disk (execution-policy restriction).
-- [ ] Complete SGD 100,000 audited demo correction and verify data preservation.
+- [x] Complete SGD 100,000 audited demo correction and verify data preservation.
 - [ ] Complete portfolio/NAV/position/performance acceptance workflows.
 - [ ] Complete risk/trade/reconciliation/stress/hedge acceptance.
 - [ ] Complete quant/factor/alpha/model/walk-forward acceptance.

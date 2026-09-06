@@ -85,12 +85,18 @@ def sample_statistics(
         "upside_capture",
         "downside_capture",
     )
-    sample = [row for row in rows if settings.frequency != "DAILY" or row.end.weekday() < 5]
+    sample = [
+        row
+        for row in rows
+        if row.statistical_ready and (settings.frequency != "DAILY" or row.end.weekday() < 5)
+    ]
     count = len(sample)
     reason = None
     if count < settings.minimum_observations:
         reason = f"Requires {settings.minimum_observations} complete {settings.frequency.lower()} observations"
-    elif any(row.selected_return(settings.fee_basis)[0] is None for row in observations):
+    elif any(row.selected_return(settings.fee_basis)[0] is None for row in observations) or any(
+        row.value is None for row in sample
+    ):
         reason = "Missing observations cannot be removed from a risk sample"
     elif not regular_daily_dates(observations):
         reason = "Irregular valuation intervals cannot be annualised as daily observations"
@@ -208,12 +214,29 @@ def rolling_statistics(
 ) -> list[dict[str, object]]:
     if window < 2:
         raise ValueError("Rolling windows require at least two observations")
+    rows = [
+        row
+        for row in rows
+        if annual in (12, 52) or row.end.weekday() < 5 or row.value not in (None, Decimal(0))
+    ]
     frame = pd.Series([float(row.value) if row.value is not None else np.nan for row in rows])
     deviations = frame.rolling(window, min_periods=window).std(ddof=1) * math.sqrt(annual)
     result = []
     for index, row in enumerate(rows):
         selected = rows[max(0, index + 1 - window) : index + 1]
-        complete = len(selected) == window and all(item.value is not None for item in selected)
+        complete = len(selected) == window and all(
+            item.value is not None and item.statistical_ready for item in selected
+        )
+        for previous, current in zip(selected, selected[1:], strict=False):
+            if annual == 12:
+                adjacent = (
+                    current.end.year - previous.end.year
+                ) * 12 + current.end.month - previous.end.month == 1
+            elif annual == 52:
+                adjacent = (current.end - previous.end).days == 7
+            else:
+                adjacent = len(pd.bdate_range(previous.end, current.end, inclusive="right")) == 1
+            complete = complete and adjacent
         value = linked([item.value for item in selected]) if complete else None
         result.append(
             {

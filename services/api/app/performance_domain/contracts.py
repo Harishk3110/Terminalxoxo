@@ -99,6 +99,7 @@ class ReturnPeriod:
     observations: int
     missing: int
     reason: str | None = None
+    statistical_ready: bool = True
 
 
 @dataclass(frozen=True)

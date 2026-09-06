@@ -29,7 +29,7 @@ from .performance_domain.series import periods, select_observations, series_payl
 from .portfolio_operations import audit
 from .portfolio_resources import PortfolioNotFound, PortfolioResourceService
 
-PERFORMANCE_VERSION = "knk-performance-1.0"
+PERFORMANCE_VERSION = "knk-performance-1.1"
 METHOD = (
     "Beginning-of-period external flows; geometric linked returns; sample standard deviation (ddof=1); "
     "annual effective risk-free rate converted to the observation frequency; geometric mean benchmark capture; "
@@ -91,6 +91,8 @@ class PortfolioPerformanceService:
         if settings.end and all_rows and settings.end > all_rows[-1].day:
             raise ValueError("Requested end exceeds the saved valuation date")
         selected = select_observations(all_rows, settings.start, settings.end)
+        if settings.start and all_rows and settings.start < all_rows[0].day:
+            raise ValueError("Requested start precedes available valuation history")
         prior = [row for row in all_rows if selected and row.day < selected[0].day]
         opening_day = prior[-1].day if prior else None
         daily = periods(selected, Frequency.DAILY, settings.fee_basis)

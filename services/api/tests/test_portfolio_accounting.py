@@ -124,18 +124,18 @@ def test_nav_full_balance_sheet_and_flow_adjustment():
 def test_seed_nav_and_independent_reconciliation(accounting_session):
     service = PortfolioValuationService(accounting_session)
     opening = service.calculate(end=DAY)
-    assert opening["portfolio"]["nav"] == "70000.00"
+    assert opening["portfolio"]["nav"] == "100000.00"
     result = service.latest(end=date(2026, 9, 4))
     assert result["portfolio"]["code"] == "KNK_MAIN"
-    assert D(result["portfolio"]["reference_capital"]) == 70000
-    assert D("65000") < D(result["portfolio"]["nav"]) < D("80000")
+    assert D(result["portfolio"]["reference_capital"]) == 100000
+    assert D(result["portfolio"]["nav"]) == D("100597.57")
     assert result["reconciliation"]["difference"] == "0.00"
     assert result["reconciliation"]["state"] == "BALANCED"
     assert result["performance"]["cagr"] is None
     assert result["performance"]["mwr"] is not None
     assert len(result["curve"]) > 60
     assert result["correlation"]["symbols"] == sorted(result["correlation"]["symbols"])
-    assert result["performance"]["twr"] == pytest.approx(float(D(result["portfolio"]["nav"]) / D("70000") - 1), abs=1e-7)
+    assert result["performance"]["twr"] == pytest.approx(float(D(result["portfolio"]["nav"]) / D("100000") - 1), abs=1e-7)
     frozen = service.latest(end=date(2026, 9, 4))
     assert frozen["valuation_run_id"] == result["valuation_run_id"]
 
@@ -192,5 +192,5 @@ def test_reset_archives_ledger_and_isolates_demo_prices(accounting_session):
     assert new.portfolio_id != old_id and new.configuration["price_mode"] == "DEMO_ONLY"
     assert old_transactions <= set(accounting_session.scalars(select(models.PortfolioTransaction.id)).all())
     result = PortfolioValuationService(accounting_session).latest()
-    assert D("69000") < D(result["portfolio"]["nav"]) < D("72000")
+    assert D(result["portfolio"]["nav"]) == D("100597.57")
     assert result["reconciliation"]["difference"] == "0.00"

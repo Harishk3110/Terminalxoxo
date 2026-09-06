@@ -1,4 +1,5 @@
 "use client";
+import { PerformanceWorkspace } from "./performance-page";
 import dynamic from "next/dynamic";
 import { SourcePreferencesPage } from "./source-preferences";
 import { BrokerMonitorPage } from "./broker-monitor";
@@ -10,7 +11,6 @@ import {
 } from "./operating-pages";
 import {
   PortfolioPage,
-  PerformancePage,
   RiskPage,
   StressPage,
   MacroPage,
@@ -52,7 +52,7 @@ export function PageRouter({ route }: { route: string }) {
   if (route === "/quant-dashboard") return <OperatingDeskPage desk="quant" />;
   if (route === "/edge-lab") return <OperatingDeskPage desk="edge" />;
   if (["/portfolio", "/positions"].includes(route)) return <PortfolioPage />;
-  if (route === "/performance") return <PerformancePage />;
+  if (route === "/performance") return <PerformanceWorkspace />;
   if (route === "/risk") return <RiskPage />;
   if (route === "/stress-tests") return <StressPage />;
   if (route === "/macro") return <MacroPage />;

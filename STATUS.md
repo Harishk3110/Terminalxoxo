@@ -24,8 +24,20 @@ portfolio endpoints returned 401. The real database remains in place.
 
 ## Continuing Work
 
-The requested SGD 100,000 demo correction and financial milestones follow this
-checkpoint. NAV, lots, corrections, cash, imports, research and saved analysis
+The guarded SGD 100,000 demo correction is applied and its SQLite backup verified.
+Original 16 transactions, 9 transaction details, 23 valuation runs and 1 analysis
+run are unchanged. NAV at the coherent demo close is SGD 100,597.57, BALANCED.
+Exact Decimal valuation curves now feed the interactive performance workspace.
+83 focused accounting/performance tests and 231 frontend tests passed. Six
+performance-domain files passed strict mypy. The broader sprint run passed 595
+and exposed one stale anonymous-actor assertion; all 30 context tests passed after
+fixing that assertion. The API suite passed 93 and exposed one direct-call test
+requiring authentication; all five broker-agent tests passed after correction.
+Three operating browser checks passed, followed by three performance/privacy
+checks after visual fixes. Desktop/mobile screenshots were inspected; percentage
+formatting and mobile toolbar overlap were corrected. Node 22 build passed.
+
+NAV, lots, corrections, cash, imports, research and saved analysis
 engines are retained. Their complete new acceptance workflow is not yet certified.
 Whole-backend lint/type failures from the earlier baseline remain disclosed.
 Docker Linux daemon was unavailable; Vercel CLI was logged out; no cloud URL is

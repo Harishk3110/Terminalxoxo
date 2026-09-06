@@ -14,6 +14,7 @@ DEMO_SOURCE = "KnK Demo / coherent daily series"
 START = date(2026, 5, 4)
 END = date(2026, 9, 4)
 OPENING = date(2026, 6, 3)
+REFERENCE_CAPITAL = Decimal("100000")
 ANCHORS = {
     "AAPL": 210, "MSFT": 410, "NVDA": 125, "AMZN": 185, "GOOGL": 165,
     "META": 520, "JPM": 205, "XOM": 115, "UNH": 480, "V": 265,
@@ -34,7 +35,10 @@ def profile_for(session, key=None):
 def ensure_main(session, *, demo_only=False):
     existing = profile_for(session)
     if existing:
-        return session.get(models.Portfolio, existing.portfolio_id)
+        portfolio = session.get(models.Portfolio, existing.portfolio_id)
+        if upgrade_demo_capital(session, portfolio, existing):
+            session.commit()
+        return portfolio
     instruments = {r.symbol: r for r in session.scalars(select(models.Instrument)).all()}
     if not {"AAPL", "MSFT", "SPY", "D05"}.issubset(instruments):
         raise ValueError("Seed the security master before the main portfolio")
@@ -66,14 +70,14 @@ def ensure_main(session, *, demo_only=False):
         day += timedelta(days=1)
 
     session.execute(update(models.Portfolio).values(is_default=False))
-    portfolio = models.Portfolio(name="KnK Capital Main Portfolio", base_currency="SGD", reference_capital=Decimal("70000"), is_default=True)
+    portfolio = models.Portfolio(name="KnK Capital Main Portfolio", base_currency="SGD", reference_capital=REFERENCE_CAPITAL, is_default=True)
     session.add(portfolio)
     session.flush()
     account = models.PortfolioAccount(portfolio_id=portfolio.id, account_type="MANUAL", display_name="KnK proprietary capital / manual ledger", provider="INTERNAL LEDGER")
     session.add(account)
     profile = models.PortfolioProfile(
         portfolio_id=portfolio.id, code="KNK_MAIN", is_demo=True,
-        configuration={"execution_mode": "MANUAL", "broker_mode": "IBKR PAPER", "portfolio_type": "PROPRIETARY CAPITAL", "external_clients": 0, "benchmark": "SPY", "opening_date": OPENING.isoformat(), "price_mode": "DEMO_ONLY" if demo_only else "AUTO", "allow_short": True, "risk_free_rate": 0},
+        configuration={"execution_mode": "MANUAL", "broker_mode": "IBKR PAPER", "portfolio_type": "PROPRIETARY CAPITAL", "external_clients": 0, "benchmark": "SPY", "opening_date": OPENING.isoformat(), "price_mode": "DEMO_ONLY" if demo_only else "AUTO", "allow_short": True, "risk_free_rate": 0, "demo_seed_version": 2},
     )
     session.add(profile)
     session.flush()
@@ -104,7 +108,7 @@ def ensure_main(session, *, demo_only=False):
         session.add(event)
         return txn, detail
 
-    add("DEPOSIT", OPENING, amount="70000")
+    add("DEPOSIT", OPENING, amount=str(REFERENCE_CAPITAL))
     converted = (Decimal("45000") / values[("FX", OPENING)]).quantize(Decimal(".00000001"))
     add("FX_CONVERSION", OPENING, amount="45000", metadata={"to_currency": "USD", "to_amount": str(converted)})
     for symbol, day, quantity in [
@@ -123,9 +127,43 @@ def ensure_main(session, *, demo_only=False):
     session.flush()
     for metric, threshold, direction in [("max_position_weight", ".30", "MAX"), ("max_sector_weight", ".60", "MAX"), ("max_currency_weight", ".85", "MAX"), ("gross_exposure", "1.20", "MAX"), ("beta", "1.10", "MAX"), ("cash_weight", "0", "MIN")]:
         session.add(models.RiskLimit(policy_id=policy.id, metric=metric, threshold=Decimal(threshold), direction=direction))
-    session.add(models.AuditLog(action="KNK_MAIN_CREATED", resource_type="portfolio", resource_id=portfolio.id, correlation_id=str(uuid.uuid4()), metadata_json={"opening_contribution": "70000.00", "base_currency": "SGD", "legacy_portfolios_preserved": True, "demo_source": DEMO_SOURCE}))
+    session.add(models.AuditLog(action="KNK_MAIN_CREATED", resource_type="portfolio", resource_id=portfolio.id, correlation_id=str(uuid.uuid4()), metadata_json={"opening_contribution": str(REFERENCE_CAPITAL), "base_currency": "SGD", "legacy_portfolios_preserved": True, "demo_source": DEMO_SOURCE}))
     session.commit()
     return portfolio
+
+
+def upgrade_demo_capital(
+    session: Session, portfolio: models.Portfolio, profile: models.PortfolioProfile
+) -> bool:
+    """Correct only the untouched managed demo contribution via an immutable revision."""
+    if not profile.is_demo or profile.code != "KNK_MAIN" or portfolio.reference_capital != Decimal("70000"):
+        return False
+    from .ledger_contracts import AmendmentRequest, TransactionChanges
+    from .ledger_revisions import PortfolioTransactionService
+    from .portfolio_valuation import load_entries
+
+    entries, payloads = load_entries(session, portfolio.id)
+    candidates = [row for row in payloads if row["type"] == "DEPOSIT" and row["source"] == "KNK_MAIN_DEMO"]
+    if len(candidates) != 1:
+        return False
+    original = candidates[0]
+    effective = next((entry for entry in entries if entry.id == original["id"]), None)
+    if effective is None or effective.amount != Decimal("70000") or effective.currency != "SGD" or original["audit_version"] != 1:
+        return False
+    reason = "Terminal-only specification: correct managed demo opening contribution to SGD 100,000; original ledger and prior runs retained"
+    revision = PortfolioTransactionService(session).revise(
+        portfolio.id, effective.id,
+        AmendmentRequest(expected_version=1, reason=reason, changes=TransactionChanges(amount=REFERENCE_CAPITAL)),
+    )
+    portfolio.reference_capital = REFERENCE_CAPITAL
+    profile.configuration = {**profile.configuration, "demo_seed_version": 2}
+    session.add(models.AuditLog(
+        action="DEMO_CAPITAL_SPECIFICATION_CORRECTED", resource_type="portfolio",
+        resource_id=portfolio.id, correlation_id=str(uuid.uuid4()),
+        metadata_json={"before": "70000", "after": str(REFERENCE_CAPITAL), "revision_id": revision["revision_id"], "prior_runs_preserved": True},
+    ))
+    session.flush()
+    return True
 
 
 def reset_main_demo(session: Session, actor: str | None = None) -> models.Portfolio:

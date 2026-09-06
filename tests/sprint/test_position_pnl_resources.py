@@ -31,7 +31,7 @@ def test_cash_merger_daily_attribution_ties_to_nav_and_saved_payload(
         metadata={"exchange_ratio": "1", "cash_per_share": "6", "cash_cost_allocation": ".05"},
     )
     summary = client.get(BASE + "/summary?end=2026-01-07").json()
-    assert summary["calculation_version"] == "knk-nav-4.6"
+    assert summary["calculation_version"] == "knk-nav-4.7"
     assert D(str(summary["portfolio"]["daily_pnl"])) == D(60)
     contributions = {row["symbol"]: row for row in summary["attribution"]}
     assert D(contributions["AAA"]["daily_pnl"]) == 0

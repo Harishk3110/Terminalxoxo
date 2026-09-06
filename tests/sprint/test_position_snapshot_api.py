@@ -42,7 +42,7 @@ def test_position_resource_exposes_currency_units_and_exact_decomposition(
     assert row["base_currency"] == "SGD"
     assert row["portfolio_id"] == "book"
     assert row["valuation_date"] == "2026-01-07"
-    assert row["calculation_version"] == "knk-nav-4.6"
+    assert row["calculation_version"] == "knk-nav-4.7"
     assert row["measurement_state"] == row["valuation_state"] == "AVAILABLE"
     assert D(row["cost_basis_native"]) == D(200)
     assert D(row["cost_basis_base"]) == D(240)

@@ -13,7 +13,7 @@ from .portfolio_performance import PortfolioPerformanceService
 from .portfolio_resource_api import Database
 
 router = APIRouter(prefix="/api/v1/performance/portfolios", tags=["performance"])
-PerformanceView = Literal["summary", "series", "drawdowns", "monthly", "rolling"]
+PerformanceView = Literal["summary", "series", "drawdowns", "monthly", "rolling", "report"]
 
 
 def query_settings(
@@ -84,5 +84,7 @@ def performance_view(
     return {
         key: value
         for key, value in result.items()
-        if key not in {"summary", "series", "drawdowns", "monthly", "rolling"} or key == view
+        if view == "report"
+        or key not in {"summary", "series", "drawdowns", "monthly", "rolling"}
+        or key == view
     }

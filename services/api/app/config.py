@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     knk_env: str = "local-demo"
     knk_timezone: str = "Asia/Singapore"
     knk_base_currency: str = "SGD"
-    knk_reference_capital: str = "70000"
+    knk_reference_capital: str = "100000"
     database_url: str = Field(default="sqlite:///./knk_terminal.db", alias="DATABASE_URL")
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     object_storage_endpoint: str | None = Field(default=None, alias="MINIO_ENDPOINT")

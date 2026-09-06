@@ -1,8 +1,9 @@
 import asyncio
 import hashlib
 import importlib.util
+import secrets
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,6 +14,7 @@ from sqlalchemy import select
 from starlette.requests import Request
 
 from app import models
+from app.auth_sessions import token_digest
 from app.broker_api import SnapshotRequest, ApproveFillRequest, receive_snapshot, account_view, approve_fill, current_snapshot
 from app.portfolio_operations import PortfolioReconciliationService
 from app.portfolio_seed import profile_for
@@ -45,6 +47,16 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(accountin
     assert any(r["type"] == "UNMATCHED_BROKER_FILL" for r in reconcile["items"])
     request = Request({"type":"http", "headers":[], "session":{}})
     approval = ApproveFillRequest(snapshot_id=result["id"], execution_id="E1", transaction_type="BUY", fx_rate_to_base="1.29", rationale="Verified recorded execution")
+    with pytest.raises(HTTPException) as denied:
+        approve_fill(approval, request, session)
+    assert denied.value.status_code == 403
+    token = secrets.token_urlsafe(32)
+    user = models.User(email="broker-review@example.test", password_hash="test-session-only", role="ADMIN")
+    session.add(user)
+    session.flush()
+    session.add(models.UserSession(user_id=user.id, session_hash=token_digest(token), expires_at=now + timedelta(hours=1)))
+    session.commit()
+    request = Request({"type": "http", "headers": [(b"cookie", f"knk_session={token}".encode())]})
     added = approve_fill(approval, request, session)
     assert added["trade_event_id"]
     assert approve_fill(approval, request, session)["duplicate"]

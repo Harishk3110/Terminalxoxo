@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Audited 100K Capital and Exact Performance
+
+- Corrected only the untouched managed demo contribution using an immutable revision; original ledger records and saved runs remain unchanged.
+- Recorded exact NAV/flow/P&L/fee/benchmark Decimal values in version 4.7 snapshots.
+- Consolidated performance calculations with partial-period, missing-data and non-conventional-IRR guards.
+- Connected portfolio/date/frequency/fee/risk-free/rolling controls and audited saved performance calculations.
+- Added opening capital and cash/investment/risk metrics to the dense Overview ribbon.
+- Made Tailwind configuration independent of the build working directory.
+
 ## Terminal-only Scope Correction
 
 - Pushed recovery tag pre-terminal-only-cleanup before removing visitor frontend source.

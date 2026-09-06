@@ -1,6 +1,7 @@
 # NAV Methodology
 
-Version: knk-nav-3.0. Authoritative calculation:
+Version: knk-nav-4.7. See PORTFOLIO_NAV.md for current implementation evidence.
+Authoritative calculation:
 cash + sum(quantity * price * FX-to-SGD * contract multiplier) + accrued income
 + receivables - payables - accrued fees - other liabilities.
 
@@ -11,8 +12,9 @@ Missing required price/FX invalidates complete NAV. Identity FX is one only when
 the currencies are identical. Stale selected prices remain selected.
 
 ## Ledger and Returns
-Average cost excludes separately expensed fees, commissions and taxes.
-Partial sales release proportional native/base cost; shorts have signed cost
+Policy-selected FIFO, average cost and specific-lot accounting retain native/base
+cost. Charges are capitalized or expensed according to the recorded policy.
+Partial sales release cost under that policy; shorts have signed cost
 and covers release short proceeds proportionally. Splits preserve total cost;
 spinoffs require explicit child quantity and cost allocation.
 
@@ -26,9 +28,10 @@ external flows. Nonpositive return denominators produce unavailable returns.
 MWR uses PyXIRR and is deannualized to the observed period. Annual XIRR, CAGR
 and Calmar require at least one year. Annual volatility, Sharpe and Sortino
 require 60 trading observations. Ratios with zero denominators are unavailable.
-MTD/QTD/YTD compound available daily returns. Risk-free rate defaults explicitly
+MTD/QTD/YTD geometrically link complete daily returns and flag partial history.
+Risk-free rate defaults explicitly
 to zero in the demonstration profile. Nonconventional flows can have multiple
-IRR roots; the application reports this warning.
+IRR roots; the application reports no claimed unique result for these flows.
 
 Drawdown uses the flow-adjusted return index. Benchmark NAV is a shadow SPY
 investment with the same external flows and SGD conversion.

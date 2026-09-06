@@ -182,7 +182,8 @@ def test_creation_audit_contains_context_and_does_not_claim_broker_execution(
     )
     assert audit.metadata_json["context"]["broker_execution_id"] == "paper-reference"
     assert audit.metadata_json["source"] == "MANUAL"
-    assert row["created_by"] is None
+    assert row["created_by"] == audit.actor_user_id
+    assert ledger_session.get(models.User, row["created_by"]) is not None
 
 
 def test_strategy_and_thesis_links_are_validated_and_returned(

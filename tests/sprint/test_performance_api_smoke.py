@@ -26,10 +26,10 @@ def test_each_performance_view_uses_the_saved_portfolio(performance_client, view
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["portfolio_id"] == "book"
-    assert data["source_precision"] == "LEGACY_ROUNDED"
+    assert data["source_precision"] == "DECIMAL"
     assert view in data
     assert data["valuation_run_id"]
-    assert data["warnings"]
+    assert "Legacy snapshot" not in " ".join(data["warnings"])
 
 
 def test_performance_run_is_audited_and_scope_checked(performance_client, ledger_session):
@@ -53,12 +53,12 @@ def test_performance_run_is_audited_and_scope_checked(performance_client, ledger
     )
 
 
-def test_gross_missing_fees_is_explicit_and_invalid_settings_are_rejected(performance_client):
+def test_gross_fees_are_recorded_and_invalid_settings_are_rejected(performance_client):
     url = "/api/v1/performance/portfolios/book/summary"
     response = performance_client.get(url, params={"end": "2026-01-09", "fee_basis": "GROSS"})
     assert response.status_code == 200, response.text
-    assert response.json()["summary"]["twr"]["value"] is None
-    assert response.json()["state"] == "INSUFFICIENT_DATA"
+    assert response.json()["summary"]["twr"]["value"] == "0"
+    assert response.json()["state"] == "AVAILABLE"
     for params in (
         {"rolling_window": 1},
         {"risk_free_rate": "NaN"},

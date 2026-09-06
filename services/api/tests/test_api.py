@@ -28,7 +28,7 @@ def test_portfolio_is_database_backed_and_demo_labelled():
     assert response.status_code == 200
     payload = response.json()
     assert payload["portfolio"]["base_currency"] == "SGD"
-    assert payload["portfolio"]["reference_capital"] == "70000.00000000"
+    assert payload["portfolio"]["reference_capital"] == "100000.00000000"
     assert len(payload["positions"]) >= 3
     assert all(row["quality"] == "DEMO DATA" for row in payload["positions"])
 

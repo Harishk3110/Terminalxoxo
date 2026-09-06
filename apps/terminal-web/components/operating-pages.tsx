@@ -77,6 +77,7 @@ interface Profile {
 const holdingColumns: Column[] = [
   { key: "symbol", label: "Security", size: 78 },
   { key: "quantity", label: "Qty", numeric: true, size: 72 },
+  { key: "average_cost", label: "Avg cost", numeric: true, size: 84 },
   { key: "market_price", label: "Price", numeric: true, size: 84 },
   {
     key: "market_value",
@@ -95,6 +96,9 @@ const holdingColumns: Column[] = [
     size: 100,
   },
   { key: "quality", label: "Price state", size: 130 },
+  { key: "currency", label: "CCY", size: 58 },
+  { key: "sector", label: "Sector", size: 120 },
+  { key: "beta", label: "Beta", numeric: true, size: 65 },
 ];
 const tradeColumns: Column[] = [
   { key: "trade_date", label: "Trade date", size: 94 },
@@ -119,25 +123,38 @@ function OperatingRibbon({ data }: { data?: OperatingData }) {
     r = data?.risk;
   const items = [
     ["NAV", money(p?.nav)],
+    ["Opening capital", money(p?.opening_capital)],
     ["Day P&L", money(p?.daily_pnl)],
     ["Day return", pct(perf?.daily)],
     ["MTD", pct(perf?.mtd)],
+    ["QTD", pct(perf?.qtd)],
     ["YTD", pct(perf?.ytd)],
     ["Inception", pct(perf?.twr)],
     ["Cash", money(p?.cash)],
+    ["Cash weight", pct(p?.cash_weight)],
+    ["Invested", money(p?.market_value)],
+    ["Total P&L", money(p?.total_pnl)],
     ["Gross assets", money(p?.gross_asset_value)],
+    ["Gross exposure", pct(r?.gross_exposure)],
     ["Net exposure", pct(r?.net_exposure)],
     ["Beta", number(r?.beta)],
     ["VaR 95%", money(r?.var_95)],
+    ["CVaR 95%", money(r?.cvar_95)],
+    ["Sharpe", number(perf?.sharpe)],
+    ["Volatility", pct(perf?.volatility)],
     ["Drawdown", pct(perf?.current_drawdown)],
     ["Data as of", data?.as_of ? timestamp(data.as_of) : "--"],
   ];
   return (
-    <div className="operating-ribbon">
+    <div className="operating-ribbon command-metrics">
       {items.map(([label, value]) => (
         <div key={label}>
           <span>{label}</span>
-          <strong title={value}>{value}</strong>
+          <strong
+            title={`${value} | ${data?.source ?? "UNAVAILABLE"} | ${data?.quality ?? "UNAVAILABLE"} | ${data?.as_of ?? "No observation"}`}
+          >
+            {value}
+          </strong>
         </div>
       ))}
     </div>
@@ -167,8 +184,16 @@ export function PortfolioHomePage() {
       <PageTitle code="HOME" title="Portfolio Command Centre">
         <span className="secondary mono">KNK_MAIN / SGD</span>
         <Badge>{data?.quality ?? "LOADING"}</Badge>
-        <IconButton label="Portfolio ledgers" onClick={() => setDirectoryOpen(true)}><Building2 size={13} /></IconButton>
-        <IconButton label="Portfolio accounting" onClick={() => setAccountingOpen(true)}>
+        <IconButton
+          label="Portfolio ledgers"
+          onClick={() => setDirectoryOpen(true)}
+        >
+          <Building2 size={13} />
+        </IconButton>
+        <IconButton
+          label="Portfolio accounting"
+          onClick={() => setAccountingOpen(true)}
+        >
           <Settings2 size={13} />
         </IconButton>
         <IconButton
@@ -183,8 +208,12 @@ export function PortfolioHomePage() {
           <RefreshCw size={13} />
         </IconButton>
       </PageTitle>
-      {accountingOpen && <AccountingDialog onClose={() => setAccountingOpen(false)} />}
-      {directoryOpen && <PortfolioDirectory onClose={() => setDirectoryOpen(false)} />}
+      {accountingOpen && (
+        <AccountingDialog onClose={() => setAccountingOpen(false)} />
+      )}
+      {directoryOpen && (
+        <PortfolioDirectory onClose={() => setDirectoryOpen(false)} />
+      )}
       <OperatingRibbon data={data} />
       <Notice error={query.error} />
       <div className="page-grid portfolio-command-grid">
@@ -436,7 +465,12 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
         </IconButton>
       </PageTitle>
       {risk && <OperatingRibbon data={data} />}
-      {correctionId && <TransactionCorrectionDialog transactionId={correctionId} onClose={() => setCorrectionId(null)} />}
+      {correctionId && (
+        <TransactionCorrectionDialog
+          transactionId={correctionId}
+          onClose={() => setCorrectionId(null)}
+        />
+      )}
       <div
         className={
           risk
@@ -513,9 +547,15 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
               >
                 <Check size={13} /> Record review
               </button>
-              {Boolean(selected.transaction_id) && <button onClick={() => setCorrectionId(String(selected.transaction_id))}>
-                <Pencil size={13} /> Correct ledger record
-              </button>}
+              {Boolean(selected.transaction_id) && (
+                <button
+                  onClick={() =>
+                    setCorrectionId(String(selected.transaction_id))
+                  }
+                >
+                  <Pencil size={13} /> Correct ledger record
+                </button>
+              )}
               <div className="operation-warnings">
                 {Array.isArray(selected.breaches) &&
                   selected.breaches.map((b: Row, i: number) => (
