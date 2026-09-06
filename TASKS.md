@@ -28,7 +28,8 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [x] Verify local database/object backup and isolated non-overwriting restore.
 - [x] Add persisted login throttles, origin checks and per-user all-session revocation.
 - [x] Complete backend/frontend regression and all 34 browser workflows across full/targeted runs, including workspace reload fixes.
-- [ ] Resolve whole-backend strict typing and remaining deployed operations (frontend launch, Docker credentials/daemon, live providers and production controls).
+- [x] Start the existing local terminal launcher and verify the main route and login response on port 3001.
+- [ ] Resolve whole-backend strict typing and remaining deployed operations (Docker credentials/daemon, live providers and production controls).
 
 No provider-dependent or incomplete function may be marked AVAILABLE.
 No broker execution capability is permitted.

@@ -31,8 +31,10 @@ See TASKS.md, docs/REPORT_READINESS.md and docs/TERMINAL_ACCEPTANCE.md.
   were observed RUNNING. Redis, the local file agent and IBKR remain offline.
 - Database/object backup verified, isolated restore verified, ten business-table
   snapshots preserved across restart, including three investment theses.
-- The user-facing frontend on port 3001 could not be launched due to execution
-  policy. The temporary 3002 test server is not a persistent browser deployment.
+- On the subsequent launch request, the existing OPEN-KNK-TERMINAL.cmd started
+  successfully in the background on port 3001. API and frontend probes responded.
+  http://127.0.0.1:3001/overview redirects unauthenticated users to /login, which
+  returned HTTP 200 with stylesheet references. This is a local, not hosted, URL.
 - Docker Linux daemon is unavailable; Compose also requires an unset database
   password. Vercel authentication/deployment is not
   configured. No public hosted URL or all-services-healthy claim is made.
@@ -59,7 +61,8 @@ Two browser checks passed: unauthenticated root/privacy and retired routes/noind
 Port 3000 was stopped. The old ignored app build/cache directory could not be
 removed because recursive deletion was policy-blocked. Source is absent from the
 active Git tree; physical directory absence is NOT claimed.
-The private 3001 launcher remains policy-blocked from the previous session.
+The private 3001 launch was blocked at this earlier checkpoint; the later
+successful local launch is recorded in Current Verification above.
 API 8000 was restarted: health returned 200; anonymous current and legacy
 portfolio endpoints returned 401. The real database remains in place.
 

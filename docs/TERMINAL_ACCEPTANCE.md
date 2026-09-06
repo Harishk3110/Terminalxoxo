@@ -20,7 +20,7 @@ of every requested feature. Historical checkpoint counts below are not additive.
 | Data / quant dispatchers | Fresh RUNNING heartbeats observed |
 | SQLite plus object backup / isolated restore | Verified, no active data overwritten |
 | Ten business-table restart snapshots | Preserved, including ledger, analyses and theses |
-| User-facing frontend 3001 | Not running; launch was policy-blocked |
+| User-facing frontend 3001 | Existing launcher started; /overview redirects to /login, HTTP 200 with stylesheet references |
 | Docker Linux daemon / Compose | Unavailable / required database password unset |
 | Hosted deployment | Not performed; authentication unavailable |
 
@@ -111,8 +111,8 @@ This document records measured checks, not a claim that all nine milestones pass
 ## Not Yet Accepted
 
 Physical removal of ignored retired-app build/dependency artifacts was blocked.
-The main 3001 process is not claimed running merely because the isolated browser
-harness passes on 3002. Full Docker health and hosted deployment are unverified.
+The main 3001 process was verified separately by HTTP after the user requested a
+working local link. Full Docker health and hosted deployment remain unverified.
 Advanced domain, complete reporting and deployed-service requirements remain
 unaccepted as listed in TASKS.md; passing workflow tests do not complete that scope.
 
