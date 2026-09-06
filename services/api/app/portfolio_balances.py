@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .ledger_contracts import RevisionRequest
+from .ledger_storage import validate_storage
 from .portfolio_domain.money import ZERO, stored_decimal
-from .portfolio_operations import CURRENCIES, audit, validate_storage
+from .portfolio_operations import CURRENCIES, audit
 from .portfolio_valuation import PortfolioValuationService
 
 

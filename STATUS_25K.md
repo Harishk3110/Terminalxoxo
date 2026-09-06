@@ -6,12 +6,13 @@ Storage-boundary checkpoint: e5f5d43282d1f6f63c22e0eeec954155ee634eaf, pushed.
 Transaction-entry checkpoint: c770947a04b3b169332f0ff6442780b5db06d99a, pushed.
 Position-period checkpoint: bef7c5cc84b8efbbc61382ca3adc0f8d96d2135f, pushed.
 Position-inspector checkpoint: 8ac83a42153845dd9cc6c2b190d165355761180f, pushed.
-Current change: portfolio directory and explicit opening-capital form; `git rev-parse HEAD` resolves this checkout.
+Portfolio-directory checkpoint: bb8812fd99420534498ac62af36764cafb97f35f, pushed.
+Current change: correction storage bounds and FX/void audit provenance; `git rev-parse HEAD` resolves this checkout.
 Branch main; existing origin retained. No sprint milestone is certified complete.
 
 - Current milestone: M1 in progress, audited ledger and accounting subledgers implemented.
-- Qualifying delta at 2026-09-06 13:05 UTC: 8,227 conservative novel source/test lines.
-  Backend 2,206; frontend 1,820; workers/agents/reports/infra 263; tests 3,938.
+- Qualifying delta at 2026-09-06 13:11 UTC: 8,331 conservative novel source/test lines.
+  Backend 2,238; frontend 1,820; workers/agents/reports/infra 263; tests 4,010.
   This is an interim worktree count, not a milestone certification.
 - Gates: backend 9,000; frontend 6,000; infrastructure/agents/reports 3,000;
   substantive tests 7,000; total 25,000.
@@ -21,13 +22,15 @@ Branch main; existing origin retained. No sprint milestone is certified complete
 - Operational routes/APIs: portfolio resources added, including append-only
   corrections, scoped lot details, accounting policy, cash, recalculation,
   historical-run accounting components and append-only balance adjustments.
-- Tests: combined Python suite 512 passed, including all 66 existing backend tests;
-  targeted accounting coverage 98% (1,418 statements, 25 missing), not whole-app coverage.
+- Tests: combined Python suite 524 passed, including all 66 existing backend tests;
+  targeted accounting coverage 98% (1,449 statements, 26 missing), not whole-app coverage.
   Frontend 131 passed; production build/typecheck passed (101 kB terminal route).
   Repository test-unit command also passes five shared-package tests; other package echo scripts are not tests.
   Full Playwright suite 21 passed with knk-nav-4.4 (run sprint25k-directory-1).
+  Latest backend-only patch passed six targeted browser workflows (sprint25k-correction-1);
+  the unchanged frontend build and the other browser cases were verified at bb8812f.
   Final frontend build includes the portfolio directory in logs/sprint-25k-build.
-- New Python modules: Ruff and strict mypy passed on 24 source files (legacy imports silent).
+- New Python modules: Ruff and strict mypy passed on 25 source files (legacy imports silent).
 - Migrations 0004/0005 passed 15 lifecycle/schema/constraint tests. A fresh saved-data
   backup copy upgraded from 0003 to 0005, valued at SGD 70,597.57, and retained all
   captured original hashes (16 transactions, two dataset versions, 22 prior runs).
@@ -70,8 +73,12 @@ Branch main; existing origin retained. No sprint milestone is certified complete
   Selecting a directory ledger does not change the main dashboard's KNK_MAIN context.
   Desktop/mobile evidence: docs/25k/portfolio-directory-1440.png,
   portfolio-create-390.png and portfolio-created-390.png.
-- Next implementation: apply new-entry storage bounds to corrections, with regression
-  coverage for corrected FX provenance and exact eight-decimal round trips.
+- Corrections now share source-entry driver bounds, including derived base-value limits.
+  Changed FX is marked AUDITED MANUAL CORRECTION while original provider evidence
+  remains in before-history; voided records display their last corrected values and
+  remain excluded from cash replay. Twelve regression tests cover these boundaries.
+- Next implementation: complete grouped exposure and stale cash-FX reporting, then
+  continue the remaining M1/M2 financial and persistence contracts.
 - M2-M20, all category LOC floors and all final acceptance gates remain incomplete.
 
 Progress/evidence: docs/LOC_EVIDENCE_25K.md, docs/BUILD_EVIDENCE_25K.md and

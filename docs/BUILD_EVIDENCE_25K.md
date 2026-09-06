@@ -299,3 +299,28 @@ valid for unchanged knk-nav-4.4; no real portfolio was created or mutated by tes
 The isolated servers stopped after the run; only the earlier baseline API on 8000
 remains. User-facing deployment, M1 certification, broader precision/exposure work,
 M2-M20 and all final gates remain incomplete.
+
+## Correction Storage and Provenance, 2026-09-06 13:12 UTC
+
+Source predecessor: bb8812fd99420534498ac62af36764cafb97f35f, pushed.
+The existing driver round-trip guard is shared through ledger_storage.py rather
+than copied; moved lines receive no extra LOC credit. Corrections now reject
+the same unsafe numeric fields and out-of-range projected base values as new
+entries. The exact JSON revision remains the audit record, not a silently rounded
+replacement. FX corrections identify their manual origin; original provider
+rounding remains in the before snapshot. Voids retain last-corrected display
+values while contributing no replay cash.
+
+Twelve regression cases were added. Before the fix, nine failed as expected:
+seven input-driver boundaries, one derived base limit and one false FX provenance.
+The final complete backend suite passes 524 tests with three existing warnings.
+Coverage now includes --cov=app.ledger_storage: 98% targeted, 1,449 statements,
+26 missing. Ruff and strict mypy passed on 25 targeted source files; security
+check passed. No PostgreSQL runtime certification is inferred from SQLite tests.
+
+Focused Playwright command (ledger.spec.ts and portfolio-directory.spec.ts):
+exit 0, six passed, run sprint25k-correction-1. No frontend changes or rebuild
+were needed; the last full 21-browser-test run and 131 frontend tests are from
+bb8812f. LOC --check expected exit 1: 8,331 qualifying lines, all floors unmet.
+No migration or real-data mutation occurred. Broader derived snapshot precision,
+exposure/freshness coverage, all milestone certifications and final gates remain open.

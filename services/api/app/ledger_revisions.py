@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .ledger_contracts import AmendmentRequest, EntryRecord, RevisionRequest
+from .ledger_storage import validate_corrected_storage
 from .portfolio_domain.ledger import LedgerState
 from .portfolio_domain.money import stored_decimal
 from .portfolio_domain.types import SECURITY_MOVEMENTS, AccountingPolicy, Entry
@@ -40,11 +41,13 @@ def apply_revisions(
             payload["revision_id"] = revision.id
             payload["revision_reason"] = revision.reason
             payload["updated_at"] = revision.created_at.isoformat()
+            snapshot = revision.before if revision.action == "VOID" else revision.after
+            entry = EntryRecord.model_validate(snapshot["entry"]).to_entry()
+            payload.update(entry_payload(entry))
+            payload["metadata"] = entry.metadata
+            payload["notes"] = snapshot.get("notes")
             if revision.action == "VOID":
                 continue
-            entry = EntryRecord.model_validate(revision.after["entry"]).to_entry()
-            payload.update(entry_payload(entry))
-            payload["notes"] = revision.after.get("notes")
         effective.append(entry)
     effective.sort(key=lambda entry: entry.day)
     return effective, payloads
@@ -113,6 +116,7 @@ class PortfolioTransactionService:
         after: dict[str, Any]
         if isinstance(request, AmendmentRequest):
             updated, notes = self._amend(entry, request, payload.get("notes"))
+            validate_corrected_storage(self.session, updated)
             portfolio = self.session.get(models.Portfolio, portfolio_id)
             if portfolio and updated.currency == portfolio.base_currency and updated.fx != 1:
                 raise ValueError("Base-currency transaction FX must equal one")
@@ -186,6 +190,16 @@ class PortfolioTransactionService:
             updated = replace(updated, amount=updated.quantity * updated.price * updated.multiplier)
         stored_decimal(updated.gross, "corrected gross amount", nonnegative=True)
         updated.validate()
+        if updated.fx != entry.fx:
+            metadata = dict(updated.metadata)
+            metadata.pop("fx_recording", None)
+            metadata["fx_source"] = "AUDITED MANUAL CORRECTION"
+            metadata["fx_correction"] = {
+                "previous_rate": str(entry.fx),
+                "recorded_rate": str(updated.fx),
+                "reason": request.reason,
+            }
+            updated = replace(updated, metadata=metadata)
         return updated, updated_notes
 
     def history(self, portfolio_id: str, transaction_id: str) -> list[dict[str, Any]]:

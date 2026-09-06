@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from collections.abc import Mapping
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Numeric, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from . import models
 from .portfolio_domain.types import AccountingPolicy
@@ -19,23 +18,13 @@ from .price_sources import FxRateResolver, close_of_day
 from .transaction_context import record_context
 from .portfolio_domain.transaction_cash import enrich_cash_effects
 from .transaction_views import transaction_views
+from .ledger_storage import validate_storage
 
 CURRENCIES = {"SGD", "USD", "EUR", "GBP", "JPY", "HKD", "AUD", "CAD", "CHF", "CNH", "CNY", "NZD"}
 
 
 def audit(session: Session, action: str, resource_type: str, resource_id: str, metadata: dict[str, Any], actor: str | None = None) -> None:
     session.add(models.AuditLog(action=action, resource_type=resource_type, resource_id=resource_id, actor_user_id=actor, correlation_id=str(uuid.uuid4()), metadata_json=jsonable(metadata)))
-
-
-def validate_storage(session: Session, values: Mapping[str, Decimal]) -> None:
-    dialect = session.get_bind().dialect
-    if dialect.name != "sqlite":
-        return
-    processor = Numeric(24, 8).result_processor(dialect, None)
-    if processor is not None:
-        for name, value in values.items():
-            if processor(float(value)) != value:
-                raise ValueError(f"{name} cannot round-trip through local SQLite storage at eight decimal places")
 
 
 class PortfolioLedgerService:
