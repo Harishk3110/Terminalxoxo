@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .ledger_contracts import RevisionRequest
-from .portfolio_domain.money import ZERO, decimal
-from .portfolio_operations import CURRENCIES, audit
+from .portfolio_domain.money import ZERO, stored_decimal
+from .portfolio_operations import CURRENCIES, audit, validate_storage
 from .portfolio_valuation import PortfolioValuationService
 
 
@@ -29,9 +29,9 @@ class BalanceAdjustmentRequest(BaseModel):
     @field_validator("amount")
     @classmethod
     def representable_amount(cls, value: Decimal) -> Decimal:
-        value = decimal(value, "adjustment amount")
-        if value == ZERO or value != value.quantize(Decimal(".00000001")):
-            raise ValueError("Balance adjustment must be nonzero with at most eight decimal places")
+        value = stored_decimal(value, "adjustment amount")
+        if value == ZERO:
+            raise ValueError("Balance adjustment must be nonzero")
         return value
 
     @field_validator("reason")
@@ -78,6 +78,7 @@ class PortfolioBalanceService:
             raise ValueError("Future balance adjustments are not accepted")
         if request.currency not in CURRENCIES:
             raise ValueError("Balance currency is not configured")
+        validate_storage(self.session, {"adjustment amount": request.amount})
         opening = self.session.scalar(
             select(models.PortfolioTransaction.trade_date)
             .where(

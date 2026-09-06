@@ -46,6 +46,9 @@ portfolio rows survived the temporary-database downgrade/upgrade test.
 
 ## Accounting Checkpoint, 2026-09-06 11:24 UTC
 
+Source checkpoint: e25b94e52a7669458beaaa8c7685942dc256cd55, pushed to the existing
+Terminalxoxo origin/main. Verification below preceded the commit; source is identical.
+
 All results below use the baseline plus the checkpoint worktree, not the old API
 process on port 8000. Test servers use isolated databases and ports 8001/3002.
 
@@ -95,3 +98,27 @@ The preservation report is `logs/sprint-subledger-final-preservation.json`.
 
 No real-database migration, user-web deployment, full-stack health, whole-app 85%
 coverage, completed M1 or completed 25K sprint is claimed by this checkpoint.
+
+## Storage Boundary Follow-Up, 2026-09-06 11:38 UTC
+
+The same combined Python/coverage command now passes 395 tests: 1,079 targeted
+statements, 23 missing, 98%. Strict mypy still passes for the 19 targeted files.
+Ruff passes for the changed domain/contracts/revision/balance/test files; the
+touched legacy operations module passes E9/F checks (not a whole-module Ruff claim).
+Playwright's full 16-test suite passed again with run ID sprint25k-ledger-6.
+No frontend implementation changed after its successful production build/52 tests.
+The LOC check correctly exits 1 at 5,054 eligible lines; all floors remain unmet.
+
+The NUMERIC(24,8) write boundary now rejects excessive input precision and derived
+gross amounts that cannot be represented. Provider-resolved FX is explicitly
+half-even rounded to eight places with observed and recorded rates in protected
+metadata. Explicit user FX is not silently rounded. Stored base-value projections
+use half-even eight-place rounding. SQLite driver round-trip checks reject large
+fractional values whose binary representation would change a recorded input.
+This deliberately rejects unsupported values rather than expanding storage scale.
+
+A replay regression test initially compared Decimal string scale (`10000` versus
+`10000.00000000`); it now compares every reconciliation numeric value as Decimal.
+Supported fractional inputs retain quantity, gross, commission and NAV after a
+fresh database read. Broader precision/storage architecture remains an open M1/M18
+task; these tests are not certification of all PostgreSQL or SQLite accounting.

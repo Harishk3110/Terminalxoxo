@@ -3,15 +3,17 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Mapping
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Numeric, select
 from sqlalchemy.orm import Session
 from . import models
 from .portfolio_domain.types import AccountingPolicy
-from .portfolio_engine import Entry, LedgerState, TRANSACTION_TYPES, decimal, ZERO
+from .portfolio_domain.money import money, stored_decimal
+from .portfolio_engine import LedgerState, TRANSACTION_TYPES, decimal
 from .portfolio_valuation import PortfolioValuationService, jsonable, load_entries
 from .price_sources import FxRateResolver, close_of_day
 
@@ -20,6 +22,17 @@ CURRENCIES = {"SGD", "USD", "EUR", "GBP", "JPY", "HKD", "AUD", "CAD", "CHF", "CN
 
 def audit(session: Session, action: str, resource_type: str, resource_id: str, metadata: dict[str, Any], actor: str | None = None) -> None:
     session.add(models.AuditLog(action=action, resource_type=resource_type, resource_id=resource_id, actor_user_id=actor, correlation_id=str(uuid.uuid4()), metadata_json=jsonable(metadata)))
+
+
+def validate_storage(session: Session, values: Mapping[str, Decimal]) -> None:
+    dialect = session.get_bind().dialect
+    if dialect.name != "sqlite":
+        return
+    processor = Numeric(24, 8).result_processor(dialect, None)
+    if processor is not None:
+        for name, value in values.items():
+            if processor(float(value)) != value:
+                raise ValueError(f"{name} cannot round-trip through local SQLite storage at eight decimal places")
 
 
 class PortfolioLedgerService:
@@ -48,13 +61,13 @@ class PortfolioLedgerService:
             raise ValueError("Unsupported currency or currency does not match instrument")
         if kind == "SHORT" and not profile.configuration.get("allow_short", False):
             raise ValueError("Short positions are disabled in this portfolio policy")
-        quantity = decimal(payload.get("quantity", 0), "quantity", nonnegative=True)
-        price = decimal(payload.get("price", 0), "price", nonnegative=True)
-        fee = decimal(payload.get("fee", 0), "fee", nonnegative=True)
-        commission = decimal(payload.get("commission", 0), "commission", nonnegative=True)
-        tax = decimal(payload.get("tax", 0), "tax", nonnegative=True)
-        multiplier = decimal(payload.get("contract_multiplier", 1), "multiplier", positive=True)
-        amount = decimal(payload.get("amount") or payload.get("gross_amount") or quantity * price * multiplier, "amount", nonnegative=True)
+        quantity = stored_decimal(payload.get("quantity", 0), "quantity", nonnegative=True)
+        price = stored_decimal(payload.get("price", 0), "price", nonnegative=True)
+        fee = stored_decimal(payload.get("fee", 0), "fee", nonnegative=True)
+        commission = stored_decimal(payload.get("commission", 0), "commission", nonnegative=True)
+        tax = stored_decimal(payload.get("tax", 0), "tax", nonnegative=True)
+        multiplier = stored_decimal(payload.get("contract_multiplier", 1), "multiplier", positive=True)
+        amount = stored_decimal(payload.get("amount") or payload.get("gross_amount") or quantity * price * multiplier, "gross amount", nonnegative=True)
         if kind in {"BUY", "SELL", "SHORT", "COVER"} and amount != quantity * price * multiplier:
             raise ValueError("Gross amount must equal quantity times price times multiplier")
         if kind in {"COMMISSION", "FEE", "TAX"} and amount and fee + commission + tax:
@@ -65,7 +78,7 @@ class PortfolioLedgerService:
                 raise ValueError("Base-currency FX must equal one")
             fx_source = "IDENTITY"
         elif payload.get("fx_rate_to_base") is not None:
-            fx = decimal(payload["fx_rate_to_base"], "transaction FX", positive=True)
+            fx = stored_decimal(payload["fx_rate_to_base"], "transaction FX", positive=True)
             fx_source = "USER PROVIDED TRANSACTION FX"
         else:
             fx, provenance = FxRateResolver(self.session).resolve(currency, portfolio.base_currency, close_of_day(day))
@@ -73,6 +86,17 @@ class PortfolioLedgerService:
                 raise ValueError("Missing transaction FX; supply an explicit recorded exchange rate")
             fx_source = provenance["source"]
         metadata = dict(payload.get("metadata") or {})
+        metadata.pop("fx_recording", None)
+        if currency != portfolio.base_currency and payload.get("fx_rate_to_base") is None:
+            observed_fx = fx
+            fx = stored_decimal(money(fx, 8), "recorded transaction FX", positive=True)
+            metadata["fx_recording"] = {"observed_rate": str(observed_fx), "recorded_rate": str(fx),
+                                        "rounding": "ROUND_HALF_EVEN", "decimal_places": 8}
+        stored_base_value = money(amount * fx, 8)
+        stored_decimal(stored_base_value, "stored base value", nonnegative=True)
+        validate_storage(self.session, {"quantity": quantity, "price": price, "fee": fee,
+                         "commission": commission, "tax": tax, "multiplier": multiplier,
+                         "gross amount": amount, "transaction FX": fx, "stored base value": stored_base_value})
         for key in ("to_currency", "to_amount", "ratio", "cost_allocation", "exchange_ratio", "cash_per_share", "cash_cost_allocation", "reason", "direction", "thesis_id", "strategy_id", "rationale"):
             if payload.get(key) is not None:
                 metadata[key] = payload[key]
@@ -117,7 +141,7 @@ class PortfolioLedgerService:
         self.session.flush()
         detail = models.TransactionDetail(
             transaction_id=txn.id, gross_amount=amount, commission=commission, tax=tax,
-            contract_multiplier=multiplier, base_value=amount * fx, external_key=external_key,
+            contract_multiplier=multiplier, base_value=stored_base_value, external_key=external_key,
             source_file_id=source_file_id, metadata_json=jsonable({**metadata, "external_reference": reference}),
             reconciliation_state="MATCHED" if source == "IBKR PAPER" else "INTERNAL_ONLY",
         )

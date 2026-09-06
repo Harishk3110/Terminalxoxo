@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from . import models
 from .ledger_contracts import AmendmentRequest, EntryRecord, RevisionRequest
 from .portfolio_domain.ledger import LedgerState
+from .portfolio_domain.money import stored_decimal
 from .portfolio_domain.types import SECURITY_MOVEMENTS, AccountingPolicy, Entry
 
 
@@ -183,6 +184,7 @@ class PortfolioTransactionService:
             raise ValueError("Future-dated corrections are not accepted")
         if updated.kind in SECURITY_MOVEMENTS and updated.instrument_id and "amount" not in fields:
             updated = replace(updated, amount=updated.quantity * updated.price * updated.multiplier)
+        stored_decimal(updated.gross, "corrected gross amount", nonnegative=True)
         updated.validate()
         return updated, updated_notes
 

@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .portfolio_domain.money import stored_decimal
 from .portfolio_domain.types import AccountingPolicy, CostMethod, Entry
 
 
@@ -55,9 +56,7 @@ class TransactionChanges(BaseModel):
     @field_validator("quantity", "price", "amount", "fee", "commission", "tax", "fx_rate_to_base")
     @classmethod
     def bounded(cls, value: Decimal | None) -> Decimal | None:
-        if value is not None and (not value.is_finite() or abs(value) > Decimal("1e16")):
-            raise ValueError("Accounting values must be finite and bounded")
-        return value
+        return stored_decimal(value, "corrected accounting value") if value is not None else None
 
 
 class RevisionRequest(BaseModel):

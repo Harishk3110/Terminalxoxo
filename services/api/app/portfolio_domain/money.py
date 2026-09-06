@@ -39,6 +39,22 @@ def money(value: Decimal, places: int = 2) -> Decimal:
     return abs(rounded) if rounded == ZERO else rounded
 
 
+def stored_decimal(
+    value: object,
+    name: str = "amount",
+    *,
+    positive: bool = False,
+    nonnegative: bool = False,
+) -> Decimal:
+    """Reject values the existing NUMERIC(24, 8) ledger cannot represent."""
+    number = decimal(value, name, positive=positive, nonnegative=nonnegative)
+    if abs(number) >= MAX_AMOUNT:
+        raise ValueError(f"{name} exceeds the ledger's sixteen integer digits")
+    if number != money(number, 8):
+        raise ValueError(f"{name} supports at most eight decimal places in the current ledger")
+    return number
+
+
 def allocate(total: Decimal, weights: list[Decimal]) -> list[Decimal]:
     """Allocate exactly; place division residual on the final positive weight."""
     if any(not weight.is_finite() or weight < ZERO for weight in weights):
