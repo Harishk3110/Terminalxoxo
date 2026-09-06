@@ -107,7 +107,9 @@ def delete_workspace(workspace_id: str, session: Session = Depends(get_session))
 
 @router.get("/terminal/bootstrap")
 def bootstrap(session: Session = Depends(get_session)):
-    return {"functions": FUNCTIONS, "quotes": quotes(session), "workspaces": workspaces(session)["items"], "scenarios": scenario_library(), "timezone": "Asia/Singapore", "currency": "SGD", "broker_mode": "PAPER", "broker_state": "NOT_CONNECTED", "calculation_version": VERSION, "as_of": datetime.now(timezone.utc).isoformat()}
+    from .broker_api import snapshot
+    broker_state = snapshot(session)["state"]
+    return {"functions": FUNCTIONS, "quotes": quotes(session), "workspaces": workspaces(session)["items"], "scenarios": scenario_library(), "timezone": "Asia/Singapore", "currency": "SGD", "broker_mode": "PAPER", "broker_state": broker_state, "calculation_version": VERSION, "as_of": datetime.now(timezone.utc).isoformat()}
 
 
 @router.get("/quotes")
@@ -177,8 +179,8 @@ def start_run(payload: RunRequest, session: Session = Depends(get_session)):
     if payload.kind == "stress":
         params["_portfolio"] = portfolio_analytics(session)
     if payload.kind == "backtest" and params.get("dataset_id"):
-        version = session.scalar(select(models.DatasetVersion).where(models.DatasetVersion.dataset_id == params["dataset_id"]).order_by(models.DatasetVersion.version.desc()))
-        if not version:
+        version = session.get(models.DatasetVersion, params["dataset_version_id"]) if params.get("dataset_version_id") else session.scalar(select(models.DatasetVersion).where(models.DatasetVersion.dataset_id == params["dataset_id"]).order_by(models.DatasetVersion.version.desc()))
+        if not version or version.dataset_id != params["dataset_id"]:
             raise HTTPException(404, "Dataset version not found")
         params["dataset_version_id"] = version.id
         params["mapping"] = (version.schema_json or {}).get("mapping", {"date": "date", "close": "close"})
@@ -316,7 +318,19 @@ def dataset_detail(dataset_id: str, session: Session = Depends(get_session)):
     if not dataset:
         raise HTTPException(404, "Dataset not found")
     versions = session.scalars(select(models.DatasetVersion).where(models.DatasetVersion.dataset_id == dataset_id).order_by(models.DatasetVersion.version.desc())).all()
-    return {"id": dataset.id, "name": dataset.name, "source": dataset.source, "quality": dataset.quality, "versions": [{"id": v.id, "version": v.version, "rows": v.row_count, "hash": v.content_hash, "schema": v.schema_json, "as_of": v.created_at.isoformat()} for v in versions]}
+    result = []
+    for version in versions:
+        schema = dict(version.schema_json or {})
+        if schema.get("curated_key"):
+            content = ObjectStorage().get_bytes(schema["curated_key"])
+            if hashlib.sha256(content).hexdigest() != schema["curated_hash"]:
+                raise HTTPException(409, "Curated dataset integrity check failed")
+            preview = json.loads(content)[:30]
+            schema = {**schema, "raw_columns": schema.get("columns"), "preview": preview, "columns": [{"name": k} for k in preview[0]] if preview else []}
+        lineage = session.scalars(select(models.DatasetLineage).where(models.DatasetLineage.dataset_version_id == version.id)).all()
+        linked = [run_payload(run) for run in session.scalars(select(models.AnalysisRun).where(models.AnalysisRun.kind == "backtest")).all() if run.parameters.get("dataset_version_id") == version.id]
+        result.append({"id": version.id, "version": version.version, "rows": version.row_count, "hash": version.content_hash, "schema": schema, "as_of": version.created_at.isoformat(), "lineage": [{"source_type": r.source_type, "source_id": r.source_id, "transform": r.transform} for r in lineage], "backtests": linked})
+    return {"id": dataset.id, "name": dataset.name, "source": dataset.source, "quality": dataset.quality, "versions": result}
 
 
 @router.get("/research")
@@ -371,7 +385,20 @@ def terminal_health(session: Session = Depends(get_session)):
         rows.append({"service": "Object storage", "state": "FAILED", "as_of": now, "detail": "Write/read probe failed"})
     active = session.scalars(select(models.AnalysisRun).where(models.AnalysisRun.status.in_(["QUEUED", "RUNNING"]))).all()
     rows.append({"service": "Analytical workers", "state": "RUNNING" if active else "IDLE", "as_of": now, "detail": f"{len(active)} active persisted jobs; on-demand processes"})
-    for name in ("IBKR paper agent", "SEC EDGAR", "OpenFIGI", "AI provider", "News provider", "Options provider", "Email alerts", "Telegram", "Sentry", "Backup", "Public web", "Report service", "Workflow orchestrator"):
+    from .price_sources import utc
+    from .portfolio_seed import profile_for
+    agent = session.scalar(select(models.LocalAgent).where(models.LocalAgent.revoked_at.is_(None)).order_by(models.LocalAgent.last_seen.desc()).limit(1))
+    online = agent and agent.last_seen and (datetime.now(timezone.utc) - utc(agent.last_seen)).total_seconds() < 90
+    rows.append({"service": "Local data agent", "state": "ONLINE" if online else "OFFLINE", "as_of": agent.last_seen.isoformat() if agent and agent.last_seen else None, "detail": "Scoped outbound heartbeat" if online else "No current agent heartbeat"})
+    profile = profile_for(session)
+    nav = session.scalar(select(models.PortfolioValuationRun).where(models.PortfolioValuationRun.portfolio_id == profile.portfolio_id).order_by(models.PortfolioValuationRun.created_at.desc()).limit(1)) if profile else None
+    rows.append({"service": "Portfolio NAV", "state": nav.status if nav else "NOT_CALCULATED", "as_of": nav.created_at.isoformat() if nav else None, "detail": nav.payload.get("quality") if nav else "No valuation run"})
+    fred = session.scalar(select(models.MacroObservation).where(models.MacroObservation.provider == "FRED").order_by(models.MacroObservation.ingestion_timestamp.desc()).limit(1))
+    rows.append({"service": "FRED", "state": "OBSERVED" if fred else "CONFIGURED" if settings.fred_enabled and settings.fred_api_key else "DEMO", "as_of": fred.ingestion_timestamp.isoformat() if fred else None, "detail": "Persisted FRED observation" if fred else "No connected observations"})
+    from .broker_api import current_snapshot
+    broker, broker_active = current_snapshot(session, profile.portfolio_id) if profile else (None, False)
+    rows.append({"service": "IBKR paper agent", "state": "READ_ONLY" if broker_active else "OFFLINE", "as_of": broker.as_of.isoformat() if broker else None, "detail": "Observed paired paper snapshot" if broker else "No broker snapshot received"})
+    for name in ("SEC EDGAR", "OpenFIGI", "AI provider", "News provider", "Options provider", "Email alerts", "Telegram", "Sentry", "Backup", "Public web", "Report service", "Workflow orchestrator"):
         rows.append({"service": name, "state": "NOT_VERIFIED", "as_of": now, "detail": "No current heartbeat or configured probe"})
     try:
         commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL, timeout=2).decode().strip()
@@ -394,6 +421,9 @@ def terminal_report(kind: str, session: Session = Depends(get_session)):
         raise HTTPException(404, "Unknown report template")
     data = portfolio_analytics(session)
     rows = data["positions"]
+    if any(r["market_price"] is None or r["fx_rate"] is None for r in rows):
+        return service.portfolio_xlsx()
+    rows = [{**r, "fx_rate": float(r["fx_rate"])} for r in rows]
     sheets = {"Sources": [["Source", "Data as of", "Quality"], [data["source"], data["as_of"], data["quality"]]], "Positions": [["Symbol", "Quantity", "Price", "FX", "Calculated value SGD"]] + [[r["symbol"], float(r["quantity"]), float(r["market_price"]), r["fx_rate"], ReportFormula(f"=B{i+2}*C{i+2}*D{i+2}", float(r["quantity"]) * float(r["market_price"]) * r["fx_rate"])] for i, r in enumerate(rows)], "Risk": [["Metric", "Value"]] + [[k, v] for k, v in data["risk"].items()], "Performance": [["Metric", "Value"]] + [[k, v] for k, v in data["performance"].items()], "Warnings": [[w] for w in data["warnings"]]}
     return service._write_workbook(kind, sheets)
 

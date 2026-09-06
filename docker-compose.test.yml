@@ -6,9 +6,9 @@ services:
       POSTGRES_USER: knk
       POSTGRES_PASSWORD: knk_test
     ports:
-      - "55432:5432"
+      - "127.0.0.1:55432:5432"
 
   redis-test:
     image: redis:7-alpine
     ports:
-      - "56379:6379"
+      - "127.0.0.1:56379:6379"

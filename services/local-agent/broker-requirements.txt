@@ -1,0 +1,2 @@
+-r requirements.txt
+ib_async==2.1.0

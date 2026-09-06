@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import sys
+import json
+import hashlib
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -36,11 +38,23 @@ def backtest_result(session, params):
     if dataset_id:
         version = session.get(models.DatasetVersion, params["dataset_version_id"])
         raw = session.get(models.RawObject, version.raw_object_id)
-        rows, _ = infer_tabular(ObjectStorage().get_bytes(raw.object_key), params.get("suffix", "csv"))
-        mapping = params.get("mapping") or {"date": "date", "close": "close"}
-        rows = [{role: row.get(column) for role, column in mapping.items()} for row in rows]
-        data_source = "USER_UPLOAD"
-        quality = "USER PROVIDED"
+        schema = version.schema_json or {}
+        if schema.get("curated_key"):
+            content = ObjectStorage().get_bytes(schema["curated_key"])
+            if hashlib.sha256(content).hexdigest() != schema["curated_hash"]:
+                raise ValueError("Pinned dataset integrity check failed")
+            rows = json.loads(content)
+            symbols = {r.get("symbol") for r in rows}
+            if len(symbols) > 1:
+                rows = [r for r in rows if r.get("symbol") == params.get("symbol")]
+            if not rows or any(r.get(k) is None for r in rows for k in ("date", "open", "high", "low", "close")):
+                raise ValueError("Pinned dataset requires complete validated OHLC bars")
+        else:
+            rows, _ = infer_tabular(ObjectStorage().get_bytes(raw.object_key), params.get("suffix", "csv"))
+            mapping = params.get("mapping") or {"date": "date", "close": "close"}
+            rows = [{role: row.get(column) for role, column in mapping.items()} for row in rows]
+        data_source = schema.get("source", "USER_UPLOAD")
+        quality = "FILE IMPORT" if schema.get("file_id") else "USER PROVIDED"
     else:
         payload = history(session, params.get("symbol", "SPY"))
         rows, data_source, quality = payload["items"], payload["source"], payload["quality"]

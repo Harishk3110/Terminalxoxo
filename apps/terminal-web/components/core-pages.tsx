@@ -742,7 +742,7 @@ export function RiskPage() {
       />
       <div className="page-grid equal-grid">
         <Panel
-          title="Position beta contribution"
+          title="Position variance contribution"
           source={d?.source}
           asOf={d?.as_of}
           quality={d?.quality}
@@ -750,7 +750,7 @@ export function RiskPage() {
           loading={query.isLoading}
         >
           <Chart
-            label="Position beta contribution"
+            label="Position variance contribution"
             option={{
               xAxis: {
                 type: "category",
@@ -758,6 +758,7 @@ export function RiskPage() {
               },
               yAxis: {
                 type: "value",
+                axisLabel: { formatter: (value: number) => `${(value * 100).toFixed(0)}%` },
                 splitLine: { lineStyle: { color: COLORS.grid } },
               },
               series: [
@@ -772,9 +773,9 @@ export function RiskPage() {
         </Panel>
         <Panel
           title="Daily return correlation"
-          source="Aligned DemoProvider daily closes"
+          source={d?.source}
           asOf={d?.as_of}
-          quality="DEMO DATA"
+          quality={d?.quality}
         >
           <Chart
             label="Correlation matrix"
@@ -833,8 +834,9 @@ export function RiskPage() {
               { key: "beta", label: "Beta", numeric: true, size: 85 },
               {
                 key: "risk_contribution",
-                label: "Beta contribution",
+                label: "Variance share",
                 numeric: true,
+                percent: true,
                 size: 125,
               },
               { key: "sector", label: "Sector", size: 155 },
@@ -1497,16 +1499,36 @@ export function HedgePage() {
   const [symbol, setSymbol] = useTabState("hedge-symbol", "SPY");
   const [review, setReview] = useTabState("hedge-review", "DRAFT");
   const quote = bootstrap.quotes.find((q) => q.symbol === symbol);
-  const nav = Number(data?.portfolio.nav ?? 0);
-  const beta = Number(data?.risk.beta ?? 0);
-  const fx =
+  const nav = data?.portfolio.nav == null ? NaN : Number(data.portfolio.nav);
+  const beta = data?.risk.beta == null ? NaN : Number(data.risk.beta);
+  const fx = Number(
     data?.positions.find((p) => p.symbol === symbol)?.fx_rate ??
-    data?.positions.find((p) => p.currency === quote?.currency)?.fx_rate ??
-    1;
+      data?.positions.find((p) => p.currency === quote?.currency)?.fx_rate ??
+      (quote?.currency === "SGD" ? 1 : NaN),
+  );
   const unitValue = (quote?.price ?? 0) * fx;
   const notional = nav * (beta - target);
   const units = unitValue ? Math.trunc(Math.abs(notional) / unitValue) : 0;
   const residual = Math.abs(notional) - units * unitValue;
+  if (
+    data &&
+    (!Number.isFinite(nav) ||
+      !Number.isFinite(beta) ||
+      !Number.isFinite(fx) ||
+      !quote?.price)
+  )
+    return (
+      <>
+        <PageTitle code="HEDGE" title="Manual Hedge Analysis">
+          <Badge>UNAVAILABLE</Badge>
+        </PageTitle>
+        <p className="warning-note section-pad">
+          Complete ledger NAV, portfolio beta, hedge price and FX are required.
+          Broker snapshot history is not a ledger risk model. No order
+          transmission is available.
+        </p>
+      </>
+    );
   const result = [
     {
       instrument: symbol,

@@ -126,24 +126,38 @@ test("manual ledger, upload validation and backtest lifecycle", async ({
   await expect(page.getByLabel("transactions table")).toContainText("MANUAL");
   await command(page, "DROP");
   const csv =
-    "date,close\n" +
+    "Date,Open,High,Low,Close,Volume\n" +
     Array.from(
       { length: 240 },
       (_, i) =>
-        `${new Date(Date.UTC(2024, 0, i + 1)).toISOString().slice(0, 10)},${100 + 0.1 * i + 10 * Math.sin(i / 8)}`,
+        `${new Date(Date.UTC(2024, 0, i + 1)).toISOString().slice(0, 10)},${100 + 0.1 * i + 10 * Math.sin(i / 8)},${101 + 0.1 * i + 10 * Math.sin(i / 8)},${99 + 0.1 * i + 10 * Math.sin(i / 8)},${100 + 0.1 * i + 10 * Math.sin(i / 8)},10000`,
     ).join("\n");
   await page.locator("input[type=file]").setInputFiles({
-    name: "qa-prices.csv",
+    name: "SPY_2024-08-27_prices.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
   });
   await expect(page.getByLabel("Dataset name")).toBeVisible();
-  await page.getByLabel("Licence note").fill("Self-created QA fixture");
-  await page.getByRole("button", { name: "Validate", exact: true }).click();
+  await page.getByRole("tab", { name: "Mapping", exact: true }).click();
   await page
-    .getByRole("button", { name: "Import dataset", exact: true })
+    .getByLabel("Mapping profile")
+    .selectOption({ label: "KOYFIN_PRICE_HISTORY / v1" });
+  await page
+    .getByRole("button", { name: "Validate mapping", exact: true })
     .click();
-  await expect(page.getByText("IMPORTED", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("data-drop-inbox table")).toContainText(
+    "AWAITING_APPROVAL",
+  );
+  await page
+    .getByLabel("Licence / permitted use")
+    .fill("Self-created QA fixture");
+  await page.getByLabel("Approve this validated version").check();
+  await page
+    .getByRole("button", { name: "Import approved file", exact: true })
+    .click();
+  await expect(page.getByLabel("data-drop-inbox table")).toContainText(
+    "IMPORTED",
+  );
   await page
     .getByRole("button", { name: "Backtest dataset", exact: true })
     .click();
@@ -368,6 +382,7 @@ for (const viewport of [
         maskColor: "#111111",
         mask: [
           page.locator(".header-clock"),
+          page.locator(".valuation-timestamp"),
           page.locator(".quote-meta time"),
           page.locator(".status-bar"),
           page.locator(".inspector-body"),
@@ -390,9 +405,15 @@ test("mobile monitoring stays within viewport", async ({ page }) => {
   const mainBounds = await page.locator("#main-workspace").boundingBox();
   expect(mainBounds!.width).toBeGreaterThan(300);
   expect(mainBounds!.height).toBeGreaterThan(500);
-  expect(await page.locator(".kpi > *").evaluateAll(elements =>
-    elements.every(element => element.scrollWidth <= element.clientWidth + 1),
-  )).toBe(true);
+  expect(
+    await page
+      .locator(".kpi > *")
+      .evaluateAll((elements) =>
+        elements.every(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      ),
+  ).toBe(true);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
@@ -402,6 +423,7 @@ test("mobile monitoring stays within viewport", async ({ page }) => {
     maskColor: "#111111",
     mask: [
       page.locator(".header-clock"),
+      page.locator(".valuation-timestamp"),
       page.locator(".status-bar"),
       page.locator(".panel-footer time"),
     ],

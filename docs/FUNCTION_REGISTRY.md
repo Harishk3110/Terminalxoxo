@@ -1,12 +1,12 @@
 # Function Registry
 
-Canonical source: services/api/app/data/functions.json. The API, palette, rail and typed @knk/terminal-functions package consume this same file. There are 102 registered functions and 92 distinct registry route patterns.
+Canonical source: services/api/app/data/functions.json. The API, palette, rail and typed @knk/terminal-functions package consume this same file. There are 110 registered functions and 96 distinct registry route patterns.
 
 Statuses: available = operational workflow; demo_available = working calculation/view with synthetic inputs; provider_required = missing external data/connection; in_development = not implemented. Registry membership is not a claim that every specialist feature is complete. Shared analytical routes intentionally serve related functions.
 
 | Function | Name | Status | Route |
 | --- | --- | --- | --- |
-| HOME | Market Pulse | demo_available | /overview |
+| HOME | Portfolio Command Centre | demo_available | /overview |
 | Q | Quote | demo_available | /quote/{instrumentId} |
 | GP | Price Chart | demo_available | /chart/{instrumentId} |
 | TECH | Technical Analysis | demo_available | /technicals/{instrumentId} |
@@ -80,7 +80,7 @@ Statuses: available = operational workflow; demo_available = working calculation
 | STATS | Statistics | demo_available | /factor-lab |
 | WALK | Walk-Forward Analysis | in_development | /functions/walk |
 | MC | Monte Carlo | in_development | /functions/mc |
-| EDGE | Edge Lab | in_development | /functions/edge |
+| EDGE | Edge Lab | available | /edge-lab |
 | MODEL | Model Lab | in_development | /functions/model |
 | RESEARCH | Research Workspace | available | /research |
 | THESIS | Investment Thesis | available | /thesis |
@@ -108,5 +108,13 @@ Statuses: available = operational workflow; demo_available = working calculation
 | SECURITY | Security Settings | available | /settings/security |
 | FUNC | Function Directory | available | /functions |
 | AI | KnK AI | provider_required | /functions/ai |
+| NAV | Portfolio NAV | available | /overview |
+| PNL | Portfolio P&L | available | /performance |
+| TRADES | Trade Monitor | available | /trade-monitor |
+| RISKMON | Risk & Trade Monitor | available | /risk-trade-monitor |
+| QMON | Quant Research Monitor | available | /quant-dashboard |
+| EQUITY | Equity Research Desk | available | /equity |
+| KOYFIN | Koyfin File Drop | available | /data-drop |
+| DATADROP | External Data Drop | available | /data-drop |
 
-TECH currently supports SMA20/SMA50; no indicator builder. BREADTH/SECTOR are basic market inspection views. THESIS/IDEA are private free-form notes. FACTOR/STATS offer trailing momentum ranks and z-scores, not IC/walk-forward validation. HEDGE is an integer ETF beta-exposure estimate, not portfolio optimization. EXCEL supports portfolio, risk, macro and completed backtests; deck/PDF generation is unavailable. PINE exports one approved moving-average template.
+TECH currently supports SMA20/SMA50; no indicator builder. BREADTH/SECTOR are basic market inspection views. THESIS/IDEA retain private free-form notes. FACTOR/STATS include trailing momentum ranks, historical rank IC and quintile forward returns with a purged IS/OOS split; this is not walk-forward validation or proven edge. EDGE records pinned research candidates, with paper promotion gated. HEDGE is an integer ETF beta-exposure estimate, not portfolio optimization. EXCEL supports portfolio, risk, macro and completed backtests; deck/PDF generation is unavailable. PINE exports one approved moving-average template. Broker Monitor supports read-only reported snapshots and explicit recorded-fill approval; actual paper connectivity remains unverified.

@@ -1,5 +1,24 @@
 # TASKS
 
+## Portfolio-First / 2026-09-06
+
+- [x] M1: preserve legacy data; explicit SGD 70,000 main book, Decimal ledger/NAV/performance and Portfolio Command Centre.
+- [x] M2: durable CSV/XLSX/JSON Data Drop, 12 mapping profiles, approval, raw/curated lineage and scoped outbound file agent.
+- [x] M3: trade-event/review records, recorded paper-fill approval, pre/post risk and reconciliation.
+- [x] M4: risk/trade desk, limits, contributions, stress with cash FX, manual hedge review.
+- [x] M5: quant registry/monitor, pinned backtests, measured factor IC/quantiles and research candidates.
+- [x] M6: equity desk, holdings/theses/import links and curated fundamentals with honest unavailable valuations.
+- [x] M7 implementation: actual health/freshness, source preferences, workbooks, documentation and migration/restart checks.
+- [x] Final browser comparison and documented release evidence; release commit is recorded in Git history.
+- [ ] Configure and verify real paper account, file watcher, provider credentials and complete Docker stack.
+- [ ] Trusted-profile auto-import/editor, agent service installer and broader file formats.
+- [ ] Persisted factor jobs, verified strategy paper returns, walk-forward/custom strategy execution.
+- [ ] PDF/deck output, cash-FX/liability covariance risk, production authorization and supervision.
+
+The historical checklist below records the earlier UI release. Its remaining
+items that concern attribution, factor IC and broker reconciliation are now
+partially superseded by this release; broader specialist requirements remain.
+
 ## Terminal UI V2 / 2026-09-06
 
 - [x] Audit the stacked layout and replace it with the requested terminal information architecture.

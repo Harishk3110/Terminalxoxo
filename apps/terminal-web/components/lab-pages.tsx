@@ -47,6 +47,9 @@ export function BacktestPage() {
     dataset_id: activeTab.route.startsWith("/backtests/dataset/")
       ? activeTab.route.split("/")[3]
       : "",
+    dataset_version_id: activeTab.route.includes("/version/")
+      ? activeTab.route.split("/")[5]
+      : "",
     start: "",
     end: "",
   });
@@ -162,11 +165,20 @@ export function BacktestPage() {
             <select
               aria-label="Backtest dataset"
               value={form.dataset_id}
-              onChange={(e) => setForm({ ...form, dataset_id: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  dataset_id: e.target.value,
+                  dataset_version_id: "",
+                })
+              }
             >
               <option value="">DemoProvider daily prices</option>
               {datasets.data?.items
-                .filter((d) => d.source === "USER_UPLOAD")
+                .filter(
+                  (d) =>
+                    d.source === "USER_UPLOAD" || d.dataset_type === "ohlcv",
+                )
                 .map((d) => (
                   <option key={String(d.id)} value={String(d.id)}>
                     {String(d.name)}
@@ -322,6 +334,7 @@ export function FactorPage() {
     as_of: string;
     quality: string;
     warnings: string[];
+    diagnostics?: { state: string; in_sample: Row; out_of_sample: Row };
   }>("factor", `/api/v1/factors?lookback=${lookback}`);
   const d = query.data;
   return (
@@ -402,6 +415,12 @@ export function FactorPage() {
             <dd>Five equal-count groups</dd>
             <dt>Forward IC</dt>
             <dd>Not observable for latest signal</dd>
+            <dt>Historical IS rank IC</dt>
+            <dd>{number(d?.diagnostics?.in_sample?.mean_ic)}</dd>
+            <dt>Historical OOS rank IC</dt>
+            <dd>{number(d?.diagnostics?.out_of_sample?.mean_ic)}</dd>
+            <dt>Diagnostics</dt>
+            <dd>{d?.diagnostics?.state ?? "UNAVAILABLE"}</dd>
           </dl>
           {d?.warnings.map((w) => (
             <p className="warning-note section-pad" key={w}>
@@ -725,10 +744,25 @@ export function CataloguePage({ route }: { route: string }) {
       }>(`/api/v1/datasets/${selected}`, signal),
     enabled: !!selected,
   });
-  const version = detail.data?.versions[0];
+  const [versionId, setVersionId] = useState("");
+  const version =
+    detail.data?.versions.find((v) => v.id === versionId) ??
+    detail.data?.versions[0];
   return (
     <>
-      <PageTitle code="CATALOGUE" title="Data Catalogue" />
+      <PageTitle code="CATALOGUE" title="Data Catalogue">
+        <select
+          aria-label="Dataset version"
+          value={version?.id ?? ""}
+          onChange={(e) => setVersionId(e.target.value)}
+        >
+          {detail.data?.versions.map((v) => (
+            <option key={v.id} value={v.id}>
+              Version {v.version} / {v.rows} rows
+            </option>
+          ))}
+        </select>
+      </PageTitle>
       <div className="page-grid analytics-grid">
         <Panel
           className="wide-panel"

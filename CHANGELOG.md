@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## Portfolio-First Operating Model - 2026-09-06
+
+- Replaced market-first HOME with the KNK_MAIN Portfolio Command Centre while retaining the approved terminal shell.
+- Added explicit SGD 70,000 opening contribution, 17 Decimal ledger kinds, native cash, immutable NAV/performance/risk records and provenance.
+- Added trade review, risk contributions/limits, source comparison, stale-data retention, scoped demo reset and workbook reporting.
+- Added durable file approval, 12 mapping profiles, immutable raw/curated versions, dataset-pinned research and imported financial statements.
+- Added outbound OS-vault file agent and optional read-only paper snapshot reader with explicit fill-to-ledger approval.
+- Added Equity/Quant/Risk & Trade desks, measured factor IC/quantiles and research-only candidate records; expanded registry to 110 functions.
+- Added migration 0003, accounting/agent/broker tests and cross-viewport browser acceptance. Live services and production limitations remain explicit in STATUS.md.
+- Restored Git tracking in C:\Dev without replacing transferred files; rebuilt copied dependency links outside OneDrive.
+- Fixed compact-container seed startup, deterministic correlation ordering and source labels; verified API/PostgreSQL/Redis readiness and zero NAV reconciliation difference in Docker.
+
 ## Terminal UI V2 - 2026-09-06
 
 - Rebuilt the terminal shell around compact command/security/tab bars, function navigation, persistent workspaces, analytical panels, resizable inspector and measured status.

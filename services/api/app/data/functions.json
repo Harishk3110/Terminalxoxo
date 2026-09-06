@@ -1,9 +1,9 @@
 [
   {
     "mnemonic": "HOME",
-    "name": "Market Pulse",
-    "description": "Market Pulse.",
-    "category": "markets",
+    "name": "Portfolio Command Centre",
+    "description": "KnK main portfolio operating centre.",
+    "category": "portfolio",
     "keywords": [
       "market pulse"
     ],
@@ -1383,11 +1383,9 @@
     "requiresSecurity": false,
     "supportsMultipleSecurities": false,
     "supportedAssetClasses": [],
-    "route": "/functions/edge",
-    "implementationStatus": "in_development",
-    "providerRequirements": [
-      "Implementation pending"
-    ]
+    "route": "/edge-lab",
+    "implementationStatus": "available",
+    "providerRequirements": []
   },
   {
     "mnemonic": "MODEL",
@@ -1851,5 +1849,170 @@
     "providerRequirements": [
       "AI provider"
     ]
+  },
+  {
+    "mnemonic": "NAV",
+    "name": "Portfolio NAV",
+    "description": "Portfolio NAV.",
+    "category": "portfolio",
+    "keywords": [
+      "net asset value",
+      "main portfolio",
+      "show my portfolio"
+    ],
+    "aliases": [
+      "net asset value",
+      "main portfolio",
+      "show my portfolio"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/overview",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "PNL",
+    "name": "Portfolio P&L",
+    "description": "Portfolio P&L.",
+    "category": "portfolio",
+    "keywords": [
+      "profit and loss",
+      "portfolio pnl"
+    ],
+    "aliases": [
+      "profit and loss",
+      "portfolio pnl"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/performance",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "TRADES",
+    "name": "Trade Monitor",
+    "description": "Trade Monitor.",
+    "category": "portfolio",
+    "keywords": [
+      "trade blotter",
+      "record transaction",
+      "trade monitor"
+    ],
+    "aliases": [
+      "trade blotter",
+      "record transaction",
+      "trade monitor"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/trade-monitor",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "RISKMON",
+    "name": "Risk & Trade Monitor",
+    "description": "Risk & Trade Monitor.",
+    "category": "risk",
+    "keywords": [
+      "risk monitor",
+      "risk trade monitor"
+    ],
+    "aliases": [
+      "risk monitor",
+      "risk trade monitor"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/risk-trade-monitor",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "QMON",
+    "name": "Quant Research Monitor",
+    "description": "Quant Research Monitor.",
+    "category": "quant",
+    "keywords": [
+      "quant dashboard",
+      "strategy monitor"
+    ],
+    "aliases": [
+      "quant dashboard",
+      "strategy monitor"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/quant-dashboard",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "EQUITY",
+    "name": "Equity Research Desk",
+    "description": "Equity Research Desk.",
+    "category": "research",
+    "keywords": [
+      "equity desk",
+      "equity research"
+    ],
+    "aliases": [
+      "equity desk",
+      "equity research"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/equity",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "KOYFIN",
+    "name": "Koyfin File Drop",
+    "description": "Koyfin File Drop.",
+    "category": "data",
+    "keywords": [
+      "koyfin import",
+      "upload koyfin csv"
+    ],
+    "aliases": [
+      "koyfin import",
+      "upload koyfin csv"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/data-drop",
+    "implementationStatus": "available",
+    "providerRequirements": []
+  },
+  {
+    "mnemonic": "DATADROP",
+    "name": "External Data Drop",
+    "description": "External Data Drop.",
+    "category": "data",
+    "keywords": [
+      "import files",
+      "data drop"
+    ],
+    "aliases": [
+      "IMPORT",
+      "import files",
+      "data drop"
+    ],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/data-drop",
+    "implementationStatus": "available",
+    "providerRequirements": []
   }
 ]

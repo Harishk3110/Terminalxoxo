@@ -49,7 +49,7 @@ export interface PortfolioData extends PortfolioPayload {
   risk: Metrics;
   curve: CurvePoint[];
   monthly: { month: string; return: number }[];
-  correlation: { symbols: string[]; values: number[][] };
+  correlation: { symbols: string[]; values: (number | null)[][] };
   source: string;
   as_of: string;
   quality: string;

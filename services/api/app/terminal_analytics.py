@@ -35,6 +35,12 @@ def instrument(session: Session, key: str):
 
 
 def price_frame(session: Session, ids: list[str], limit_days=3700):
+    if session.scalar(select(models.MarketObservation.id).where(models.MarketObservation.instrument_id.in_(ids)).limit(1)):
+        from .price_sources import MarketPriceResolver
+        today = datetime.now(timezone.utc).date()
+        book = MarketPriceResolver(session, ids, today - timedelta(days=limit_days))
+        values = [{"date": pd.Timestamp(row["date"]), "id": key, "close": row["close"]} for key in ids for row in book.history(key, today - timedelta(days=limit_days), today)]
+        return pd.DataFrame(values).pivot_table(index="date", columns="id", values="close", aggfunc="last").sort_index() if values else pd.DataFrame()
     latest = session.scalar(select(models.PriceBar.timestamp).where(models.PriceBar.interval == "1d").order_by(models.PriceBar.timestamp.desc()).limit(1))
     if latest is None:
         return pd.DataFrame()
@@ -50,16 +56,38 @@ def quotes(session: Session):
         prices = frame[item.id].dropna() if item.id in frame else []
         previous = float(prices.iloc[-2]) if len(prices) > 1 else float(quote.price)
         result.append({"id": item.id, "symbol": item.symbol, "name": item.name, "asset_class": item.asset_class, "currency": item.currency, "country": item.country, "sector": item.sector, "industry": item.industry, "exchange": exchange.code if exchange else None, "price": float(quote.price), "change": float(quote.price) - previous, "change_pct": float(quote.price) / previous - 1 if previous else None, "source": quote.provider, "quality": quote.quality, "as_of": quote.as_of.isoformat(), "market_state": "DEMO" if quote.quality == "DEMO DATA" else "EOD"})
+    from .price_sources import MarketPriceResolver
+    at = datetime.now(timezone.utc)
+    book = MarketPriceResolver(session, [r["id"] for r in result])
+    for row in result:
+        observation = book.resolve(row["id"], at)
+        if observation:
+            previous = book.resolve(row["id"], observation.timestamp - timedelta(days=1))
+            row.update({"price": float(observation.value), "change": float(observation.value - previous.value) if previous else None, "change_pct": float(observation.value / previous.value - 1) if previous else None, "source": observation.source, "quality": observation.provenance(at)["data_state"], "as_of": observation.timestamp.isoformat(), "market_state": "DEMO" if observation.category == "DEMO" else "FILE IMPORT" if observation.category == "FILE" else observation.state})
+        else:
+            row.update({"price": None, "change": None, "change_pct": None, "source": "UNAVAILABLE", "quality": "UNAVAILABLE", "as_of": None, "market_state": "UNAVAILABLE"})
     return result
 
 
 def history(session: Session, key: str, limit=2600):
     item = instrument(session, key)
+    if session.scalar(select(models.MarketObservation.id).where(models.MarketObservation.instrument_id == item.id).limit(1)):
+        from .price_sources import MarketPriceResolver
+        today = datetime.now(timezone.utc).date()
+        book = MarketPriceResolver(session, [item.id])
+        rows = book.history(item.id, today - timedelta(days=limit * 2), today)[-limit:]
+        return {"instrument_id": item.id, "symbol": item.symbol, "source": rows[-1]["source"] if rows else None, "quality": rows[-1]["data_state"] if rows else "UNAVAILABLE", "as_of": rows[-1]["as_of"] if rows else None, "items": rows}
     rows = session.scalars(select(models.PriceBar).where(models.PriceBar.instrument_id == item.id, models.PriceBar.interval == "1d").order_by(models.PriceBar.timestamp.desc()).limit(limit)).all()[::-1]
     return {"instrument_id": item.id, "symbol": item.symbol, "source": rows[-1].provider if rows else None, "quality": rows[-1].quality if rows else "UNAVAILABLE", "as_of": rows[-1].timestamp.isoformat() if rows else None, "items": [{"date": bar.timestamp.date().isoformat(), "open": float(bar.open), "high": float(bar.high), "low": float(bar.low), "close": float(bar.close), "volume": float(bar.volume or 0)} for bar in rows]}
 
 
 def portfolio_analytics(session: Session):
+    from .portfolio_valuation import PortfolioValuationService
+    from .broker_api import account_view
+    return account_view(session, PortfolioValuationService(session).latest())
+
+
+def legacy_portfolio_analytics(session: Session):
     snapshot = PortfolioService(session).default_snapshot()
     repo = PortfolioRepository(session)
     portfolio = repo.default_portfolio()
@@ -148,6 +176,10 @@ def scenario_library():
 
 def stress_result(session: Session, parameters: dict):
     data = parameters.get("_portfolio") or portfolio_analytics(session)
+    if data.get("account_source") == "BROKER":
+        raise ValueError("Broker snapshot risk is unavailable; reconcile and explicitly use the internal-ledger analytical view")
+    if data["portfolio"]["nav"] is None or any(p["beta"] is None for p in data["positions"]):
+        raise ValueError("Stress calculation requires a complete NAV and sufficient position beta history")
     equity = float(parameters.get("equity_shock", -10)) / 100
     fx = float(parameters.get("fx_shock", 0)) / 100
     rates = float(parameters.get("rates_bp", 0)) / 10000
@@ -163,6 +195,10 @@ def stress_result(session: Session, parameters: dict):
         shock = max(-1, (1 + shock + rate_shock) * (1 + currency_shock) - 1)
         value = float(p["market_value"])
         rows.append({"symbol": p["symbol"], "sector": p["sector"], "country": p["country"], "currency": p["currency"], "market_value": value, "beta": p["beta"], "shock": shock, "pnl": round(value * shock, 2), "post_value": round(value * (1 + shock), 2), "fx_impact": round(value * currency_shock, 2)})
+    for cash in data.get("cash", []):
+        if cash["currency"] == "USD" and cash.get("base_value") is not None:
+            value = float(cash["base_value"])
+            rows.append({"symbol": "USD CASH", "sector": "Cash", "country": "Currency", "currency": "USD", "market_value": value, "beta": 0, "shock": fx, "pnl": round(value * fx, 2), "post_value": round(value * (1 + fx), 2), "fx_impact": round(value * fx, 2)})
     loss = round(sum(p["pnl"] for p in rows), 2)
     nav = float(data["portfolio"]["nav"])
     worst = min(rows, key=lambda p: p["pnl"], default={})
@@ -171,6 +207,10 @@ def stress_result(session: Session, parameters: dict):
 
 def fundamentals(session: Session, key: str):
     item = instrument(session, key)
+    from .curated_fundamentals import curated_statements
+    curated = curated_statements(session, item)
+    if curated is not None:
+        return curated
     row = session.scalar(select(models.FundamentalSnapshot).where(models.FundamentalSnapshot.instrument_id == item.id))
     if row is None:
         quote = MarketRepository(session).latest_quote(item.id)
@@ -198,7 +238,12 @@ def valuation(session: Session, key: str, growth=.08, wacc=.10, terminal_growth=
     if not -.5 <= growth <= .5 or not .01 <= wacc <= .5 or not -.05 <= terminal_growth < wacc:
         raise ValueError("Growth must be -50% to 50%; WACC must exceed terminal growth")
     data = fundamentals(session, key)
-    latest = data["items"][-1]
+    eligible = [r for r in data["items"] if r.get("actual_estimate", "ACTUAL") == "ACTUAL" and r.get("frequency", "ANNUAL") in {"ANNUAL", "FY", "YEARLY"}]
+    if not eligible:
+        raise ValueError("DCF requires annual actual financial statements")
+    latest = eligible[-1]
+    if any(latest.get(k) is None for k in ("free_cash_flow", "debt", "cash", "shares")) or latest["shares"] <= 0:
+        raise ValueError("DCF requires complete FCF, debt, cash and positive share count; missing imported fields are not replaced with demo values")
     forecast = [{"year": i, "fcf": latest["free_cash_flow"] * (1 + growth) ** i, "pv": latest["free_cash_flow"] * (1 + growth) ** i / (1 + wacc) ** i} for i in range(1, 6)]
     terminal = forecast[-1]["fcf"] * (1 + terminal_growth) / (wacc - terminal_growth)
     enterprise = sum(r["pv"] for r in forecast) + terminal / (1 + wacc) ** 5
@@ -209,9 +254,12 @@ def valuation(session: Session, key: str, growth=.08, wacc=.10, terminal_growth=
 def factor_analysis(session: Session, lookback=63):
     universe = [q for q in quotes(session) if q["asset_class"] in ("Equity", "ETF")]
     frame = price_frame(session, [q["id"] for q in universe], 730)
-    lookback = min(max(lookback, 5), len(frame) - 2)
+    if lookback < 5 or len(frame) <= lookback + 1:
+        return {"items": [], "lookback": lookback, "source": "SOURCE-AWARE HISTORY", "as_of": None, "quality": "INSUFFICIENT DATA", "diagnostics": {"state": "INSUFFICIENT DATA", "warnings": ["Requested factor lookback exceeds available history"]}, "warnings": ["Requested factor lookback exceeds available history"]}
     signal = frame.iloc[-1] / frame.iloc[-lookback - 1] - 1
     zscore = (signal - signal.mean()) / signal.std() if signal.std() else signal * 0
     ranked = sorted(universe, key=lambda q: signal[q["id"]], reverse=True)
     rows = [{"symbol": q["symbol"], "sector": q["sector"], "factor": float(signal[q["id"]]), "zscore": float(zscore[q["id"]]), "rank": i + 1, "quantile": min(5, i * 5 // len(ranked) + 1), "volatility": float(frame[q["id"]].pct_change().std()) * math.sqrt(252), "source": q["source"], "quality": q["quality"], "as_of": q["as_of"]} for i, q in enumerate(ranked)]
-    return {"items": rows, "lookback": lookback, "source": "DemoProvider daily closes", "as_of": frame.index[-1].isoformat(), "quality": "DEMO DATA", "warnings": ["Cross-sectional trailing momentum. No forward return is available for the latest observation; IC is not estimated."]}
+    from .factor_statistics import factor_statistics
+    diagnostics = factor_statistics(frame, lookback)
+    return {"items": rows, "lookback": lookback, "source": " / ".join(sorted({q["source"] for q in universe})), "as_of": frame.index[-1].isoformat(), "quality": "DEMO DATA" if all(q["market_state"] == "DEMO" for q in universe) else "MIXED SOURCES", "diagnostics": diagnostics, "warnings": diagnostics["warnings"] + ["Source-aware trailing momentum. Latest signals have no observable forward return; historical IC is reported separately."]}

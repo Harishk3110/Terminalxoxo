@@ -3,51 +3,82 @@
 Date: 2026-09-06
 Product: KnK Capital Terminal / KnK Capital
 Repository: https://github.com/Harishk3110/Terminalxoxo
-Branch: main. Baseline before UI work: 71bd4df.
+Branch: main. Portfolio-first baseline: 6e707d3.
 
 ## Delivery
-The terminal shell and core demo/research workflows are rebuilt. This is not full completion of every specialist function in the supplied PRD.
 
-- Full-height black/amber command, security, tabs, rail, analysis, inspector and status layout.
-- 24 page/view components; 102 canonical functions across 92 registry route patterns.
-- 17 available operational functions, 31 demo analytical, 42 provider-required, 12 in development.
-- Persisted workspaces and per-tab state; shared tables/charts, fuzzy commands and security context menus.
-- Dynamic ledger-based performance/risk; immutable stress runs; isolated configurable backtesting.py jobs.
-- Validated CSV/JSON/XLSX imports and dataset versions; source-labelled synthetic financials, DCF, comparables, private notes, workbook/Pine exports.
-- Migration 0002 adds workspace states, analysis runs and fundamental snapshots.
-- Public site styling and read-only broker boundary preserved. Public app only gains configurable build output and exclusion of generated logs from type scanning.
+The approved dense black/amber shell now opens on the Portfolio Command Centre.
+KNK_MAIN is a separate, auditable SGD 70,000 demonstration ledger. The legacy
+reference book, users, datasets and runs are preserved.
+
+- Decimal, native-currency ledger with 17 transaction types and full NAV buckets.
+- Immutable valuations, source provenance, flow-adjusted P&L, TWR/XIRR and risk.
+- Thirteen-metric ribbon and seven overview panels; seven operating desks.
+- Trade events/reviews, pre/post risk snapshots, reconciliation and manual hedges.
+- CSV/XLSX/JSON Data Drop, 12 profiles, approval, hash deduplication and lineage.
+- Outbound Windows-vault file agent and optional scoped read-only paper reader.
+- Equity coverage/imported statements, Quant monitor, pinned backtests, measured
+  factor IC/quantiles and research-only candidate records.
+- 110 canonical functions; workbook exports; actual service/agent freshness.
+- Migration 0003 adds 19 accounting, source, ingestion and agent tables.
 
 ## Verification
-| Gate | Latest result |
-| --- | --- |
-| Backend tests | 31 passed; 3 framework deprecation warnings |
-| Vitest | 8 passed across domain, registry and workspace tests |
-| No-execution scan | Passed |
-| Monorepo typecheck | Passed |
-| Monorepo lint | Passed without warnings |
-| Public production build | Passed using KNK_PUBLIC_DIST_DIR=logs/public-v2-build |
-| Terminal production build | Passed using KNK_NEXT_DIST_DIR=logs/terminal-v2-verified; first-load bundle 172 kB |
-| Browser journeys / visual regression | 10 passed in 4.2 minutes; 33 existing image baselines compared; 0 skipped, unexpected or flaky tests |
-| Alembic | Default database upgraded; clean test upgrade / downgrade-to-0001 / upgrade passed |
-| Compose configuration | Passed |
-| Full Docker startup | Not run: Docker Desktop Linux engine unavailable |
-| Live providers | Not run: credentials/connections absent |
 
-Earlier browser passes identified a first-load fundamentals race, a portfolio refresh race after a rapid manual transaction, and mobile panel/KPI layout issues. All were fixed. The final run used a fresh isolated database and no snapshot-update flag; evidence is recorded in docs/VISUAL_ACCEPTANCE.md. Older CORE_ACCEPTANCE.md and BUILD_EVIDENCE.md describe the V1 run, not this delivery.
+- Backend: 66 passed on a fresh isolated database in C:\Dev; three framework deprecation warnings.
+- API statement coverage 79%; accounting 92%, valuation 95%, source resolver 96%, broker API 89%.
+- Vitest: 8 passed. No-execution source scan passed.
+- Monorepo typecheck and lint passed.
+- Terminal production build passed: logs/dev-portfolio-release, 180 kB first load.
+- Public production build passed: logs/public-dev-release, 94 kB first load.
+- Browser: 12 passed in 225.4 seconds; 33 screenshot comparisons without updating
+  snapshots, four desktop sizes plus mobile; no failures, skips or flaky tests.
+- Fresh SQLite and isolated PostgreSQL migration upgrade / downgrade to 0002 / upgrade passed.
+- User SQLite backup, additive migration and immutable-record preservation passed.
+- Local API restart and persisted-record checks completed.
+- Docker Linux API image built; container Alembic and idempotent seed passed.
+  Container API readiness reported API, PostgreSQL, Redis and local object storage
+  ready; portfolio NAV/reconciliation matched SQLite. Thirteen focused tests
+  passed with PostgreSQL configured (five API tests; eight isolated SQLite fixtures).
+  Full Compose stack, MinIO, distributed workers and web containers remain unverified.
 
-## Limits
-- Demo price histories and transaction fixtures are independent; inherited performance can be unrealistic and is not investment performance.
-- No live brokerage execution, options repricing, portfolio optimizer, AI provider, news feed or verified live market data.
-- No arbitrary user-code execution, walk-forward optimization, factor IC, attribution engine, WACC builder or full structured thesis model.
-- No PDF/deck builder, Parquet/Arrow/ZIP ingestion or complex docking/link groups.
-- Table views are browser-local; workspaces have no conflict merge or per-user isolation.
-- Production security hardening, TOTP lifecycle and distributed worker supervision remain outstanding.
-- Most specialist function limitations are visible in the function registry, not hidden behind generic Overview routes.
+## Valuation and Timing
 
-## Local Runtime
-The local API was restarted with the final code on http://127.0.0.1:8000 and verified live: 102 functions, 20 demo quotes and nine workspaces. Background terminal launch was blocked by the session execution policy; a web server on 3001 must be started by the user using the README command. Browser tests used isolated temporary services on 8001/3002 and separate databases, not the working ledger. Both test ports were confirmed closed after the final run.
+Local DEMO DATA as of 2026-09-04 20:00 UTC: NAV SGD 70,597.57, cash 23,476.64,
+securities 47,120.93, P&L 597.57, reconciliation difference 0.00.
+These are deterministic demonstration results, not real-time investment returns.
 
-## Evidence
-Design/behavior: docs/PRD_TERMINAL_UI.md and the companion shell, registry, workspace, data and stress docs.
-Visuals: docs/screenshots; regression baselines: tests/e2e/terminal.spec.ts-snapshots.
-Machine-local test report: logs/terminal-e2e-results.json (ignored by Git).
+Measured five-sample warm medians in C:\Dev: summary 31.40 ms, overview API 29.84 ms,
+NAV recalculation 450.63 ms, cached risk 29.03 ms. Cold summary was 1053.94 ms.
+Local measurements are not load-test guarantees. File-preview latency has not
+been separately benchmarked.
+
+## Remaining Limits
+
+Real TWS/paper connectivity, live provider data and credentials remain unverified.
+Broker current NAV never inherits demo historical risk/performance. Optional
+automatic file-profile approval, profile editor, agent installer/service,
+PDF/decks, arbitrary strategy execution, walk-forward optimization and verified
+paper-strategy returns are not implemented. Candidates cannot claim an edge or
+promote themselves to paper trading. Imported positions remain references.
+
+Risk excludes cash-FX and liability sensitivities; stress explicitly includes
+USD cash FX. Historical NAV restates accepted data, not point-in-time versions.
+Production multi-user authorization, distributed supervision and specialist
+provider-required functions remain outside this local workstation release.
+The complete 80-step acceptance workflow is not claimed: see
+docs/PORTFOLIO_ACCEPTANCE.md for implemented, tested and unverified boundaries.
+
+## Runtime
+
+API: http://127.0.0.1:8000, migrated and restarted with portfolio-first code.
+Working project moved to C:\Dev. Git history was restored from origin/main
+without replacing the transferred worktree. Immutable record hashes match the
+old folder; dependencies were reinstalled because copied package links retained
+OneDrive paths. The API now runs from C:\Dev, not the old OneDrive directory.
+Web: the session policy blocked launching the user's port 3001. The verified
+build is available through OPEN-KNK-TERMINAL.cmd after the API is running.
+Main page: http://127.0.0.1:3001/overview. This is local, not a public deployment.
+The isolated browser tests use ports 8001/3002 and separate SQLite/object stores.
+
+API/SQLite/local object storage healthy; Redis OFFLINE; on-demand workers IDLE;
+file agent and IBKR OFFLINE; FRED DEMO. Other unprobed services remain NOT_VERIFIED.

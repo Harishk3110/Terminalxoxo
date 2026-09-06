@@ -23,6 +23,10 @@ from .providers.fred import FredProvider
 from .repositories import InstrumentRepository, JobRepository, ProviderRepository, StrategyRepository, SystemRepository
 from .services import BacktestService, DatasetService, DemoIngestionService, FredIngestionService, MacroService, PerformanceService, PineService, PortfolioService, ReportService, RiskService, to_jsonable
 from .terminal_api import router as terminal_router
+from .portfolio_api import router as portfolio_router
+from .data_drop_api import router as data_drop_router
+from .desks_api import router as desks_router
+from .broker_api import router as broker_router
 from .terminal_analytics import FUNCTIONS, portfolio_analytics
 
 try:
@@ -48,6 +52,10 @@ app = FastAPI(
     redoc_url=None,
 )
 app.include_router(terminal_router)
+app.include_router(portfolio_router)
+app.include_router(data_drop_router)
+app.include_router(desks_router)
+app.include_router(broker_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,8 +86,14 @@ class TransactionRequest(BaseModel):
     quantity: Decimal = Decimal("0")
     price: Decimal = Decimal("0")
     currency: str = "SGD"
-    fx_rate_to_base: Decimal = Decimal("1")
+    fx_rate_to_base: Decimal | None = None
     fee: Decimal = Decimal("0")
+    amount: Decimal | None = None
+    commission: Decimal = Decimal("0")
+    tax: Decimal = Decimal("0")
+    settle_date: str | None = None
+    external_reference: str | None = None
+    metadata: dict = Field(default_factory=dict)
     notes: str | None = None
 
 
@@ -132,6 +146,8 @@ def ensure_database_ready() -> None:
     with SessionLocal() as session:
         if not session.execute(select(models.Instrument.id).limit(1)).first():
             DemoIngestionService(session).seed(reset=False)
+        from .portfolio_seed import ensure_main
+        ensure_main(session)
     _DB_READY = True
 
 

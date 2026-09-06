@@ -1,7 +1,14 @@
 "use client";
 import dynamic from "next/dynamic";
+import { SourcePreferencesPage } from "./source-preferences";
+import { BrokerMonitorPage } from "./broker-monitor";
 import {
-  OverviewPage,
+  PortfolioHomePage,
+  TradeMonitorPage,
+  DataDropOperationsPage,
+  OperatingDeskPage,
+} from "./operating-pages";
+import {
   PortfolioPage,
   PerformancePage,
   RiskPage,
@@ -25,9 +32,6 @@ const FactorPage = dynamic(() =>
   import("./lab-pages").then((m) => m.FactorPage),
 );
 const QuantPage = dynamic(() => import("./lab-pages").then((m) => m.QuantPage));
-const DataDropPage = dynamic(() =>
-  import("./lab-pages").then((m) => m.DataDropPage),
-);
 const CataloguePage = dynamic(() =>
   import("./lab-pages").then((m) => m.CataloguePage),
 );
@@ -39,7 +43,14 @@ const PinePage = dynamic(() => import("./lab-pages").then((m) => m.PinePage));
 const ExcelPage = dynamic(() => import("./lab-pages").then((m) => m.ExcelPage));
 
 export function PageRouter({ route }: { route: string }) {
-  if (["/overview", "/home", "/"].includes(route)) return <OverviewPage />;
+  if (route === "/broker-monitor") return <BrokerMonitorPage />;
+  if (route === "/price-sources") return <SourcePreferencesPage />;
+  if (["/overview", "/home", "/"].includes(route)) return <PortfolioHomePage />;
+  if (route === "/trade-monitor") return <TradeMonitorPage />;
+  if (route === "/risk-trade-monitor") return <TradeMonitorPage risk />;
+  if (route === "/equity") return <OperatingDeskPage desk="equity" />;
+  if (route === "/quant-dashboard") return <OperatingDeskPage desk="quant" />;
+  if (route === "/edge-lab") return <OperatingDeskPage desk="edge" />;
   if (["/portfolio", "/positions"].includes(route)) return <PortfolioPage />;
   if (route === "/performance") return <PerformancePage />;
   if (route === "/risk") return <RiskPage />;
@@ -49,7 +60,7 @@ export function PageRouter({ route }: { route: string }) {
   if (route.startsWith("/backtests")) return <BacktestPage />;
   if (route === "/factor-lab") return <FactorPage />;
   if (["/quant", "/strategies"].includes(route)) return <QuantPage />;
-  if (route === "/data-drop") return <DataDropPage />;
+  if (route === "/data-drop") return <DataDropOperationsPage />;
   if (route.startsWith("/data-catalogue"))
     return <CataloguePage route={route} />;
   if (route === "/data-jobs") return <JobsPage />;

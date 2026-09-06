@@ -135,7 +135,7 @@ export function Badge({
 }) {
   const text = state ?? String(children);
   const kind =
-    /DEMO|STALE|UNVERIFIED|REQUIRED|DEVELOPMENT|NOT_|OFFLINE|WARNING/.test(
+    /DEMO|STALE|UNVERIFIED|REQUIRED|DEVELOPMENT|NOT[_ ]|OFFLINE|WARNING/.test(
       text.toUpperCase(),
     )
       ? "warning"

@@ -268,7 +268,11 @@ export function SecurityPage({ route }: { route: string }) {
           />
           <Panel
             className="page-grid"
-            title="Annual financial statements / synthetic demonstration"
+            title={
+              data?.quality === "FILE IMPORT"
+                ? "Financial statements / imported records"
+                : "Annual financial statements / synthetic demonstration"
+            }
             source={data?.source}
             asOf={data?.as_of}
             quality={data?.quality}

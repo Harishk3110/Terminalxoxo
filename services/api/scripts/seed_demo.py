@@ -5,11 +5,9 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-API_ROOT = ROOT / "services" / "api"
-for path in (ROOT, API_ROOT):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+API_ROOT = Path(__file__).resolve().parents[1]
+if str(API_ROOT) not in sys.path:
+    sys.path.insert(0, str(API_ROOT))
 
 from app.database import SessionLocal, engine  # noqa: E402
 from app.models import Base  # noqa: E402

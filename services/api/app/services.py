@@ -382,6 +382,10 @@ class PortfolioService:
         self.market = MarketRepository(session)
 
     def default_snapshot(self) -> dict:
+        from .portfolio_seed import profile_for
+        if profile_for(self.session):
+            from .portfolio_valuation import PortfolioValuationService
+            return PortfolioValuationService(self.session).latest()
         portfolio = self.repo.default_portfolio()
         if not portfolio:
             raise ValueError("Default portfolio not seeded")
@@ -394,6 +398,12 @@ class PortfolioService:
         }
 
     def add_manual_transaction(self, payload: dict) -> dict:
+        from .portfolio_seed import profile_for
+        if profile_for(self.session):
+            from .portfolio_operations import PortfolioLedgerService
+            result = PortfolioLedgerService(self.session).add({k: v for k, v in payload.items() if v is not None})
+            self.session.commit()
+            return result
         if payload["transaction_type"] not in {"BUY", "SELL", "DIVIDEND", "FEE", "DEPOSIT"}:
             raise ValueError("Unsupported manual ledger transaction")
         for field in ("quantity", "price", "fee", "fx_rate_to_base"):
@@ -446,6 +456,10 @@ class PortfolioService:
         return self._transaction_payload(txn)
 
     def recalculate(self, portfolio_id: str) -> dict:
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio_id):
+            from .portfolio_valuation import PortfolioValuationService
+            return PortfolioValuationService(self.session).latest(portfolio_id, force=True)
         portfolio = self.session.get(models.Portfolio, portfolio_id)
         if not portfolio:
             raise ValueError("Portfolio not found")
@@ -541,6 +555,10 @@ class PerformanceService:
         self.analytics = AnalyticsRepository(session)
 
     def calculate(self, portfolio_id: str) -> dict:
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio_id):
+            from .portfolio_valuation import PortfolioValuationService
+            return PortfolioValuationService(self.session).latest(portfolio_id)["performance"]
         portfolio = self.session.get(models.Portfolio, portfolio_id)
         nav = self.repo.latest_nav(portfolio_id)
         if not portfolio or not nav:
@@ -567,6 +585,9 @@ class PerformanceService:
         portfolio = self.repo.default_portfolio()
         if not portfolio:
             raise ValueError("Default portfolio not seeded")
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio.id):
+            return self.calculate(portfolio.id)
         snapshot = self.analytics.latest_performance(portfolio.id) or self.calculate(portfolio.id)
         return self.payload(snapshot)
 
@@ -581,6 +602,10 @@ class RiskService:
         self.analytics = AnalyticsRepository(session)
 
     def calculate(self, portfolio_id: str) -> dict:
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio_id):
+            from .portfolio_valuation import PortfolioValuationService
+            return PortfolioValuationService(self.session).latest(portfolio_id)["risk"]
         nav = self.portfolios.latest_nav(portfolio_id)
         positions = self.portfolios.positions(portfolio_id)
         if not nav:
@@ -632,6 +657,9 @@ class RiskService:
         portfolio = self.portfolios.default_portfolio()
         if not portfolio:
             raise ValueError("Default portfolio not seeded")
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio.id):
+            return self.calculate(portfolio.id)
         snapshot = self.analytics.latest_risk(portfolio.id) or self.calculate(portfolio.id)
         return self.payload(snapshot)
 
@@ -639,12 +667,40 @@ class RiskService:
         portfolio = self.portfolios.default_portfolio()
         if not portfolio:
             return []
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio.id):
+            from .portfolio_valuation import PortfolioValuationService
+            from .terminal_analytics import scenario_library, stress_result
+            data = PortfolioValuationService(self.session).latest(portfolio.id)
+            if data["portfolio"]["nav"] is None or any(p["beta"] is None for p in data["positions"]):
+                return []
+            results = []
+            for scenario in scenario_library():
+                result = stress_result(self.session, {**scenario, "_portfolio": data})
+                results.append({**result, "scenario_id": scenario["id"], "pnl_impact": result["loss"], "nav_after": result["post_nav"], "contributions": result["contributions"]})
+            return results
         return [to_jsonable({"id": item.id, "scenario_id": item.scenario_id, "pnl_impact": item.pnl_impact, "nav_after": item.nav_after, "contributions": item.contributions}) for item in self.analytics.list_stress_results(portfolio.id)]
 
     def hedge(self) -> dict:
         portfolio = self.portfolios.default_portfolio()
         if not portfolio:
             raise ValueError("Default portfolio not seeded")
+        from .portfolio_seed import profile_for
+        if profile_for(self.session, portfolio.id):
+            from .portfolio_valuation import PortfolioValuationService
+            from .price_sources import MarketPriceResolver, FxRateResolver
+            data = PortfolioValuationService(self.session).latest(portfolio.id)
+            spy = self.session.scalar(select(models.Instrument).where(models.Instrument.symbol == "SPY"))
+            now = datetime.now(timezone.utc)
+            price = MarketPriceResolver(self.session, [spy.id]).resolve(spy.id, now) if spy else None
+            fx, _ = FxRateResolver(self.session).resolve(spy.currency, portfolio.base_currency, now) if spy else (None, {})
+            beta, nav = data["risk"]["beta"], data["portfolio"]["nav"]
+            if price is None or fx is None or beta is None or nav is None:
+                return {"recommendation": None, "items": [], "state": "UNAVAILABLE", "warnings": ["Complete prices, FX and beta history required"]}
+            target = Decimal(".8")
+            notional = max(Decimal(str(beta)) - target, Decimal(0)) * Decimal(nav)
+            units = int(notional / (price.value * fx))
+            return to_jsonable({"recommendation": {"target_beta": target, "current_beta": beta, "target_notional": notional, "residual_notional": notional - units * price.value * fx, "quality": data["quality"], "source": data["source"], "as_of": data["as_of"], "state": "MANUAL REVIEW REQUIRED"}, "items": [{"symbol": "SPY", "units": -units, "price": price.value, "fx_rate": fx, "notional": -units * price.value * fx, "instruction": "Manual review required. Indicative beta reduction only; no order is transmitted."}] if units else [], "warnings": data["warnings"] + ["Assumes SPY beta one; ignores basis, financing, margin and execution constraints."]})
         rec = self.analytics.latest_hedge(portfolio.id)
         if rec is None:
             self.calculate(portfolio.id)
@@ -935,6 +991,19 @@ class ReportService:
 
     def portfolio_xlsx(self) -> dict:
         portfolio = PortfolioService(self.session).default_snapshot()
+        if portfolio.get("calculation_version"):
+            sheets = {}
+            for key in ("portfolio", "positions", "cash", "transactions", "curve", "performance", "risk", "attribution", "reconciliation", "metric_metadata"):
+                value = portfolio[key]
+                if isinstance(value, dict):
+                    sheets[key] = [["Metric", "Value"]] + [[k, json.dumps(v) if isinstance(v, (dict, list)) else v] for k, v in value.items()]
+                else:
+                    columns = list(dict.fromkeys(k for row in value for k in row))
+                    sheets[key] = [columns or ["No records"]] + [[json.dumps(row.get(k)) if isinstance(row.get(k), (dict, list)) else row.get(k) for k in columns] for row in value]
+            sheets["Sources"] = [["Field", "Value"], *[[k, portfolio[k]] for k in ("source", "as_of", "quality", "calculation_version", "methodology")]]
+            sheets["Warnings"] = [["Warning"], *[[w] for w in portfolio["warnings"]]]
+            result = self._write_workbook("portfolio-overview", sheets)
+            return {**result, "quality": portfolio["quality"]}
         performance = PerformanceService(self.session).latest()
         risk = RiskService(self.session).latest()
         stress = RiskService(self.session).stress()

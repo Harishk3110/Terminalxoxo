@@ -2,9 +2,9 @@
 
 Repository: `Terminalxoxo`
 
-KnK Capital Terminal is a local investment-research workstation for KnK Capital. The V2 terminal rebuild introduces a full-height black/amber shell, security-aware commands, persistent workspaces/tabs, dense analytical views, an inspector, and source-labelled data. Stress and moving-average backtests execute as persisted jobs in separate processes. The existing public website and read-only broker boundary are preserved.
+KnK Capital Terminal is a local portfolio, equity, quant and risk workstation for KnK Capital. HOME is the Portfolio Command Centre for KNK_MAIN, with an explicit SGD 70,000 demonstration opening ledger, source-aware NAV and auditable trade reviews. The approved dense black/amber shell, persistent workspaces, inspector and public website are preserved. Stress and version-pinned moving-average backtests run as persisted jobs in separate processes.
 
-The registry contains 102 functions: 17 operational, 31 demo analytical, 42 provider-required and 12 in development. This is not a live trading terminal or complete implementation of every specialist function. See [Function Registry](docs/FUNCTION_REGISTRY.md), [Demo Data Mode](docs/DEMO_DATA_MODE.md), and [Status](STATUS.md).
+The registry contains 110 functions, including NAV, PNL, TRADES, RISKMON, QMON, EQUITY, KOYFIN and DATADROP. CSV/XLSX/JSON files pass through mapping, validation and explicit approval into immutable raw/curated versions. Koyfin means permitted exported files, not a direct API or live feed. The local agent supports OS-vault pairing and an optional read-only paper-account reader. See [Portfolio Acceptance](docs/PORTFOLIO_ACCEPTANCE.md), [Local Agent](docs/LOCAL_DATA_AGENT.md), and [Status](STATUS.md) for measured results and remaining limitations.
 
 The build remains deliberately safe:
 
@@ -38,6 +38,19 @@ corepack pnpm --filter @knk/terminal-web dev --hostname 127.0.0.1 --port 3001
 
 Open http://127.0.0.1:3001/overview, or http://127.0.0.1:3001/stress-tests for the scenario workspace. Run the API from the repository root so it uses the same database as migrations. KNK_API_URL controls the terminal's server-side API proxy (default http://127.0.0.1:8000). In PowerShell, setting `$env:KNK_NEXT_DIST_DIR='logs/terminal-dev'` gives development its own output directory and avoids sharing production build files.
 
+For the verified production build on Windows, keep the API running, then use
+`OPEN-KNK-TERMINAL.cmd`. It starts the main terminal on port 3001; keep its
+window open. To rebuild that launcher's output:
+
+```powershell
+$env:KNK_NEXT_DIST_DIR='logs/dev-portfolio-release'
+corepack pnpm --filter @knk/terminal-web build
+```
+
+The latest agent session could not start the user's web process under its
+execution policy. A localhost link works only while the launcher/dev server
+is running; this repository push is not a public hosting deployment.
+
 Account setup/sign-in is under SECURITY. Local demo access is intentionally allowed without an account; outside local-demo, private API routes require a session. Keep the local server bound to loopback. Credentials, databases, uploads, logs and generated workbooks are ignored by Git.
 
 Public web:
@@ -53,9 +66,16 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Docker Compose config validates, but the latest local `docker compose build` could not run because Docker Desktop's Linux engine was not reachable on this machine. See `docs/BUILD_EVIDENCE.md`.
+The Linux API image, container migration/seed and API readiness/NAV checks passed
+against an isolated PostgreSQL/Redis stack in C:\Dev. Full Compose startup,
+MinIO, distributed workers and web-container health have not been verified.
+See [Portfolio Acceptance](docs/PORTFOLIO_ACCEPTANCE.md) for current evidence;
+`docs/BUILD_EVIDENCE.md` is the archived V1 record.
 
 ## Verification
+
+The backend tests also exercise the local agent. Install its optional test
+dependencies with `python -m pip install -r services/local-agent/requirements.txt`.
 
 ```bash
 python -m compileall -q services/api/app services/api/scripts services/worker-data/app services/worker-quant/app services/report-engine/app services/broker-agent

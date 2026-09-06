@@ -472,8 +472,16 @@ export default function TerminalShell({ route }: { route: string }) {
               <FolderCog size={14} />
             </IconButton>
             <Badge>PAPER</Badge>
-            <Badge>DEMO DATA</Badge>
-            <span className="header-broker muted mono">IBKR OFFLINE</span>
+            <Badge>
+              {data.quotes.every((q) => q.market_state === "DEMO")
+                ? "DEMO DATA"
+                : "MIXED SOURCES"}
+            </Badge>
+            <span className="header-broker muted mono">
+              IBKR{" "}
+              {health.data?.items.find((x) => x.service === "IBKR paper agent")
+                ?.state ?? "UNKNOWN"}
+            </span>
             <IconButton label="Alerts" onClick={() => open("/alerts", "ALERT")}>
               <Bell size={14} />
             </IconButton>
@@ -508,6 +516,25 @@ export default function TerminalShell({ route }: { route: string }) {
             <span>No security selected</span>
           )}
         </div>
+        <nav className="desk-strip" aria-label="Operating desks">
+          {[
+            ["PORTFOLIO", "/overview"],
+            ["EQUITY", "/equity"],
+            ["QUANT", "/quant-dashboard"],
+            ["RISK & TRADE", "/risk-trade-monitor"],
+            ["RESEARCH", "/research"],
+            ["DATA", "/data-drop"],
+            ["SYSTEM", "/system-health"],
+          ].map(([label, route]) => (
+            <button
+              key={label}
+              className={activeTab.route === route ? "active" : ""}
+              onClick={() => open(route, label)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
         <div className="tab-strip" data-testid="terminal-tabs">
           <div
             className="tabs-scroll"
@@ -748,9 +775,38 @@ export default function TerminalShell({ route }: { route: string }) {
             className="warning optional-status"
             onClick={() => open("/settings/connections", "CONN")}
           >
-            FRED DEMO
+            FRED{" "}
+            {health.data?.items.find((x) => x.service === "FRED")?.state ??
+              "UNKNOWN"}
           </button>
-          <span className="warning optional-status">IBKR OFFLINE</span>
+          <button
+            className="optional-status secondary"
+            onClick={() => open("/data-drop", "DATADROP")}
+          >
+            AGENT{" "}
+            {health.data?.items.find((x) => x.service === "Local data agent")
+              ?.state ?? "UNKNOWN"}
+          </button>
+          <button
+            className="optional-status secondary"
+            onClick={() => open("/overview", "NAV")}
+            title={
+              health.data?.items.find((x) => x.service === "Portfolio NAV")
+                ?.detail
+            }
+          >
+            NAV{" "}
+            {health.data?.items.find((x) => x.service === "Portfolio NAV")
+              ?.state ?? "UNKNOWN"}
+          </button>
+          <button
+            className="warning optional-status"
+            onClick={() => open("/broker-monitor", "BROKER")}
+          >
+            IBKR{" "}
+            {health.data?.items.find((x) => x.service === "IBKR paper agent")
+              ?.state ?? "UNKNOWN"}
+          </button>
           <span className="muted optional-status">
             BUILD {health.data?.commit ?? "--"}
           </span>
@@ -1051,7 +1107,7 @@ function Inspector({ quote }: { quote?: Quote }) {
 
 import { useTerminal } from "./context";
 function InspectorContent({ quote }: { quote?: Quote }) {
-  const { config, activeTab, setConfig } = useTerminal();
+  const { config, activeTab, setConfig, bootstrap } = useTerminal();
   const runId = config.inspectRunId;
   const run = useQuery({
     queryKey: ["run", runId],
@@ -1175,8 +1231,9 @@ function InspectorContent({ quote }: { quote?: Quote }) {
               <h3>Data provenance</h3>
               <Badge>{quote?.quality ?? "UNAVAILABLE"}</Badge>
               <p className="warning-note">
-                Synthetic market records. Not a live quote or an executable
-                price.
+                {quote?.quality?.includes("DEMO")
+                  ? "Synthetic market records. Not a live quote or an executable price."
+                  : "Source-reported observation. The displayed timestamp does not certify live or executable pricing."}
               </p>
             </div>
             <div className="inspector-section">
@@ -1187,7 +1244,9 @@ function InspectorContent({ quote }: { quote?: Quote }) {
             <div className="inspector-section">
               <h3>Broker account</h3>
               <Badge>PAPER</Badge>
-              <p className="warning-note">IBKR account data not connected.</p>
+              <p className="warning-note">
+                {bootstrap.broker_state}. No order transmission.
+              </p>
             </div>
           </>
         )}

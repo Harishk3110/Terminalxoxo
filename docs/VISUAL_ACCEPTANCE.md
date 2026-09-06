@@ -1,4 +1,28 @@
-# Terminal V2 Visual Acceptance
+# Terminal Visual Acceptance
+
+## Portfolio-First Release
+
+Date: 2026-09-06. Final normal run started at 09:28:45 UTC in C:\Dev, against a
+fresh isolated database and logs/dev-portfolio-release. All 12 tests and 33
+Windows/Chromium screenshot comparisons passed in 225.4 seconds without a
+snapshot-update flag; no failures, skips or flaky tests.
+
+Coverage adds the 13-metric ribbon and seven-panel Portfolio Command Centre at
+1366x768, 1440x900, 1920x1080, 2560x1440 and 390x844, seven operating desks,
+approved file-to-price provenance, manual transaction/review persistence and
+insufficient-history factor behavior. Geometry and nonblank canvas checks passed.
+Risk correlation axes now use stable symbol order, actual source provenance and
+missing values instead of invented zero correlations. Variance contribution
+is explicitly labelled and displayed as a percentage.
+
+Initial seeded overview images are docs/screenshots/portfolio-command-centre-*.png.
+The other analytical screenshots use the browser-test ledger, including approved
+file imports and manual entries; their NAV need not match the untouched working
+demo. API restart retained the working records and reconciled NAV 70,597.57.
+See docs/PORTFOLIO_ACCEPTANCE.md for current operational limits. Firefox-engine
+coverage and a public deployment are not claimed.
+
+## Archived V2 Baseline
 
 Date: 2026-09-06. Final regression: 10 tests passed in 251.7 seconds, with zero failures, skips or flaky tests. All 33 existing screenshot baselines passed comparison without a snapshot-update flag.
 

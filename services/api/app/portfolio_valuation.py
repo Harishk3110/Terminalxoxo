@@ -1,0 +1,476 @@
+"""Ledger-driven valuation, performance and risk with immutable calculation records."""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+from collections import defaultdict
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
+
+import numpy as np
+import pandas as pd
+import pyxirr
+from sqlalchemy import delete, func, select
+
+from . import models
+from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, money, nav_total
+from .portfolio_seed import DEMO_SOURCE, ensure_main, profile_for
+from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day, utc
+
+VERSION = "knk-nav-3.0"
+METHOD = "Average-cost ledger; native cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
+
+
+def jsonable(value):
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [jsonable(v) for v in value]
+    return value
+
+
+def number(value):
+    return float(value) if value is not None and math.isfinite(float(value)) else None
+
+
+def load_entries(session, portfolio_id):
+    rows = session.execute(select(models.PortfolioTransaction, models.TransactionDetail).outerjoin(models.TransactionDetail, models.TransactionDetail.transaction_id == models.PortfolioTransaction.id).where(models.PortfolioTransaction.portfolio_id == portfolio_id).order_by(models.PortfolioTransaction.trade_date, models.PortfolioTransaction.created_at, models.PortfolioTransaction.id)).all()
+    entries, payloads = [], []
+    instruments = {r.id: r for r in session.scalars(select(models.Instrument)).all()}
+    for txn, detail in rows:
+        amount = detail.gross_amount if detail else txn.quantity * txn.price
+        if not detail and txn.transaction_type == "DEPOSIT" and not amount:
+            raise ValueError("Legacy implicit contribution requires explicit ledger migration")
+        entries.append(Entry(
+            id=txn.id, day=txn.trade_date, kind=txn.transaction_type, currency=txn.currency,
+            quantity=txn.quantity, price=txn.price, fx=txn.fx_rate_to_base, amount=amount,
+            fee=txn.fee, commission=detail.commission if detail else ZERO,
+            tax=detail.tax if detail else ZERO, instrument_id=txn.instrument_id,
+            multiplier=detail.contract_multiplier if detail else ONE, metadata=detail.metadata_json if detail else {},
+        ))
+        instrument = instruments.get(txn.instrument_id)
+        payloads.append(jsonable({
+            "id": txn.id, "portfolio_id": portfolio_id, "account_id": txn.account_id,
+            "type": txn.transaction_type, "transaction_type": txn.transaction_type,
+            "symbol": instrument.symbol if instrument else None, "instrument_id": txn.instrument_id,
+            "trade_date": txn.trade_date, "settle_date": txn.settle_date,
+            "quantity": txn.quantity, "price": txn.price, "gross_amount": amount,
+            "currency": txn.currency, "fx_rate_to_base": txn.fx_rate_to_base,
+            "base_value": amount * txn.fx_rate_to_base, "fee": txn.fee,
+            "commission": detail.commission if detail else ZERO, "tax": detail.tax if detail else ZERO,
+            "source": txn.source, "quality": txn.quality, "notes": txn.notes,
+            "created_at": txn.created_at, "updated_at": txn.updated_at,
+            "source_file_id": detail.source_file_id if detail else None,
+            "external_reference": detail.external_key if detail else None,
+            "reconciliation_state": detail.reconciliation_state if detail else "INTERNAL_ONLY",
+            "metadata": detail.metadata_json if detail else {},
+        }))
+    return entries, payloads
+
+
+def metric_summary(curve, cash_flows, end, risk_free=0):
+    valid = [p for p in curve if p["return"] is not None]
+    complete = len(valid) == len(curve) and bool(curve)
+    warnings = []
+    data = pd.DataFrame(valid)
+    empty = {k: None for k in ("twr", "cagr", "mwr", "xirr", "mtd", "qtd", "ytd", "daily", "daily_volatility", "volatility", "sharpe", "sortino", "max_drawdown", "current_drawdown", "calmar", "beta", "alpha", "tracking_error", "information_ratio")}
+    if data.empty or not complete:
+        return {**empty, "observations": len(valid)}, ["Performance unavailable: incomplete historical valuations"]
+    returns = pd.Series([p["return"] for p in valid if date.fromisoformat(p["date"]).weekday() < 5], dtype=float)
+    all_returns = data["return"].astype(float)
+    days = (end - date.fromisoformat(valid[0]["date"])).days
+    twr = float((1 + all_returns).prod() - 1)
+    annual_ok = len(returns) >= 60
+    long_ok = days >= 365
+    std = float(returns.std(ddof=1)) if len(returns) > 1 else 0
+    downside = np.minimum(returns.to_numpy() - risk_free / 252, 0)
+    downside_dev = float(np.sqrt(np.mean(downside ** 2))) if len(downside) else 0
+    cagr = (1 + twr) ** (365 / days) - 1 if long_ok and twr > -1 else None
+    maximum_dd = min(float(p["drawdown"]) for p in valid)
+    result = {
+        **empty, "twr": twr, "cagr": cagr, "daily": float(valid[-1]["return"]),
+        "daily_volatility": std if len(returns) > 1 else None,
+        "volatility": std * math.sqrt(252) if annual_ok else None,
+        "sharpe": (float(returns.mean()) - risk_free / 252) / std * math.sqrt(252) if annual_ok and std else None,
+        "sortino": (float(returns.mean()) - risk_free / 252) / downside_dev * math.sqrt(252) if annual_ok and downside_dev else None,
+        "max_drawdown": maximum_dd, "current_drawdown": float(valid[-1]["drawdown"]),
+        "calmar": cagr / abs(maximum_dd) if cagr is not None and maximum_dd else None,
+        "observations": len(returns), "calendar_days": days,
+    }
+    boundaries = {"mtd": date(end.year, end.month, 1), "qtd": date(end.year, ((end.month - 1) // 3) * 3 + 1, 1), "ytd": date(end.year, 1, 1)}
+    for key, start in boundaries.items():
+        selected = [p["return"] for p in valid if date.fromisoformat(p["date"]) >= start]
+        result[key] = float(np.prod(1 + np.array(selected)) - 1) if selected else None
+    if not annual_ok:
+        warnings.append("INSUFFICIENT DATA: annual volatility, Sharpe, Sortino and risk ratios require 60 trading observations")
+    if not long_ok:
+        warnings.append("INSUFFICIENT DATA: CAGR, annual XIRR and Calmar require one year; MWR is shown for the actual period")
+    flows = defaultdict(Decimal)
+    for day, amount in cash_flows:
+        flows[day] -= amount
+    flows[end] += Decimal(str(valid[-1]["equity"]))
+    amounts = [(d, float(v)) for d, v in sorted(flows.items()) if v]
+    if days > 0 and any(v < 0 for _, v in amounts) and any(v > 0 for _, v in amounts):
+        try:
+            irr = pyxirr.xirr(amounts)
+            if irr is not None and math.isfinite(irr) and irr > -1:
+                result["mwr"] = (1 + irr) ** (days / 365) - 1
+                result["xirr"] = irr if long_ok else None
+            if not pyxirr.is_conventional_cash_flow([v for _, v in amounts]):
+                warnings.append("Non-conventional cash flows may have multiple IRR roots; the selected root is not unique")
+        except (ValueError, pyxirr.InvalidPaymentsError):
+            warnings.append("XIRR has no valid solution for the selected cash flows")
+    return result, warnings
+
+
+class PortfolioValuationService:
+    def __init__(self, session):
+        self.session = session
+
+    def portfolio(self, key=None):
+        profile = profile_for(self.session, key)
+        if profile is None and key is None:
+            ensure_main(self.session)
+            profile = profile_for(self.session)
+        if profile is None:
+            raise ValueError("Portfolio is not enabled for the audited ledger")
+        return self.session.get(models.Portfolio, profile.portfolio_id), profile
+
+    def fingerprint(self, portfolio_id, end):
+        parts = [VERSION, portfolio_id, end.isoformat(), datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")]
+        for model in (models.PortfolioTransaction, models.TransactionDetail, models.MarketObservation, models.FxObservation, models.SourcePrecedenceRule, models.PortfolioProfile, models.PortfolioBalanceAdjustment, models.RiskLimit):
+            query = select(func.count(model.id), func.max(model.updated_at))
+            if hasattr(model, "portfolio_id"):
+                query = query.where(model.portfolio_id == portfolio_id)
+            parts.append(str(self.session.execute(query).one()))
+        return hashlib.sha256("|".join(parts).encode()).hexdigest()
+
+    def latest(self, key=None, *, force=False, end=None):
+        portfolio, _ = self.portfolio(key)
+        day = end or datetime.now(timezone.utc).date()
+        fingerprint = self.fingerprint(portfolio.id, day)
+        if not force:
+            cached = self.session.scalar(select(models.PortfolioValuationRun).where(models.PortfolioValuationRun.portfolio_id == portfolio.id, models.PortfolioValuationRun.fingerprint == fingerprint).order_by(models.PortfolioValuationRun.created_at.desc()).limit(1))
+            if cached:
+                return cached.payload
+        payload = self.calculate(portfolio.id, day)
+        run = models.PortfolioValuationRun(
+            portfolio_id=portfolio.id, fingerprint=fingerprint, valuation_date=day,
+            status="SUCCEEDED" if payload["portfolio"]["nav"] is not None else "INCOMPLETE",
+            nav=Decimal(payload["portfolio"]["nav"]) if payload["portfolio"]["nav"] is not None else None,
+            payload={},
+        )
+        self.session.add(run)
+        self.session.flush()
+        payload["valuation_run_id"] = run.id
+        run.payload = payload
+        for row in payload["positions"]:
+            self.session.add(models.PositionValuation(
+                valuation_run_id=run.id, instrument_id=row["instrument_id"],
+                quantity=Decimal(row["quantity"]),
+                price=Decimal(row["market_price"]) if row["market_price"] is not None else None,
+                fx_rate=Decimal(row["fx_rate"]) if row["fx_rate"] is not None else None,
+                market_value=Decimal(row["market_value"]) if row["market_value"] is not None else None,
+                provenance={"price": row["price_provenance"], "fx": row["fx_provenance"]},
+            ))
+        if run.nav is not None:
+            p = payload["portfolio"]
+            self.session.add(models.NavSnapshot(portfolio_id=portfolio.id, as_of=datetime.now(timezone.utc), nav=run.nav, cash=Decimal(p["cash"]), market_value=Decimal(p["market_value"]), quality=payload["quality"]))
+            self.session.execute(delete(models.PortfolioPosition).where(models.PortfolioPosition.portfolio_id == portfolio.id))
+            self.session.execute(delete(models.PortfolioCashBalance).where(models.PortfolioCashBalance.portfolio_id == portfolio.id))
+            for row in payload["positions"]:
+                self.session.add(models.PortfolioPosition(portfolio_id=portfolio.id, instrument_id=row["instrument_id"], quantity=Decimal(row["quantity"]), average_cost=Decimal(row["average_cost"]), market_price=Decimal(row["market_price"]), market_value=Decimal(row["market_value"]), unrealised_pnl=Decimal(row["unrealised_pnl"]), realised_pnl=Decimal(row["realised_pnl"]), weight=Decimal(row["weight"]), as_of=datetime.fromisoformat(row["as_of"]), quality=payload["quality"]))
+            for row in payload["cash"]:
+                self.session.add(models.PortfolioCashBalance(portfolio_id=portfolio.id, currency=row["currency"], amount=Decimal(row["amount"]), quality=payload["quality"]))
+            self.session.execute(delete(models.DailyReturn).where(models.DailyReturn.portfolio_id == portfolio.id))
+            for row in payload["curve"]:
+                if row["return"] is not None:
+                    self.session.add(models.DailyReturn(portfolio_id=portfolio.id, date=date.fromisoformat(row["date"]), return_value=Decimal(str(row["return"]))))
+        self.session.commit()
+        return payload
+
+    def calculate(self, key=None, end=None):
+        portfolio, profile = self.portfolio(key)
+        end = end or datetime.now(timezone.utc).date()
+        now = datetime.now(timezone.utc)
+        entries, transactions = load_entries(self.session, portfolio.id)
+        entries = [r for r in entries if r.day <= end]
+        if not entries:
+            raise ValueError("Portfolio has no transactions at this date")
+        start = min(r.day for r in entries)
+        instruments = {r.id: r for r in self.session.scalars(select(models.Instrument)).all()}
+        benchmark = next((r for r in instruments.values() if r.symbol == profile.configuration.get("benchmark", "SPY")), None)
+        ids = {r.instrument_id for r in entries if r.instrument_id}
+        ids.update(r.metadata["child_instrument_id"] for r in entries if r.metadata.get("child_instrument_id"))
+        if benchmark:
+            ids.add(benchmark.id)
+        prices = MarketPriceResolver(self.session, ids, start)
+        fx = FxRateResolver(self.session)
+        if profile.configuration.get("price_mode") == "DEMO_ONLY":
+            prices.rules = {}
+            for key in list(prices.grouped):
+                prices.grouped[key] = {group: value for group, value in prices.grouped[key].items() if group[0] == "DEMO"}
+            for pair in list(fx.groups):
+                fx.groups[pair] = {group: value for group, value in fx.groups[pair].items() if group[0] == "DEMO"}
+        adjustments = self.session.scalars(select(models.PortfolioBalanceAdjustment).where(models.PortfolioBalanceAdjustment.portfolio_id == portfolio.id)).all()
+        days = {r.day for r in entries} | {end}
+        for values in prices.series.values():
+            days.update(r.timestamp.date() for r in values if start <= r.timestamp.date() <= end)
+        days = sorted(d for d in days if start <= d <= end)
+        state = LedgerState()
+        index, previous_nav, return_index, peak, previous_benchmark, benchmark_equity = 0, ZERO, ONE, ONE, None, ZERO
+        curve, histories, last_positions, last_cash, warnings = [], defaultdict(dict), [], [], []
+        previous_position_values = {}
+        last_daily_contributions = {}
+        for day in days:
+            at = min(close_of_day(day), now) if day == now.date() else close_of_day(day)
+            flow_before = state.external_flows
+            daily_entries = []
+            while index < len(entries) and entries[index].day <= day:
+                state.apply(entries[index])
+                daily_entries.append(entries[index])
+                index += 1
+            flows = state.external_flows - flow_before
+            position_values, position_rows, cash_rows, missing = {}, [], [], []
+            total_cash = ZERO
+            sources = []
+            for currency, amount in state.cash.items():
+                if amount == 0:
+                    continue
+                rate, provenance = fx.resolve(currency, portfolio.base_currency, at)
+                value = amount * rate if rate is not None else None
+                cash_rows.append({"currency": currency, "amount": amount, "base_value": money(value) if value is not None else None, "as_of": provenance["as_of"], "quality": provenance["data_state"], "fx_rate": rate, "source": provenance["source"]})
+                if value is None:
+                    missing.append(f"Missing FX {currency}/{portfolio.base_currency}")
+                else:
+                    total_cash += value
+                    sources.append(provenance)
+            for instrument_id, lot in state.lots.items():
+                if lot.quantity == 0:
+                    continue
+                item = instruments[instrument_id]
+                price = prices.resolve(instrument_id, at)
+                provenance = prices.describe(instrument_id, at)
+                rate, fx_provenance = fx.resolve(item.currency, portfolio.base_currency, at)
+                value = lot.quantity * price.value * rate * lot.multiplier if price and rate is not None else None
+                if value is None:
+                    missing.append(f"{item.symbol}: missing {'price' if not price else 'FX'}")
+                else:
+                    position_values[instrument_id] = value
+                sources.extend([provenance, fx_provenance])
+                position_rows.append({
+                    "id": instrument_id, "instrument_id": instrument_id, "symbol": item.symbol, "name": item.name,
+                    "quantity": lot.quantity, "average_cost": lot.cost_native / lot.quantity / lot.multiplier,
+                    "cost_basis_base": lot.cost_base, "market_price": price.value if price else None,
+                    "market_value": money(value) if value is not None else None,
+                    "unrealised_pnl": money(value - lot.cost_base) if value is not None else None,
+                    "realised_pnl": money(lot.realised), "income": money(lot.income), "fees": money(lot.charges),
+                    "currency": item.currency, "sector": item.sector or "Unclassified", "country": item.country,
+                    "asset_class": item.asset_class, "contract_multiplier": lot.multiplier,
+                    "source": provenance["source"], "quality": provenance["data_state"], "as_of": provenance["as_of"],
+                    "price_provenance": provenance, "fx_provenance": fx_provenance, "fx_rate": rate,
+                    "weight": ZERO, "beta": None, "risk_contribution": None,
+                })
+            balances = defaultdict(Decimal)
+            for adjustment in adjustments:
+                if adjustment.effective_date <= day:
+                    rate, _ = fx.resolve(adjustment.currency, portfolio.base_currency, at)
+                    if rate is None:
+                        missing.append(f"Missing adjustment FX {adjustment.currency}")
+                    else:
+                        balances[adjustment.bucket] += adjustment.amount * rate
+            totals = nav_total(total_cash, list(position_values.values()), dict(balances))
+            nav = None if missing else totals["nav"]
+            daily_pnl, daily_return = (None, None) if nav is None or previous_nav is None else daily_performance(previous_nav, nav, flows)
+            if daily_return is not None:
+                return_index *= 1 + daily_return
+                peak = max(peak, return_index)
+            dd = float(return_index / peak - 1) if peak else 0
+            benchmark_price = prices.resolve(benchmark.id, at) if benchmark else None
+            benchmark_fx, _ = fx.resolve(benchmark.currency, portfolio.base_currency, at) if benchmark else (None, {})
+            benchmark_base = benchmark_price.value * benchmark_fx if benchmark_price and benchmark_fx else None
+            benchmark_return = benchmark_base / previous_benchmark - 1 if benchmark_base and previous_benchmark else ZERO
+            benchmark_equity = (benchmark_equity + flows) * (1 + benchmark_return)
+            previous_benchmark = benchmark_base
+            daily_contributions = {}
+            for instrument_id in set(previous_position_values) | set(position_values):
+                contribution = position_values.get(instrument_id, ZERO) - previous_position_values.get(instrument_id, ZERO)
+                for entry in daily_entries:
+                    if entry.instrument_id != instrument_id:
+                        continue
+                    if entry.kind in {"BUY", "COVER", "TRANSFER_IN"}:
+                        contribution -= entry.gross * entry.fx
+                    if entry.kind in {"SELL", "SHORT", "TRANSFER_OUT"}:
+                        contribution += entry.gross * entry.fx
+                    if entry.kind in {"DIVIDEND", "INTEREST"}:
+                        contribution += entry.gross * entry.fx
+                    contribution -= entry.charges * entry.fx
+                daily_contributions[instrument_id] = contribution
+            for row in position_rows:
+                row["weight"] = Decimal(row["market_value"]) / nav if nav and row["market_value"] is not None else ZERO
+                row["daily_pnl"] = number(daily_contributions.get(row["instrument_id"], ZERO)) if nav is not None and previous_nav is not None else None
+                row["total_pnl"] = money((position_values.get(row["instrument_id"], ZERO) - state.lots[row["instrument_id"]].cost_base) + state.lots[row["instrument_id"]].realised + state.lots[row["instrument_id"]].income - state.lots[row["instrument_id"]].charges) if row["market_value"] is not None else None
+                row["return"] = number((position_values[row["instrument_id"]] - state.lots[row["instrument_id"]].cost_base) / abs(state.lots[row["instrument_id"]].cost_base)) if row["market_value"] is not None and state.lots[row["instrument_id"]].cost_base else None
+            for instrument_id in ids:
+                observation = prices.resolve(instrument_id, at)
+                item = instruments[instrument_id]
+                rate, _ = fx.resolve(item.currency, portfolio.base_currency, at)
+                if observation and rate is not None:
+                    histories[instrument_id][day] = float(observation.value * rate)
+            curve.append({
+                "date": day.isoformat(), "equity": number(money(nav)) if nav is not None else None,
+                "opening_nav": number(money(previous_nav)) if previous_nav is not None else None,
+                "daily_pnl": number(money(daily_pnl)) if daily_pnl is not None else None,
+                "external_flow": number(money(flows)), "return": number(daily_return),
+                "benchmark": number(money(benchmark_equity)) if benchmark_base else None,
+                "benchmark_return": number(benchmark_return) if benchmark_base else None,
+                "drawdown": dd, "return_index": float(return_index),
+                "quality": "UNAVAILABLE" if missing else ("STALE" if any(p.get("stale") for p in sources) else "CALCULATED"),
+            })
+            previous_nav = nav
+            previous_position_values = position_values
+            last_positions, last_cash, last_daily_contributions = position_rows, cash_rows, daily_contributions
+            if day == end:
+                warnings.extend(missing)
+                selected_sources = sources
+                final_totals = totals
+
+        performance, performance_warnings = metric_summary(curve, state.flow_events, end, float(profile.configuration.get("risk_free_rate", 0)))
+        warnings.extend(performance_warnings)
+        risk, correlations = self.risk(histories, last_positions, benchmark.id if benchmark else None, nav, performance)
+        paired = [(p["return"], p["benchmark_return"]) for p in curve if p["return"] is not None and p["benchmark_return"] is not None and date.fromisoformat(p["date"]).weekday() < 5]
+        if len(paired) >= 60:
+            pr, br = np.array(paired).T
+            tracking = float(np.std(pr - br, ddof=1))
+            beta = float(np.cov(pr, br, ddof=1)[0, 1] / np.var(br, ddof=1)) if np.var(br, ddof=1) else None
+            rf = float(profile.configuration.get("risk_free_rate", 0)) / 252
+            performance.update({"beta": beta, "alpha": (float(pr.mean()) - rf - beta * (float(br.mean()) - rf)) * 252 if beta is not None else None, "tracking_error": tracking * math.sqrt(252), "information_ratio": float(np.mean(pr - br)) / tracking * math.sqrt(252) if tracking else None})
+        exposure = self.exposure(last_positions, last_cash, nav)
+        risk.update({
+            "max_position_weight": max((abs(float(p["weight"])) for p in last_positions), default=0),
+            "top_five_concentration": sum(sorted((abs(float(p["weight"])) for p in last_positions), reverse=True)[:5]),
+            "max_sector_weight": max((abs(r["weight"]) for r in exposure["sector"]), default=0),
+            "max_currency_weight": max((abs(r["weight"]) for r in exposure["currency"]), default=0),
+            "cash_weight": float(total_cash / nav) if nav else None,
+        })
+        if nav is None:
+            risk = {key: value if key == "observations" else None for key, value in risk.items()}
+            for row in last_positions:
+                row["weight"] = None
+            for rows in exposure.values():
+                for row in rows:
+                    row["weight"] = None
+        limits = self.session.execute(select(models.RiskLimit, models.RiskPolicy).join(models.RiskPolicy, models.RiskPolicy.id == models.RiskLimit.policy_id).where(models.RiskPolicy.portfolio_id == portfolio.id, models.RiskPolicy.enabled.is_(True))).all()
+        breaches = []
+        for limit, _ in limits:
+            actual = risk.get(limit.metric)
+            if actual is not None and (actual > float(limit.threshold) if limit.direction == "MAX" else actual < float(limit.threshold)):
+                breaches.append({"limit_id": limit.id, "metric": limit.metric, "value": actual, "threshold": str(limit.threshold), "severity": "WARN", "state": "OPEN", "as_of": now.isoformat()})
+        stale_value = sum((abs(Decimal(p["market_value"])) for p in last_positions if p["market_value"] is not None and (p["price_provenance"].get("stale") or p["fx_provenance"].get("stale"))), ZERO)
+        if any(p.get("stale") for p in selected_sources):
+            warnings.append("CALCULATED WITH STALE DATA: selected prices/FX are retained; no demo substitution")
+            warnings.append("Risk estimates include carried-forward stale observations and may understate variability")
+        if any(p.get("conflict") for p in selected_sources):
+            warnings.append("Material same-date source differences exceed 1%; review price provenance")
+        if any(p["amount"] < 0 for p in last_cash):
+            warnings.append("Negative native-currency cash: review funding or FX conversion")
+        if any(row["beta"] is None for row in last_positions):
+            warnings.append("Some position risk metrics have insufficient paired price history")
+        warnings.append("Risk uses current security weights; cash FX and liability sensitivities are excluded. Historical valuations use currently accepted source versions, not point-in-time research snapshots.")
+        categories = {p.get("source_category") for p in selected_sources} - {None}
+        quality = "UNAVAILABLE" if nav is None else ("CALCULATED WITH STALE DATA" if any(p.get("stale") for p in selected_sources) else "DEMO DATA" if categories <= {"DEMO"} else "FILE IMPORT" if categories <= {"FILE"} else "MIXED SOURCES")
+        source_name = "INTERNAL LEDGER / " + ", ".join(sorted({p["source"] for p in selected_sources if p.get("source") != "IDENTITY"}))
+        market_stamps = [p["as_of"] for p in selected_sources if p.get("as_of") and p.get("source") != "IDENTITY"]
+        as_of = min(market_stamps) if market_stamps else now.isoformat()
+        investment = sum((lot.realised for lot in state.lots.values()), ZERO) + sum((position_values.get(key, ZERO) - lot.cost_base for key, lot in state.lots.items()), ZERO)
+        cash_fx = total_cash - state.cash_book_base
+        balance_effect = final_totals["nav"] - total_cash - final_totals["market_value"]
+        total_pnl = nav - state.external_flows if nav is not None else None
+        expected = state.external_flows + investment + state.income - state.fees - state.taxes + cash_fx + state.adjustments + balance_effect
+        difference = money(nav - expected) if nav is not None else None
+        if difference and abs(difference) > Decimal(".01"):
+            warnings.append("NAV RECONCILIATION FAILED: accounting components do not balance")
+        attribution = []
+        for key, lot in state.lots.items():
+            item = instruments[key]
+            unrealised = position_values.get(key, ZERO) - lot.cost_base if key in position_values or lot.quantity == 0 else None
+            contribution = lot.realised + unrealised + lot.income - lot.charges if unrealised is not None else None
+            attribution.append({"symbol": item.symbol, "sector": item.sector, "currency": item.currency, "realised": money(lot.realised), "unrealised": money(unrealised) if unrealised is not None else None, "income": money(lot.income), "fees": money(lot.charges), "daily_pnl": money(last_daily_contributions.get(key, ZERO)) if nav is not None else None, "total_pnl": money(contribution) if contribution is not None else None, "contribution": number(contribution / portfolio.reference_capital) if contribution is not None else None})
+        metric_metadata = {key: {"value": value, "portfolio": profile.code, "base_currency": portfolio.base_currency, "start": start.isoformat(), "end": end.isoformat(), "benchmark": profile.configuration.get("benchmark", "SPY"), "methodology": METHOD, "source": source_name, "calculated_at": now.isoformat(), "quality": quality} for key, value in {**performance, **risk}.items()}
+        p = {
+            "id": portfolio.id, "code": profile.code, "name": portfolio.name, "base_currency": portfolio.base_currency,
+            "reference_capital": portfolio.reference_capital, "opening_capital": portfolio.reference_capital,
+            **{k: money(v) if isinstance(v, Decimal) else v for k, v in final_totals.items()},
+            "nav": money(nav) if nav is not None else None, "total_pnl": money(total_pnl) if total_pnl is not None else None,
+            "cash": money(total_cash) if all(c["base_value"] is not None for c in last_cash) else None,
+            "market_value": money(final_totals["market_value"]) if all(p["market_value"] is not None for p in last_positions) else None,
+            "gross_asset_value": money(final_totals["gross_asset_value"]) if nav is not None else None,
+            "total_return": number(total_pnl / portfolio.reference_capital) if total_pnl is not None else None,
+            "daily_pnl": curve[-1]["daily_pnl"], "opening_nav": curve[-1]["opening_nav"],
+            "quality": quality, "as_of": as_of, "calculated_at": now.isoformat(),
+            "view": "INTERNAL LEDGER", "execution_mode": "MANUAL", "broker_mode": "PAPER",
+            "price_mode": profile.configuration.get("price_mode", "AUTO"),
+        }
+        monthly = []
+        for month in sorted({p["date"][:7] for p in curve}):
+            values = [p["return"] for p in curve if p["date"][:7] == month]
+            monthly.append({"month": month, "return": float(np.prod(1 + np.array(values)) - 1) if all(v is not None for v in values) else None})
+        return jsonable({
+            "portfolio": p, "positions": last_positions, "cash": last_cash, "transactions": transactions,
+            "performance": performance, "risk": risk, "curve": curve, "monthly": monthly, "correlation": correlations,
+            "exposures": exposure, "attribution": attribution, "breaches": breaches,
+            "source": source_name, "quality": quality, "as_of": as_of, "calculated_at": now.isoformat(),
+            "methodology": METHOD, "calculation_version": VERSION, "metric_metadata": metric_metadata,
+            "warnings": list(dict.fromkeys(warnings)), "freshness": {"stale_market_value": money(stale_value), "stale_nav_pct": number(stale_value / abs(nav)) if nav else None, "price_coverage_pct": sum(p["market_price"] is not None and p["fx_rate"] is not None for p in last_positions) / len(last_positions) * 100 if last_positions else 100},
+            "reconciliation": {"opening_capital": portfolio.reference_capital, "net_external_flows": money(state.external_flows), "additional_capital_flows": money(state.external_flows - portfolio.reference_capital), "investment_pnl": money(investment) if nav is not None else None, "income": money(state.income), "fees": money(state.fees), "taxes": money(state.taxes), "cash_fx_pnl": money(cash_fx) if nav is not None else None, "adjustments": money(state.adjustments + balance_effect), "expected_nav": money(expected) if nav is not None else None, "difference": difference, "state": "BALANCED" if difference == ZERO else "INCOMPLETE" if difference is None else "BREAK"},
+        })
+
+    @staticmethod
+    def risk(histories, positions, benchmark_id, nav, performance):
+        frame = pd.DataFrame(histories).sort_index()
+        frame = frame.loc[[d.weekday() < 5 for d in frame.index]]
+        returns = frame.pct_change(fill_method=None).dropna()
+        weights = pd.Series({p["instrument_id"]: float(p["weight"]) for p in positions}, dtype=float)
+        empty = {"beta": None, "volatility": None, "var_95": None, "var_99": None, "cvar_95": None, "max_drawdown": performance.get("max_drawdown"), "current_drawdown": performance.get("current_drawdown"), "gross_exposure": float(weights.abs().sum()), "net_exposure": float(weights.sum()), "concentration": float(weights.abs().max()) if len(weights) else 0, "observations": len(returns)}
+        symbols = {p["instrument_id"]: p["symbol"] for p in positions}
+        ordered = sorted(returns.columns, key=lambda key: symbols.get(key, "SPY"))
+        corr = returns[ordered].corr()
+        correlations = {"symbols": [symbols.get(k, "SPY") for k in corr.columns], "values": [[number(value) for value in row] for row in corr.values]}
+        if len(returns) < 60 or nav is None or not len(weights):
+            return empty, correlations
+        assets = returns.reindex(columns=weights.index)
+        weighted = assets.mul(weights, axis=1).sum(axis=1)
+        q = float(weighted.quantile(.05))
+        tail = weighted[weighted <= q]
+        covariance = assets.cov() * 252
+        marginal = covariance @ weights
+        variance = float(weights @ marginal)
+        volatility = math.sqrt(max(variance, 0))
+        benchmark = returns[benchmark_id] if benchmark_id in returns else None
+        beta = float(weighted.cov(benchmark) / benchmark.var()) if benchmark is not None and benchmark.var() else None
+        for row in positions:
+            asset = assets[row["instrument_id"]]
+            row["beta"] = float(asset.cov(benchmark) / benchmark.var()) if benchmark is not None and benchmark.var() else None
+            row["risk_contribution"] = float(weights[row["instrument_id"]] * marginal[row["instrument_id"]] / variance) if variance else None
+            row["marginal_volatility"] = float(marginal[row["instrument_id"]] / volatility) if volatility else None
+        return {**empty, "beta": beta, "volatility": volatility, "var_95": min(0, q * float(nav)), "var_99": min(0, float(weighted.quantile(.01)) * float(nav)), "cvar_95": min(0, float(tail.mean()) * float(nav)) if len(tail) else None}, correlations
+
+    @staticmethod
+    def exposure(positions, cash, nav):
+        result = {}
+        for field in ("sector", "country", "currency", "asset_class"):
+            groups = defaultdict(Decimal)
+            for row in positions:
+                if row["market_value"] is not None:
+                    groups[row[field]] += Decimal(row["market_value"])
+            if field == "currency":
+                for row in cash:
+                    if row["base_value"] is not None:
+                        groups[row["currency"]] += Decimal(row["base_value"])
+            result[field] = [{"name": key, "value": money(value), "weight": float(value / nav) if nav else 0} for key, value in sorted(groups.items(), key=lambda pair: abs(pair[1]), reverse=True)]
+        return result

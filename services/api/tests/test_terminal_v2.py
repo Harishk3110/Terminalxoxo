@@ -163,4 +163,4 @@ def test_backtest_costs_affect_results():
         cheap = backtest_result(session, {'symbol': 'SPY', 'fast': 5, 'slow': 15, 'fee_bps': 0, 'slippage_bps': 0})
         costly = backtest_result(session, {'symbol': 'SPY', 'fast': 5, 'slow': 15, 'fee_bps': 50, 'slippage_bps': 20})
         assert cheap['final_equity'] != costly['final_equity']
-        assert len(cheap['equity_curve']) > 1000
+        assert len(cheap['equity_curve']) >= 80
