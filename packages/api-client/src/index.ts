@@ -124,8 +124,20 @@ export class KnkApiClient {
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
+    return this.mutate<T>("POST", path, body);
+  }
+
+  async put<T>(path: string, body: unknown): Promise<T> {
+    return this.mutate<T>("PUT", path, body);
+  }
+
+  async delete<T>(path: string, body?: unknown): Promise<T> {
+    return this.mutate<T>("DELETE", path, body);
+  }
+
+  private async mutate<T>(method: "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
+      method,
       credentials: "include",
       headers: body instanceof FormData ? undefined : { "Content-Type": "application/json" },
       body: body instanceof FormData ? body : body === undefined ? undefined : JSON.stringify(body)

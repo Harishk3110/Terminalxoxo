@@ -6,7 +6,9 @@ import {
   ArrowDownToLine,
   Check,
   Plus,
+  Pencil,
   RefreshCw,
+  Settings2,
   Upload,
   X,
 } from "lucide-react";
@@ -29,6 +31,8 @@ import {
   type Column,
 } from "./ui";
 import type { PortfolioData, Row } from "./types";
+import { AccountingDialog } from "./ledger/accounting-dialog";
+import { TransactionCorrectionDialog } from "./ledger/transaction-correction";
 
 type OperatingData = PortfolioData & {
   portfolio: PortfolioData["portfolio"] & Row;
@@ -137,6 +141,7 @@ function OperatingRibbon({ data }: { data?: OperatingData }) {
   );
 }
 export function PortfolioHomePage() {
+  const [accountingOpen, setAccountingOpen] = useState(false);
   const query = usePortfolio();
   const data = query.data as OperatingData | undefined;
   const { open, selectSecurity } = useTerminal();
@@ -158,6 +163,9 @@ export function PortfolioHomePage() {
       <PageTitle code="HOME" title="Portfolio Command Centre">
         <span className="secondary mono">KNK_MAIN / SGD</span>
         <Badge>{data?.quality ?? "LOADING"}</Badge>
+        <IconButton label="Portfolio accounting" onClick={() => setAccountingOpen(true)}>
+          <Settings2 size={13} />
+        </IconButton>
         <IconButton
           label="Export portfolio workbook"
           onClick={() =>
@@ -170,6 +178,7 @@ export function PortfolioHomePage() {
           <RefreshCw size={13} />
         </IconButton>
       </PageTitle>
+      {accountingOpen && <AccountingDialog onClose={() => setAccountingOpen(false)} />}
       <OperatingRibbon data={data} />
       <Notice error={query.error} />
       <div className="page-grid portfolio-command-grid">
@@ -369,6 +378,7 @@ export function PortfolioHomePage() {
 }
 
 export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
+  const [correctionId, setCorrectionId] = useState<string | null>(null);
   const { open } = useTerminal();
   const query = useApi<{ items: Row[] }>(
     "operating-trades",
@@ -459,6 +469,7 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
         </IconButton>
       </PageTitle>
       {risk && <OperatingRibbon data={data} />}
+      {correctionId && <TransactionCorrectionDialog transactionId={correctionId} onClose={() => setCorrectionId(null)} />}
       <div
         className={
           risk
@@ -535,6 +546,9 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
               >
                 <Check size={13} /> Record review
               </button>
+              {Boolean(selected.transaction_id) && <button onClick={() => setCorrectionId(String(selected.transaction_id))}>
+                <Pencil size={13} /> Correct ledger record
+              </button>}
               <div className="operation-warnings">
                 {Array.isArray(selected.breaches) &&
                   selected.breaches.map((b: Row, i: number) => (

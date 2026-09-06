@@ -13,7 +13,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next-build/types/**/*.ts",
-    ".next-prod/types/**/*.ts"
+    ".next-prod/types/**/*.ts",
+    "logs/sprint-25k-build/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

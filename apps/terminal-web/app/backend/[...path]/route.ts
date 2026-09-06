@@ -21,7 +21,9 @@ async function proxy(
     const upstream = await fetch(url, {
       method: request.method,
       headers,
-      body: request.method === "POST" ? await request.arrayBuffer() : undefined,
+      body: ["POST", "PUT", "DELETE"].includes(request.method)
+        ? await request.arrayBuffer()
+        : undefined,
       cache: "no-store",
       signal: request.signal,
       redirect: "manual",
@@ -49,4 +51,4 @@ async function proxy(
   }
 }
 
-export { proxy as GET, proxy as POST };
+export { proxy as GET, proxy as POST, proxy as PUT, proxy as DELETE };

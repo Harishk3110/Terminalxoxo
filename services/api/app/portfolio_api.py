@@ -13,16 +13,16 @@ from sqlalchemy.orm import Session
 from . import models
 from .config import get_settings
 from .database import get_session
-from .portfolio_engine import decimal
 from .portfolio_operations import PortfolioLedgerService, TradeMonitorService, PortfolioReconciliationService, audit
 from .portfolio_seed import reset_main_demo
 from .portfolio_valuation import PortfolioValuationService, jsonable
 from .price_sources import PRIORITY
+from .portfolio_balances import BalanceAdjustmentRequest as BalanceRequest, PortfolioBalanceService
 
 router = APIRouter(prefix="/api/v1/operations")
 
 
-def identity(request, session, admin=False):
+def identity(request: Request, session: Session, admin: bool = False) -> str | None:
     from .terminal_api import auth_session
     user = auth_session(request, session)
     if get_settings().knk_env == "local-demo" and not user["authenticated"]:
@@ -178,31 +178,15 @@ def source_rule(symbol: str, payload: SourceRequest, request: Request, session: 
     return {"symbol": item.symbol, **payload.model_dump()}
 
 
-class BalanceRequest(BaseModel):
-    effective_date: date
-    bucket: str
-    currency: str
-    amount: str
-    reason: str = Field(min_length=5, max_length=1000)
-
-
 @router.post("/balances")
 def balance(payload: BalanceRequest, request: Request, portfolio: str = "KNK_MAIN", session: Session = Depends(get_session)):
-    if payload.bucket not in {"accrued_income", "receivables", "payables", "accrued_fees", "other_liabilities"}:
-        raise HTTPException(422, "Unknown NAV balance bucket")
-    p, _ = PortfolioValuationService(session).portfolio(portfolio)
     try:
-        amount = decimal(payload.amount, "amount")
-        if len(payload.currency) != 3 or not payload.currency.isalpha():
-            raise ValueError("Invalid currency")
+        result = PortfolioBalanceService(session).add(portfolio, payload, identity(request, session))
+        session.commit()
+        return result
     except ValueError as exc:
+        session.rollback()
         raise HTTPException(422, str(exc)) from exc
-    row = models.PortfolioBalanceAdjustment(portfolio_id=p.id, **payload.model_dump(exclude={"amount"}), amount=amount)
-    session.add(row)
-    session.flush()
-    audit(session, "NAV_BALANCE_ADJUSTED", "portfolio_balance", row.id, payload.model_dump(mode="json"), identity(request, session))
-    session.commit()
-    return {"id": row.id}
 
 
 @router.get("/export")

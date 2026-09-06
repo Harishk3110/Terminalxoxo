@@ -5,21 +5,27 @@ import hashlib
 import json
 import math
 from collections import defaultdict
+from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pyxirr
 from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
 from . import models
+from .portfolio_domain.types import AccountingPolicy
+from .portfolio_domain.postings import BalanceAdjustment, CurrencyMark, outstanding_postings, summarize_postings, transaction_postings
+from .ledger_revisions import apply_revisions
 from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, money, nav_total
 from .portfolio_seed import DEMO_SOURCE, ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day, utc
 
-VERSION = "knk-nav-3.0"
-METHOD = "Average-cost ledger; native cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
+VERSION = "knk-nav-4.1"
+METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
 def jsonable(value):
@@ -38,7 +44,7 @@ def number(value):
     return float(value) if value is not None and math.isfinite(float(value)) else None
 
 
-def load_entries(session, portfolio_id):
+def load_entries(session: Session, portfolio_id: str) -> tuple[list[Entry], list[dict[str, Any]]]:
     rows = session.execute(select(models.PortfolioTransaction, models.TransactionDetail).outerjoin(models.TransactionDetail, models.TransactionDetail.transaction_id == models.PortfolioTransaction.id).where(models.PortfolioTransaction.portfolio_id == portfolio_id).order_by(models.PortfolioTransaction.trade_date, models.PortfolioTransaction.created_at, models.PortfolioTransaction.id)).all()
     entries, payloads = [], []
     instruments = {r.id: r for r in session.scalars(select(models.Instrument)).all()}
@@ -52,6 +58,7 @@ def load_entries(session, portfolio_id):
             fee=txn.fee, commission=detail.commission if detail else ZERO,
             tax=detail.tax if detail else ZERO, instrument_id=txn.instrument_id,
             multiplier=detail.contract_multiplier if detail else ONE, metadata=detail.metadata_json if detail else {},
+            settle_date=txn.settle_date, account_id=txn.account_id,
         ))
         instrument = instruments.get(txn.instrument_id)
         payloads.append(jsonable({
@@ -70,7 +77,7 @@ def load_entries(session, portfolio_id):
             "reconciliation_state": detail.reconciliation_state if detail else "INTERNAL_ONLY",
             "metadata": detail.metadata_json if detail else {},
         }))
-    return entries, payloads
+    return apply_revisions(session, portfolio_id, entries, payloads)
 
 
 def metric_summary(curve, cash_flows, end, risk_free=0):
@@ -129,28 +136,31 @@ def metric_summary(curve, cash_flows, end, risk_free=0):
 
 
 class PortfolioValuationService:
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def portfolio(self, key=None):
+    def portfolio(self, key: str | None = None) -> tuple[models.Portfolio, models.PortfolioProfile]:
         profile = profile_for(self.session, key)
         if profile is None and key is None:
             ensure_main(self.session)
             profile = profile_for(self.session)
         if profile is None:
             raise ValueError("Portfolio is not enabled for the audited ledger")
-        return self.session.get(models.Portfolio, profile.portfolio_id), profile
+        portfolio = self.session.get(models.Portfolio, profile.portfolio_id)
+        if portfolio is None:
+            raise ValueError("Portfolio record is unavailable")
+        return portfolio, profile
 
     def fingerprint(self, portfolio_id, end):
         parts = [VERSION, portfolio_id, end.isoformat(), datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M")]
-        for model in (models.PortfolioTransaction, models.TransactionDetail, models.MarketObservation, models.FxObservation, models.SourcePrecedenceRule, models.PortfolioProfile, models.PortfolioBalanceAdjustment, models.RiskLimit):
+        for model in (models.PortfolioTransaction, models.TransactionDetail, models.TransactionRevision, models.MarketObservation, models.FxObservation, models.SourcePrecedenceRule, models.PortfolioProfile, models.PortfolioBalanceAdjustment, models.RiskLimit):
             query = select(func.count(model.id), func.max(model.updated_at))
             if hasattr(model, "portfolio_id"):
                 query = query.where(model.portfolio_id == portfolio_id)
             parts.append(str(self.session.execute(query).one()))
         return hashlib.sha256("|".join(parts).encode()).hexdigest()
 
-    def latest(self, key=None, *, force=False, end=None):
+    def latest(self, key: str | None = None, *, force: bool = False, end: date | None = None, commit: bool = True) -> dict[str, Any]:
         portfolio, _ = self.portfolio(key)
         day = end or datetime.now(timezone.utc).date()
         fingerprint = self.fingerprint(portfolio.id, day)
@@ -169,6 +179,10 @@ class PortfolioValuationService:
         self.session.flush()
         payload["valuation_run_id"] = run.id
         run.payload = payload
+        from .lot_persistence import persist_lots
+        persist_lots(self.session, run.id, payload["lots"], payload["lot_matches"])
+        from .accounting_persistence import persist_accounting
+        persist_accounting(self.session, portfolio.id, run.id, payload["accounting"]["items"])
         for row in payload["positions"]:
             self.session.add(models.PositionValuation(
                 valuation_run_id=run.id, instrument_id=row["instrument_id"],
@@ -191,7 +205,10 @@ class PortfolioValuationService:
             for row in payload["curve"]:
                 if row["return"] is not None:
                     self.session.add(models.DailyReturn(portfolio_id=portfolio.id, date=date.fromisoformat(row["date"]), return_value=Decimal(str(row["return"]))))
-        self.session.commit()
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
         return payload
 
     def calculate(self, key=None, end=None):
@@ -218,11 +235,12 @@ class PortfolioValuationService:
             for pair in list(fx.groups):
                 fx.groups[pair] = {group: value for group, value in fx.groups[pair].items() if group[0] == "DEMO"}
         adjustments = self.session.scalars(select(models.PortfolioBalanceAdjustment).where(models.PortfolioBalanceAdjustment.portfolio_id == portfolio.id)).all()
-        days = {r.day for r in entries} | {end}
+        days = {r.day for r in entries} | {r.settlement for r in entries} | {end}
+        days.update(row.effective_date for row in adjustments)
         for values in prices.series.values():
             days.update(r.timestamp.date() for r in values if start <= r.timestamp.date() <= end)
         days = sorted(d for d in days if start <= d <= end)
-        state = LedgerState()
+        state = LedgerState(policy=AccountingPolicy.from_config(profile.configuration))
         index, previous_nav, return_index, peak, previous_benchmark, benchmark_equity = 0, ZERO, ONE, ONE, None, ZERO
         curve, histories, last_positions, last_cash, warnings = [], defaultdict(dict), [], [], []
         previous_position_values = {}
@@ -235,20 +253,27 @@ class PortfolioValuationService:
                 state.apply(entries[index])
                 daily_entries.append(entries[index])
                 index += 1
+            state.advance(day)
             flows = state.external_flows - flow_before
             position_values, position_rows, cash_rows, missing = {}, [], [], []
             total_cash = ZERO
+            settled_cash = available_cash = settlement_receivables = settlement_payables = ZERO
             sources = []
-            for currency, amount in state.cash.items():
-                if amount == 0:
+            for currency, cash_balance in state.cash_service.balances(day).items():
+                amount = cash_balance.economic
+                if amount == 0 and cash_balance.settled == 0 and cash_balance.receivable == 0 and cash_balance.payable == 0:
                     continue
                 rate, provenance = fx.resolve(currency, portfolio.base_currency, at)
                 value = amount * rate if rate is not None else None
-                cash_rows.append({"currency": currency, "amount": amount, "base_value": money(value) if value is not None else None, "as_of": provenance["as_of"], "quality": provenance["data_state"], "fx_rate": rate, "source": provenance["source"]})
+                cash_rows.append({"currency": currency, "amount": amount, "settled": cash_balance.settled, "receivable": cash_balance.receivable, "payable": cash_balance.payable, "available": cash_balance.available, "base_value": money(value) if value is not None else None, "as_of": provenance["as_of"], "quality": provenance["data_state"], "fx_rate": rate, "source": provenance["source"]})
                 if value is None:
                     missing.append(f"Missing FX {currency}/{portfolio.base_currency}")
                 else:
                     total_cash += value
+                    settled_cash += cash_balance.settled * rate
+                    available_cash += cash_balance.available * rate
+                    settlement_receivables += cash_balance.receivable * rate
+                    settlement_payables += cash_balance.payable * rate
                     sources.append(provenance)
             for instrument_id, lot in state.lots.items():
                 if lot.quantity == 0:
@@ -270,6 +295,7 @@ class PortfolioValuationService:
                     "market_value": money(value) if value is not None else None,
                     "unrealised_pnl": money(value - lot.cost_base) if value is not None else None,
                     "realised_pnl": money(lot.realised), "income": money(lot.income), "fees": money(lot.charges),
+                    "capitalized_charges": money(lot.capitalized_charges), "expensed_charges": money(lot.expensed_charges),
                     "currency": item.currency, "sector": item.sector or "Unclassified", "country": item.country,
                     "asset_class": item.asset_class, "contract_multiplier": lot.multiplier,
                     "source": provenance["source"], "quality": provenance["data_state"], "as_of": provenance["as_of"],
@@ -279,12 +305,15 @@ class PortfolioValuationService:
             balances = defaultdict(Decimal)
             for adjustment in adjustments:
                 if adjustment.effective_date <= day:
-                    rate, _ = fx.resolve(adjustment.currency, portfolio.base_currency, at)
+                    rate, adjustment_provenance = fx.resolve(adjustment.currency, portfolio.base_currency, at)
+                    sources.append(adjustment_provenance)
                     if rate is None:
                         missing.append(f"Missing adjustment FX {adjustment.currency}")
                     else:
                         balances[adjustment.bucket] += adjustment.amount * rate
-            totals = nav_total(total_cash, list(position_values.values()), dict(balances))
+            balances["receivables"] += settlement_receivables
+            balances["payables"] += settlement_payables
+            totals = nav_total(settled_cash, list(position_values.values()), dict(balances))
             nav = None if missing else totals["nav"]
             daily_pnl, daily_return = (None, None) if nav is None or previous_nav is None else daily_performance(previous_nav, nav, flows)
             if daily_return is not None:
@@ -314,7 +343,7 @@ class PortfolioValuationService:
             for row in position_rows:
                 row["weight"] = Decimal(row["market_value"]) / nav if nav and row["market_value"] is not None else ZERO
                 row["daily_pnl"] = number(daily_contributions.get(row["instrument_id"], ZERO)) if nav is not None and previous_nav is not None else None
-                row["total_pnl"] = money((position_values.get(row["instrument_id"], ZERO) - state.lots[row["instrument_id"]].cost_base) + state.lots[row["instrument_id"]].realised + state.lots[row["instrument_id"]].income - state.lots[row["instrument_id"]].charges) if row["market_value"] is not None else None
+                row["total_pnl"] = money((position_values.get(row["instrument_id"], ZERO) - state.lots[row["instrument_id"]].cost_base) + state.lots[row["instrument_id"]].realised + state.lots[row["instrument_id"]].income - state.lots[row["instrument_id"]].expensed_charges) if row["market_value"] is not None else None
                 row["return"] = number((position_values[row["instrument_id"]] - state.lots[row["instrument_id"]].cost_base) / abs(state.lots[row["instrument_id"]].cost_base)) if row["market_value"] is not None and state.lots[row["instrument_id"]].cost_base else None
             for instrument_id in ids:
                 observation = prices.resolve(instrument_id, at)
@@ -391,7 +420,7 @@ class PortfolioValuationService:
         cash_fx = total_cash - state.cash_book_base
         balance_effect = final_totals["nav"] - total_cash - final_totals["market_value"]
         total_pnl = nav - state.external_flows if nav is not None else None
-        expected = state.external_flows + investment + state.income - state.fees - state.taxes + cash_fx + state.adjustments + balance_effect
+        expected = state.external_flows + investment + state.income - state.expensed_fees - state.taxes + cash_fx + state.adjustments + balance_effect
         difference = money(nav - expected) if nav is not None else None
         if difference and abs(difference) > Decimal(".01"):
             warnings.append("NAV RECONCILIATION FAILED: accounting components do not balance")
@@ -399,7 +428,7 @@ class PortfolioValuationService:
         for key, lot in state.lots.items():
             item = instruments[key]
             unrealised = position_values.get(key, ZERO) - lot.cost_base if key in position_values or lot.quantity == 0 else None
-            contribution = lot.realised + unrealised + lot.income - lot.charges if unrealised is not None else None
+            contribution = lot.realised + unrealised + lot.income - lot.expensed_charges if unrealised is not None else None
             attribution.append({"symbol": item.symbol, "sector": item.sector, "currency": item.currency, "realised": money(lot.realised), "unrealised": money(unrealised) if unrealised is not None else None, "income": money(lot.income), "fees": money(lot.charges), "daily_pnl": money(last_daily_contributions.get(key, ZERO)) if nav is not None else None, "total_pnl": money(contribution) if contribution is not None else None, "contribution": number(contribution / portfolio.reference_capital) if contribution is not None else None})
         metric_metadata = {key: {"value": value, "portfolio": profile.code, "base_currency": portfolio.base_currency, "start": start.isoformat(), "end": end.isoformat(), "benchmark": profile.configuration.get("benchmark", "SPY"), "methodology": METHOD, "source": source_name, "calculated_at": now.isoformat(), "quality": quality} for key, value in {**performance, **risk}.items()}
         p = {
@@ -415,13 +444,42 @@ class PortfolioValuationService:
             "quality": quality, "as_of": as_of, "calculated_at": now.isoformat(),
             "view": "INTERNAL LEDGER", "execution_mode": "MANUAL", "broker_mode": "PAPER",
             "price_mode": profile.configuration.get("price_mode", "AUTO"),
+            "accounting_policy": state.policy.to_dict(),
+            "settled_cash": money(settled_cash) if all(c["base_value"] is not None for c in last_cash) else None,
+            "available_cash": money(available_cash) if all(c["base_value"] is not None for c in last_cash) else None,
+            "settlement_receivables": money(settlement_receivables) if nav is not None else None,
+            "settlement_payables": money(settlement_payables) if nav is not None else None,
         }
         monthly = []
         for month in sorted({p["date"][:7] for p in curve}):
             values = [p["return"] for p in curve if p["date"][:7] == month]
             monthly.append({"month": month, "return": float(np.prod(1 + np.array(values)) - 1) if all(v is not None for v in values) else None})
+        postings = [posting for entry in entries for posting in transaction_postings(entry, state.policy)]
+        marks = {currency: CurrencyMark(*fx.resolve(currency, portfolio.base_currency, at))
+                 for currency in {row.currency for row in adjustments} | set(state.cash)}
+        postings.extend(outstanding_postings(
+            state.cash_service.movements,
+            [BalanceAdjustment(row.id, row.effective_date, row.bucket, row.currency, row.amount, row.reason)
+             for row in adjustments], end, marks,
+        ))
+        posting_totals = summarize_postings(postings)
+        posting_differences = {name: money(posting_totals[name] - expected_value)
+                              for name, expected_value in {
+                                  "external_flows": state.external_flows, "income": state.income,
+                                  "fees_paid": state.fees, "taxes": state.taxes,
+                                  "capitalized_charges": state.capitalized_charges,
+                                  "expensed_fees": state.expensed_fees,
+                              }.items()}
+        if any(posting_differences.values()):
+            warnings.append("ACCOUNTING SUBLEDGER BREAK: transaction components differ from replay totals")
         return jsonable({
             "portfolio": p, "positions": last_positions, "cash": last_cash, "transactions": transactions,
+            "cost_basis": {"method": state.policy.method.value, "capitalized_charges": state.capitalized_charges, "expensed_fees": state.expensed_fees},
+            "lots": [asdict(lot) for lots in state.cost_basis.open_lots.values() for lot in lots],
+            "lot_matches": [asdict(match) for match in state.cost_basis.matches],
+            "accounting": {"items": [row.payload() for row in postings], "totals": posting_totals,
+                           "reconciliation": {"state": "BREAK" if any(posting_differences.values()) else "BALANCED",
+                                              "differences": posting_differences}},
             "performance": performance, "risk": risk, "curve": curve, "monthly": monthly, "correlation": correlations,
             "exposures": exposure, "attribution": attribution, "breaches": breaches,
             "source": source_name, "quality": quality, "as_of": as_of, "calculated_at": now.isoformat(),

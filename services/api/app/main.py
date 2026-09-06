@@ -603,3 +603,9 @@ def old_portfolio(session: Session = Depends(get_session)):
 @app.get("/api/risk")
 def old_risk(session: Session = Depends(get_session)):
     return risk(session)
+
+
+# Keep the literal legacy /portfolios/default routes ahead of resource IDs.
+from .portfolio_resource_api import router as portfolio_resource_router
+
+app.include_router(portfolio_resource_router)

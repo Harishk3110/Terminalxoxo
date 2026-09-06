@@ -1,0 +1,526 @@
+{
+  "baseline": "c3d9e847604fbbfb59df170c1b5f83f7dbec94a1",
+  "baseline_inventory": {
+    "backend": {
+      "eligible_lines": 6296,
+      "files": 33,
+      "physical_lines": 7513
+    },
+    "frontend": {
+      "eligible_lines": 8760,
+      "files": 30,
+      "physical_lines": 10889
+    },
+    "tests": {
+      "eligible_lines": 1457,
+      "files": 18,
+      "physical_lines": 1741
+    },
+    "workers_agents_reports_infrastructure": {
+      "eligible_lines": 744,
+      "files": 23,
+      "physical_lines": 918
+    }
+  },
+  "branch": "main",
+  "categories": {
+    "backend": {
+      "added": 1723,
+      "minimum": 9000,
+      "passed": false
+    },
+    "frontend": {
+      "added": 790,
+      "minimum": 6000,
+      "passed": false
+    },
+    "tests": {
+      "added": 2164,
+      "minimum": 7000,
+      "passed": false
+    },
+    "workers_agents_reports_infrastructure": {
+      "added": 263,
+      "minimum": 3000,
+      "passed": false
+    }
+  },
+  "commit": "c3d9e847604fbbfb59df170c1b5f83f7dbec94a1",
+  "current_inventory": {
+    "backend": {
+      "eligible_lines": 8385,
+      "files": 53,
+      "physical_lines": 10113
+    },
+    "frontend": {
+      "eligible_lines": 10107,
+      "files": 39,
+      "physical_lines": 12516
+    },
+    "tests": {
+      "eligible_lines": 4591,
+      "files": 36,
+      "physical_lines": 5767
+    },
+    "workers_agents_reports_infrastructure": {
+      "eligible_lines": 1061,
+      "files": 24,
+      "physical_lines": 1297
+    }
+  },
+  "date": "2026-09-06T11:22:40.643138+00:00",
+  "files": [
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/app/backend/[...path]/route.ts",
+      "physical_lines": 54,
+      "qualifying_added": 3
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/app/layout.tsx",
+      "physical_lines": 24,
+      "qualifying_added": 1
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/app/ledger.css",
+      "physical_lines": 236,
+      "qualifying_added": 97
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/accounting-activity.tsx",
+      "physical_lines": 255,
+      "qualifying_added": 148
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/accounting-dialog.tsx",
+      "physical_lines": 328,
+      "qualifying_added": 162
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/balance-editor.tsx",
+      "physical_lines": 207,
+      "qualifying_added": 85
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/contracts.ts",
+      "physical_lines": 126,
+      "qualifying_added": 64
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/dialog.tsx",
+      "physical_lines": 63,
+      "qualifying_added": 31
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/transaction-correction.tsx",
+      "physical_lines": 308,
+      "qualifying_added": 126
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/components/ledger/transaction-draft.ts",
+      "physical_lines": 69,
+      "qualifying_added": 51
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": true,
+      "path": "apps/terminal-web/components/operating-pages.tsx",
+      "physical_lines": 1394,
+      "qualifying_added": 12
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/accounting-activity.test.tsx",
+      "physical_lines": 287,
+      "qualifying_added": 146
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/backend-proxy.test.ts",
+      "physical_lines": 195,
+      "qualifying_added": 110
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/ledger-controls.test.tsx",
+      "physical_lines": 286,
+      "qualifying_added": 131
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/ledger-render.tsx",
+      "physical_lines": 15,
+      "qualifying_added": 8
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/tests/transaction-draft.test.ts",
+      "physical_lines": 80,
+      "qualifying_added": 48
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "apps/terminal-web/vitest.config.ts",
+      "physical_lines": 6,
+      "qualifying_added": 4
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "migrations/versions/0001_core_schema.py",
+      "physical_lines": 144,
+      "qualifying_added": 106
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "migrations/versions/0004_ledger_lots_revisions.py",
+      "physical_lines": 116,
+      "qualifying_added": 68
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "migrations/versions/0005_accounting_subledgers.py",
+      "physical_lines": 115,
+      "qualifying_added": 64
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "packages/api-client/src/index.ts",
+      "physical_lines": 215,
+      "qualifying_added": 6
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "packages/design-system/src/index.tsx",
+      "physical_lines": 84,
+      "qualifying_added": 0
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "packages/domain/src/index.ts",
+      "physical_lines": 252,
+      "qualifying_added": 0
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "packages/domain/tests/domain.test.ts",
+      "physical_lines": 23,
+      "qualifying_added": 0
+    },
+    {
+      "category": "frontend",
+      "over_1200_lines": false,
+      "path": "packages/search/src/index.ts",
+      "physical_lines": 31,
+      "qualifying_added": 0
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "over_1200_lines": false,
+      "path": "scripts/count_25k_delta.py",
+      "physical_lines": 379,
+      "qualifying_added": 263
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/accounting_models.py",
+      "physical_lines": 123,
+      "qualifying_added": 65
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/accounting_persistence.py",
+      "physical_lines": 81,
+      "qualifying_added": 55
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/ledger_contracts.py",
+      "physical_lines": 114,
+      "qualifying_added": 70
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/ledger_models.py",
+      "physical_lines": 98,
+      "qualifying_added": 40
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/ledger_revisions.py",
+      "physical_lines": 210,
+      "qualifying_added": 146
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/lot_persistence.py",
+      "physical_lines": 51,
+      "qualifying_added": 30
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/main.py",
+      "physical_lines": 611,
+      "qualifying_added": 2
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/models.py",
+      "physical_lines": 1012,
+      "qualifying_added": 3
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_api.py",
+      "physical_lines": 215,
+      "qualifying_added": 3
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_balances.py",
+      "physical_lines": 126,
+      "qualifying_added": 65
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/__init__.py",
+      "physical_lines": 1,
+      "qualifying_added": 0
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/cash.py",
+      "physical_lines": 75,
+      "qualifying_added": 41
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/cost_basis.py",
+      "physical_lines": 260,
+      "qualifying_added": 177
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/ledger.py",
+      "physical_lines": 216,
+      "qualifying_added": 119
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/money.py",
+      "physical_lines": 58,
+      "qualifying_added": 37
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/nav.py",
+      "physical_lines": 45,
+      "qualifying_added": 23
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/postings.py",
+      "physical_lines": 260,
+      "qualifying_added": 160
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_domain/types.py",
+      "physical_lines": 193,
+      "qualifying_added": 92
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_engine.py",
+      "physical_lines": 14,
+      "qualifying_added": 12
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_operations.py",
+      "physical_lines": 246,
+      "qualifying_added": 6
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_resource_api.py",
+      "physical_lines": 249,
+      "qualifying_added": 123
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_resources.py",
+      "physical_lines": 257,
+      "qualifying_added": 141
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_seed.py",
+      "physical_lines": 141,
+      "qualifying_added": 1
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/portfolio_valuation.py",
+      "physical_lines": 534,
+      "qualifying_added": 68
+    },
+    {
+      "category": "backend",
+      "over_1200_lines": false,
+      "path": "services/api/app/schema.py",
+      "physical_lines": 32,
+      "qualifying_added": 6
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/e2e/ledger.spec.ts",
+      "physical_lines": 298,
+      "qualifying_added": 136
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/conftest.py",
+      "physical_lines": 141,
+      "qualifying_added": 68
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_accounting_contracts.py",
+      "physical_lines": 198,
+      "qualifying_added": 123
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_accounting_postings.py",
+      "physical_lines": 246,
+      "qualifying_added": 146
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_accounting_resources.py",
+      "physical_lines": 224,
+      "qualifying_added": 147
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_balance_adjustments.py",
+      "physical_lines": 214,
+      "qualifying_added": 112
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_cash_settlement.py",
+      "physical_lines": 249,
+      "qualifying_added": 138
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_corporate_actions.py",
+      "physical_lines": 228,
+      "qualifying_added": 110
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_cost_basis.py",
+      "physical_lines": 248,
+      "qualifying_added": 159
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_ledger_migrations.py",
+      "physical_lines": 253,
+      "qualifying_added": 116
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_ledger_revisions.py",
+      "physical_lines": 321,
+      "qualifying_added": 153
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_loc_counter.py",
+      "physical_lines": 274,
+      "qualifying_added": 181
+    },
+    {
+      "category": "tests",
+      "over_1200_lines": false,
+      "path": "tests/sprint/test_portfolio_resources.py",
+      "physical_lines": 269,
+      "qualifying_added": 132
+    }
+  ],
+  "line_gates_passed": false,
+  "minimum_total": 25000,
+  "semantic_review_required": true,
+  "total": 4940
+}

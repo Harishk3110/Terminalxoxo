@@ -7,6 +7,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import select, update
+from sqlalchemy.orm import Session
 from . import models
 
 DEMO_SOURCE = "KnK Demo / coherent daily series"
@@ -127,7 +128,7 @@ def ensure_main(session, *, demo_only=False):
     return portfolio
 
 
-def reset_main_demo(session, actor=None):
+def reset_main_demo(session: Session, actor: str | None = None) -> models.Portfolio:
     old = profile_for(session)
     if not old or not old.is_demo:
         raise ValueError("Only the demonstration portfolio can be reset")

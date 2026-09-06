@@ -1,0 +1,236 @@
+.ledger-dialog {
+  width: min(980px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  background: #101215;
+  color: #d8dce3;
+  border: 1px solid #555a63;
+  border-radius: 4px;
+}
+.ledger-dialog::backdrop {
+  background: #000a;
+}
+.ledger-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #353940;
+}
+.ledger-dialog-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ledger-dialog-content {
+  padding: 14px;
+  min-width: 0;
+}
+.ledger-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ledger-policy-form {
+  display: grid;
+  gap: 14px;
+  max-width: 560px;
+}
+.ledger-policy-form button[type="submit"] {
+  justify-self: start;
+  min-width: 124px;
+}
+.ledger-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.ledger-checkbox input {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  accent-color: #e9ad43;
+}
+.ledger-policy-form textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 65px;
+}
+.ledger-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding-bottom: 14px;
+  margin: 0;
+}
+.ledger-totals dt {
+  color: #939ba8;
+  font-size: 11px;
+}
+.ledger-totals dd {
+  color: #f2c56d;
+  margin: 5px 0 0;
+  font: 15px var(--font-mono, monospace);
+  overflow-wrap: anywhere;
+}
+.ledger-table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+.ledger-table {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-table th,
+.ledger-table td {
+  text-align: right;
+  padding: 8px;
+  border-bottom: 1px solid #30343a;
+  white-space: nowrap;
+}
+.ledger-table th:first-child,
+.ledger-table td:first-child {
+  text-align: left;
+}
+.ledger-table thead {
+  color: #9da5b2;
+}
+.ledger-table th {
+  font-weight: 500;
+}
+.ledger-identifier {
+  font-family: var(--font-mono, monospace);
+}
+.ledger-run-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: #989fac;
+  border-top: 1px solid #353940;
+  padding-top: 12px;
+  margin-top: 18px;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.ledger-error {
+  color: #ef8989;
+  background: #301b20;
+  padding: 10px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.ledger-loading {
+  padding: 24px 0;
+  color: #989fac;
+  font-size: 12px;
+}
+.ledger-amendment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ledger-amendment-grid input,
+.ledger-amendment-grid textarea {
+  width: 100%;
+  min-width: 0;
+}
+.ledger-amendment-wide {
+  grid-column: 1 / -1;
+}
+.ledger-revision-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.ledger-revision-row {
+  border-top: 1px solid #353940;
+  padding-top: 12px;
+}
+.ledger-revision-row h3 {
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+.ledger-revision-row p {
+  font-size: 12px;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+.ledger-toolbar .segmented {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.ledger-adjustment-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 18px;
+}
+.ledger-adjustment-form input,
+.ledger-adjustment-form select,
+.ledger-adjustment-form textarea {
+  width: 100%;
+  min-width: 0;
+}
+.ledger-adjustment-form textarea {
+  resize: vertical;
+}
+.ledger-adjustment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.ledger-record-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #989fac;
+}
+.ledger-record-detail {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #353940;
+}
+.ledger-record-detail h3 {
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.ledger-record-detail dd {
+  font-size: 11px;
+}
+.ledger-table tr[aria-selected="true"] {
+  background: #27231a;
+}
+@media (max-width: 600px) {
+  .ledger-dialog {
+    width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+  .ledger-dialog-content {
+    padding: 10px;
+  }
+  .ledger-totals {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .ledger-accounting-activity > .ledger-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ledger-amendment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

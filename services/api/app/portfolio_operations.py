@@ -5,9 +5,12 @@ import hashlib
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 from . import models
+from .portfolio_domain.types import AccountingPolicy
 from .portfolio_engine import Entry, LedgerState, TRANSACTION_TYPES, decimal, ZERO
 from .portfolio_valuation import PortfolioValuationService, jsonable, load_entries
 from .price_sources import FxRateResolver, close_of_day
@@ -15,16 +18,16 @@ from .price_sources import FxRateResolver, close_of_day
 CURRENCIES = {"SGD", "USD", "EUR", "GBP", "JPY", "HKD", "AUD", "CAD", "CHF", "CNH", "CNY", "NZD"}
 
 
-def audit(session, action, resource_type, resource_id, metadata, actor=None):
+def audit(session: Session, action: str, resource_type: str, resource_id: str, metadata: dict[str, Any], actor: str | None = None) -> None:
     session.add(models.AuditLog(action=action, resource_type=resource_type, resource_id=resource_id, actor_user_id=actor, correlation_id=str(uuid.uuid4()), metadata_json=jsonable(metadata)))
 
 
 class PortfolioLedgerService:
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
         self.valuation = PortfolioValuationService(session)
 
-    def add(self, payload, portfolio_key=None, *, source="MANUAL", source_file_id=None, actor=None):
+    def add(self, payload: dict[str, Any], portfolio_key: str | None = None, *, source: str = "MANUAL", source_file_id: str | None = None, actor: str | None = None) -> dict[str, Any]:
         portfolio, profile = self.valuation.portfolio(portfolio_key)
         kind = str(payload.get("transaction_type", "")).upper()
         if kind not in TRANSACTION_TYPES:
@@ -70,17 +73,17 @@ class PortfolioLedgerService:
                 raise ValueError("Missing transaction FX; supply an explicit recorded exchange rate")
             fx_source = provenance["source"]
         metadata = dict(payload.get("metadata") or {})
-        for key in ("to_currency", "to_amount", "ratio", "cost_allocation", "reason", "direction", "thesis_id", "strategy_id", "rationale"):
+        for key in ("to_currency", "to_amount", "ratio", "cost_allocation", "exchange_ratio", "cash_per_share", "cash_cost_allocation", "reason", "direction", "thesis_id", "strategy_id", "rationale"):
             if payload.get(key) is not None:
                 metadata[key] = payload[key]
         if kind == "FX_CONVERSION":
             if str(metadata.get("to_currency", "")).upper() not in CURRENCIES:
                 raise ValueError("FX destination currency is unknown")
             metadata["to_currency"] = str(metadata["to_currency"]).upper()
-        if kind == "SPINOFF":
+        if kind in {"SPINOFF", "MERGER"}:
             child = self.session.scalar(select(models.Instrument).where(models.Instrument.symbol == str(payload.get("child_symbol", "")).upper()))
             if not child or not instrument or child.currency != instrument.currency:
-                raise ValueError("Spinoff requires a known child security in the parent currency")
+                raise ValueError("Corporate action requires a known child security in the parent currency")
             metadata["child_instrument_id"] = child.id
         for link, model in (("thesis_id", models.InvestmentThesis), ("strategy_id", models.StrategyDefinition)):
             if metadata.get(link) and self.session.get(model, metadata[link]) is None:
@@ -122,7 +125,7 @@ class PortfolioLedgerService:
         self.session.flush()
         # Validate the full chronological ledger, including effects on later trades.
         entries, _ = load_entries(self.session, portfolio.id)
-        state = LedgerState()
+        state = LedgerState(policy=AccountingPolicy.from_config(profile.configuration))
         for entry in entries:
             state.apply(entry)
         after = self.valuation.calculate(portfolio.id, day)

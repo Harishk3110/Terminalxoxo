@@ -1,0 +1,3480 @@
+{
+  "baseline": "c3d9e847604fbbfb59df170c1b5f83f7dbec94a1",
+  "branch": "main",
+  "categories": {
+    "backend": {
+      "eligible_lines": 6296,
+      "files": 33,
+      "physical_lines": 7513
+    },
+    "frontend": {
+      "eligible_lines": 8760,
+      "files": 30,
+      "physical_lines": 10889
+    },
+    "tests": {
+      "eligible_lines": 1457,
+      "files": 18,
+      "physical_lines": 1741
+    },
+    "workers_agents_reports_infrastructure": {
+      "eligible_lines": 744,
+      "files": 23,
+      "physical_lines": 918
+    }
+  },
+  "commit": "c3d9e847604fbbfb59df170c1b5f83f7dbec94a1",
+  "date": "2026-09-06T10:07:17.081723+00:00",
+  "endpoint_declarations": [
+    {
+      "file": "services/api/app/broker_api.py",
+      "line": 65,
+      "method": "POST",
+      "router_path": "/agent/v1/broker-snapshots"
+    },
+    {
+      "file": "services/api/app/broker_api.py",
+      "line": 135,
+      "method": "GET",
+      "router_path": "/api/v1/broker/snapshot"
+    },
+    {
+      "file": "services/api/app/broker_api.py",
+      "line": 152,
+      "method": "POST",
+      "router_path": "/api/v1/broker/fills/import"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 32,
+      "method": "GET",
+      "router_path": "/api/v1/data-drop/files"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 38,
+      "method": "GET",
+      "router_path": "/api/v1/data-drop/files/{file_id}"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 43,
+      "method": "POST",
+      "router_path": "/api/v1/data-drop/files"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 49,
+      "method": "GET",
+      "router_path": "/api/v1/data-drop/profiles"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 63,
+      "method": "POST",
+      "router_path": "/api/v1/data-drop/files/{file_id}/validate"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 76,
+      "method": "POST",
+      "router_path": "/api/v1/data-drop/files/{file_id}/import"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 86,
+      "method": "POST",
+      "router_path": "/api/v1/data-drop/files/{file_id}/reject"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 95,
+      "method": "GET",
+      "router_path": "/api/v1/data-drop/agents"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 101,
+      "method": "POST",
+      "router_path": "/api/v1/data-drop/agents/pair"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 115,
+      "method": "POST",
+      "router_path": "/api/v1/data-drop/agents/{agent_id}/revoke"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 132,
+      "method": "POST",
+      "router_path": "/agent/v1/pair"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 172,
+      "method": "POST",
+      "router_path": "/agent/v1/heartbeat"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 180,
+      "method": "POST",
+      "router_path": "/agent/v1/files"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 187,
+      "method": "GET",
+      "router_path": "/agent/v1/files"
+    },
+    {
+      "file": "services/api/app/data_drop_api.py",
+      "line": 194,
+      "method": "POST",
+      "router_path": "/agent/v1/files/{file_id}/archived"
+    },
+    {
+      "file": "services/api/app/desks_api.py",
+      "line": 17,
+      "method": "GET",
+      "router_path": "/quant"
+    },
+    {
+      "file": "services/api/app/desks_api.py",
+      "line": 26,
+      "method": "GET",
+      "router_path": "/equity"
+    },
+    {
+      "file": "services/api/app/desks_api.py",
+      "line": 46,
+      "method": "POST",
+      "router_path": "/candidates"
+    },
+    {
+      "file": "services/api/app/desks_api.py",
+      "line": 65,
+      "method": "POST",
+      "router_path": "/candidates/{candidate_id}/review"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 180,
+      "method": "GET",
+      "router_path": "/health/live"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 185,
+      "method": "GET",
+      "router_path": "/health/ready"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 207,
+      "method": "GET",
+      "router_path": "/metrics"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 215,
+      "method": "GET",
+      "router_path": "/api/v1/environment"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 230,
+      "method": "POST",
+      "router_path": "/api/v1/auth/setup"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 248,
+      "method": "POST",
+      "router_path": "/api/v1/auth/login"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 279,
+      "method": "GET",
+      "router_path": "/api/v1/public/content"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 285,
+      "method": "GET",
+      "router_path": "/api/v1/functions"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 290,
+      "method": "GET",
+      "router_path": "/api/v1/search"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 297,
+      "method": "GET",
+      "router_path": "/api/v1/instruments"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 303,
+      "method": "GET",
+      "router_path": "/api/v1/instruments/{instrument_id}"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 311,
+      "method": "GET",
+      "router_path": "/api/v1/providers"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 316,
+      "method": "POST",
+      "router_path": "/api/v1/providers/fred/test"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 325,
+      "method": "GET",
+      "router_path": "/api/v1/providers/fred/status"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 333,
+      "method": "GET",
+      "router_path": "/api/v1/macro/series"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 338,
+      "method": "GET",
+      "router_path": "/api/v1/macro/series/search"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 343,
+      "method": "GET",
+      "router_path": "/api/v1/macro/series/{series_id}"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 351,
+      "method": "GET",
+      "router_path": "/api/v1/macro/series/{series_id}/observations"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 359,
+      "method": "POST",
+      "router_path": "/api/v1/macro/series/{series_id}/refresh"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 373,
+      "method": "POST",
+      "router_path": "/api/v1/macro/backfills"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 394,
+      "method": "GET",
+      "router_path": "/api/v1/macro/backfills/{job_id}"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 402,
+      "method": "GET",
+      "router_path": "/api/v1/macro/dashboard"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 407,
+      "method": "GET",
+      "router_path": "/api/v1/portfolios/default"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 412,
+      "method": "POST",
+      "router_path": "/api/v1/portfolios/default/transactions"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 420,
+      "method": "POST",
+      "router_path": "/api/v1/portfolios/default/recalculate"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 430,
+      "method": "GET",
+      "router_path": "/api/v1/performance/default"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 435,
+      "method": "GET",
+      "router_path": "/api/v1/risk/default"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 440,
+      "method": "GET",
+      "router_path": "/api/v1/stress/default"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 445,
+      "method": "GET",
+      "router_path": "/api/v1/hedge/default"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 450,
+      "method": "GET",
+      "router_path": "/api/v1/strategies"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 455,
+      "method": "GET",
+      "router_path": "/api/v1/backtests"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 460,
+      "method": "POST",
+      "router_path": "/api/v1/backtests/demo-run"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 467,
+      "method": "GET",
+      "router_path": "/api/v1/backtests/{run_id}"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 475,
+      "method": "POST",
+      "router_path": "/api/v1/uploads"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 484,
+      "method": "GET",
+      "router_path": "/api/v1/datasets"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 489,
+      "method": "GET",
+      "router_path": "/api/v1/jobs"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 494,
+      "method": "POST",
+      "router_path": "/api/v1/jobs/provider-health-check"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 503,
+      "method": "POST",
+      "router_path": "/api/v1/reports/portfolio-xlsx"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 511,
+      "method": "POST",
+      "router_path": "/api/v1/reports/risk-xlsx"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 519,
+      "method": "POST",
+      "router_path": "/api/v1/reports/backtest-xlsx"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 527,
+      "method": "POST",
+      "router_path": "/api/v1/reports/macro-xlsx"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 535,
+      "method": "GET",
+      "router_path": "/api/v1/reports/{report_id}"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 543,
+      "method": "GET",
+      "router_path": "/api/v1/reports/{report_id}/download"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 555,
+      "method": "GET",
+      "router_path": "/api/v1/pine/export"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 560,
+      "method": "GET",
+      "router_path": "/api/v1/alerts"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 566,
+      "method": "POST",
+      "router_path": "/api/v1/alerts/{alert_id}/acknowledge"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 577,
+      "method": "GET",
+      "router_path": "/api/v1/system/health"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 594,
+      "method": "GET",
+      "router_path": "/api/environment"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 599,
+      "method": "GET",
+      "router_path": "/api/portfolio"
+    },
+    {
+      "file": "services/api/app/main.py",
+      "line": 604,
+      "method": "GET",
+      "router_path": "/api/risk"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 62,
+      "method": "GET",
+      "router_path": "/portfolios"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 68,
+      "method": "GET",
+      "router_path": "/portfolio"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 78,
+      "method": "POST",
+      "router_path": "/portfolio/recalculate"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 83,
+      "method": "POST",
+      "router_path": "/transactions"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 94,
+      "method": "GET",
+      "router_path": "/trades"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 99,
+      "method": "POST",
+      "router_path": "/trades/{trade_id}/review"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 108,
+      "method": "POST",
+      "router_path": "/reconciliation"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 113,
+      "method": "POST",
+      "router_path": "/reconciliation/{break_id}/resolve"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 130,
+      "method": "POST",
+      "router_path": "/reset-demo"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 150,
+      "method": "GET",
+      "router_path": "/sources/{symbol}"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 163,
+      "method": "POST",
+      "router_path": "/sources/{symbol}"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 190,
+      "method": "POST",
+      "router_path": "/balances"
+    },
+    {
+      "file": "services/api/app/portfolio_api.py",
+      "line": 209,
+      "method": "GET",
+      "router_path": "/export"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 54,
+      "method": "GET",
+      "router_path": "/workspaces"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 70,
+      "method": "POST",
+      "router_path": "/workspaces"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 81,
+      "method": "POST",
+      "router_path": "/workspaces/{workspace_id}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 98,
+      "method": "POST",
+      "router_path": "/workspaces/{workspace_id}/delete"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 109,
+      "method": "GET",
+      "router_path": "/terminal/bootstrap"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 116,
+      "method": "GET",
+      "router_path": "/quotes"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 121,
+      "method": "GET",
+      "router_path": "/prices/{key}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 129,
+      "method": "GET",
+      "router_path": "/terminal/portfolio"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 134,
+      "method": "GET",
+      "router_path": "/fundamentals/{key}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 142,
+      "method": "GET",
+      "router_path": "/valuation/{key}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 150,
+      "method": "GET",
+      "router_path": "/factors"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 173,
+      "method": "POST",
+      "router_path": "/terminal/runs"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 201,
+      "method": "GET",
+      "router_path": "/terminal/runs"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 209,
+      "method": "GET",
+      "router_path": "/terminal/runs/{run_id}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 217,
+      "method": "POST",
+      "router_path": "/terminal/runs/{run_id}/cancel"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 228,
+      "method": "GET",
+      "router_path": "/terminal/runs/{run_id}/export"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 241,
+      "method": "POST",
+      "router_path": "/uploads/preview"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 296,
+      "method": "POST",
+      "router_path": "/uploads/validate"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 301,
+      "method": "POST",
+      "router_path": "/uploads/import"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 316,
+      "method": "GET",
+      "router_path": "/datasets/{dataset_id}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 337,
+      "method": "GET",
+      "router_path": "/research"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 349,
+      "method": "POST",
+      "router_path": "/research"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 363,
+      "method": "GET",
+      "router_path": "/terminal/health"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 411,
+      "method": "POST",
+      "router_path": "/terminal/reports/{kind}"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 432,
+      "method": "GET",
+      "router_path": "/auth/session"
+    },
+    {
+      "file": "services/api/app/terminal_api.py",
+      "line": 447,
+      "method": "POST",
+      "router_path": "/auth/logout"
+    }
+  ],
+  "existing_files_over_1200": [
+    {
+      "lines": 1482,
+      "path": "apps/terminal-web/app/globals.css"
+    },
+    {
+      "lines": 1674,
+      "path": "apps/terminal-web/components/core-pages.tsx"
+    },
+    {
+      "lines": 1322,
+      "path": "apps/terminal-web/components/lab-pages.tsx"
+    },
+    {
+      "lines": 1380,
+      "path": "apps/terminal-web/components/operating-pages.tsx"
+    },
+    {
+      "lines": 1256,
+      "path": "apps/terminal-web/components/shell.tsx"
+    }
+  ],
+  "frontend_registry": [
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "KnK main portfolio operating centre.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "market pulse"
+      ],
+      "mnemonic": "HOME",
+      "name": "Portfolio Command Centre",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/overview",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "markets",
+      "description": "Quote for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "quote"
+      ],
+      "mnemonic": "Q",
+      "name": "Quote",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/quote/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "markets",
+      "description": "Price Chart for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "price chart"
+      ],
+      "mnemonic": "GP",
+      "name": "Price Chart",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/chart/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "markets",
+      "description": "Daily closes with calculated 20-day and 50-day simple moving averages.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "technical analysis"
+      ],
+      "mnemonic": "TECH",
+      "name": "Technical Analysis",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/technicals/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "markets",
+      "description": "Market Breadth.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "market breadth"
+      ],
+      "mnemonic": "BREADTH",
+      "name": "Market Breadth",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/markets",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "markets",
+      "description": "Heatmap.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "heatmap"
+      ],
+      "mnemonic": "HEAT",
+      "name": "Heatmap",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/heatmap",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "markets",
+      "description": "Sector Monitor.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "sector monitor"
+      ],
+      "mnemonic": "SECTOR",
+      "name": "Sector Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/sectors",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Security Description for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "security description"
+      ],
+      "mnemonic": "DES",
+      "name": "Security Description",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/security/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Financial Statements for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "financial statements"
+      ],
+      "mnemonic": "FIN",
+      "name": "Financial Statements",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/financials/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Valuation for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "valuation"
+      ],
+      "mnemonic": "VAL",
+      "name": "Valuation",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/valuation/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Discounted Cash Flow for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "discounted cash flow"
+      ],
+      "mnemonic": "DCF",
+      "name": "Discounted Cash Flow",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/dcf/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Weighted Average Cost of Capital for the active security.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "weighted average cost of capital"
+      ],
+      "mnemonic": "WACC",
+      "name": "Weighted Average Cost of Capital",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/functions/wacc",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Comparable Companies for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "comparable companies"
+      ],
+      "mnemonic": "COMP",
+      "name": "Comparable Companies",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/comparables/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Analyst Estimates for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "analyst estimates"
+      ],
+      "mnemonic": "EST",
+      "name": "Analyst Estimates",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/est",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Earnings for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "earnings"
+      ],
+      "mnemonic": "EARN",
+      "name": "Earnings",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/earn",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Equity Screener.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "equity screener"
+      ],
+      "mnemonic": "SCREEN",
+      "name": "Equity Screener",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/security-master",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Relative Valuation for the active security.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "relative valuation"
+      ],
+      "mnemonic": "RELVAL",
+      "name": "Relative Valuation",
+      "providerRequirements": [],
+      "requiresSecurity": true,
+      "route": "/comparables/{instrumentId}",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Ownership for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "ownership"
+      ],
+      "mnemonic": "OWN",
+      "name": "Ownership",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/own",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Short Interest for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "short interest"
+      ],
+      "mnemonic": "SHORT",
+      "name": "Short Interest",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/short",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Dividends for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "dividends"
+      ],
+      "mnemonic": "DIV",
+      "name": "Dividends",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/div",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "equities",
+      "description": "Corporate Actions for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "corporate actions"
+      ],
+      "mnemonic": "CA",
+      "name": "Corporate Actions",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/ca",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Options Chain for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "options chain"
+      ],
+      "mnemonic": "OPT",
+      "name": "Options Chain",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/opt",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Delta for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "delta"
+      ],
+      "mnemonic": "DELTA",
+      "name": "Delta",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/delta",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Gamma for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "gamma"
+      ],
+      "mnemonic": "GAMMA",
+      "name": "Gamma",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/gamma",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Theta for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "theta"
+      ],
+      "mnemonic": "THETA",
+      "name": "Theta",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/theta",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Vega for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "vega"
+      ],
+      "mnemonic": "VEGA",
+      "name": "Vega",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/vega",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Rho for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "rho"
+      ],
+      "mnemonic": "RHO",
+      "name": "Rho",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/rho",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Option Greeks for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "option greeks"
+      ],
+      "mnemonic": "GREEKS",
+      "name": "Option Greeks",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/greeks",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Advanced Greeks for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "advanced greeks"
+      ],
+      "mnemonic": "ADV GREEKS",
+      "name": "Advanced Greeks",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/adv-greeks",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Gamma Exposure for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "gamma exposure",
+        "gamma",
+        "gama"
+      ],
+      "mnemonic": "GEX",
+      "name": "Gamma Exposure",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/gex",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Delta Exposure for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "delta exposure"
+      ],
+      "mnemonic": "DEX",
+      "name": "Delta Exposure",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/dex",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Implied Volatility for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "implied volatility"
+      ],
+      "mnemonic": "IV",
+      "name": "Implied Volatility",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/iv",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Volatility Surface for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "volatility surface"
+      ],
+      "mnemonic": "IVS",
+      "name": "Volatility Surface",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/ivs",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Volatility Skew for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "volatility skew"
+      ],
+      "mnemonic": "SKEW",
+      "name": "Volatility Skew",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/skew",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Put/Call Ratio for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "put/call ratio"
+      ],
+      "mnemonic": "PCR",
+      "name": "Put/Call Ratio",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/pcr",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Max Pain for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "max pain"
+      ],
+      "mnemonic": "MAXPAIN",
+      "name": "Max Pain",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/maxpain",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Options Flow for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "options flow"
+      ],
+      "mnemonic": "OIFLOW",
+      "name": "Options Flow",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/oiflow",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Payoff Analysis for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "payoff analysis"
+      ],
+      "mnemonic": "PAYOFF",
+      "name": "Payoff Analysis",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/payoff",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Options Strategy Builder for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "options strategy builder"
+      ],
+      "mnemonic": "OPTSTRAT",
+      "name": "Options Strategy Builder",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/optstrat",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Expected Move for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "expected move"
+      ],
+      "mnemonic": "EMOVE",
+      "name": "Expected Move",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/emove",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "options",
+      "description": "Volatility Cone for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "volatility cone"
+      ],
+      "mnemonic": "VOLCONE",
+      "name": "Volatility Cone",
+      "providerRequirements": [
+        "Options market data"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/volcone",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "macro",
+      "description": "Macro Dashboard.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "macro dashboard"
+      ],
+      "mnemonic": "MACRO",
+      "name": "Macro Dashboard",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/macro",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "macro",
+      "description": "Economic Calendar.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "economic calendar"
+      ],
+      "mnemonic": "CAL",
+      "name": "Economic Calendar",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/cal",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "macro",
+      "description": "Central Banks.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "central banks"
+      ],
+      "mnemonic": "CB",
+      "name": "Central Banks",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/functions/cb",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "macro",
+      "description": "Yield Curves.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "yield curves"
+      ],
+      "mnemonic": "CURVE",
+      "name": "Yield Curves",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/macro",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fixed-income",
+      "description": "Bond Monitor.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "bond monitor"
+      ],
+      "mnemonic": "BONDS",
+      "name": "Bond Monitor",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/bonds",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fixed-income",
+      "description": "Rates Monitor.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "rates monitor"
+      ],
+      "mnemonic": "RATES",
+      "name": "Rates Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/macro",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fixed-income",
+      "description": "Credit Spreads.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "credit spreads"
+      ],
+      "mnemonic": "CREDIT",
+      "name": "Credit Spreads",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/macro",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fixed-income",
+      "description": "Duration Analysis.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "duration analysis"
+      ],
+      "mnemonic": "DURATION",
+      "name": "Duration Analysis",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/duration",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fx",
+      "description": "FX Monitor.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "fx monitor"
+      ],
+      "mnemonic": "FX",
+      "name": "FX Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/functions/fx",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fx",
+      "description": "FX Carry.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "fx carry"
+      ],
+      "mnemonic": "CARRY",
+      "name": "FX Carry",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/carry",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "fx",
+      "description": "FX Volatility.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "fx volatility"
+      ],
+      "mnemonic": "FXVOL",
+      "name": "FX Volatility",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/fxvol",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "crypto",
+      "description": "Crypto Monitor.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "crypto monitor"
+      ],
+      "mnemonic": "CRYPTO",
+      "name": "Crypto Monitor",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/crypto",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Portfolio.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "portfolio"
+      ],
+      "mnemonic": "PORT",
+      "name": "Portfolio",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/portfolio",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Positions.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "positions"
+      ],
+      "mnemonic": "POSITIONS",
+      "name": "Positions",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/positions",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Performance.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "performance"
+      ],
+      "mnemonic": "PERF",
+      "name": "Performance",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/performance",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Attribution.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "attribution"
+      ],
+      "mnemonic": "ATTR",
+      "name": "Attribution",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/functions/attr",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Portfolio Risk.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "portfolio risk"
+      ],
+      "mnemonic": "RISK",
+      "name": "Portfolio Risk",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/risk",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Value at Risk.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "value at risk"
+      ],
+      "mnemonic": "VAR",
+      "name": "Value at Risk",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/risk",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Stress Testing.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "stress testing"
+      ],
+      "mnemonic": "STRESS",
+      "name": "Stress Testing",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/stress-tests",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Portfolio Greeks.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "portfolio greeks"
+      ],
+      "mnemonic": "PORT GREEKS",
+      "name": "Portfolio Greeks",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/port-greeks",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Hedge Recommendations.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "hedge recommendations"
+      ],
+      "mnemonic": "HEDGE",
+      "name": "Hedge Recommendations",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/hedge",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "portfolio",
+      "description": "Rebalance Recommendations.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "rebalance recommendations"
+      ],
+      "mnemonic": "REBAL",
+      "name": "Rebalance Recommendations",
+      "providerRequirements": [
+        "Licensed market data"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/rebal",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Quant Lab.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "quant lab"
+      ],
+      "mnemonic": "QUANT",
+      "name": "Quant Lab",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/quant",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "BT"
+      ],
+      "category": "quant",
+      "description": "Backtesting.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "backtesting"
+      ],
+      "mnemonic": "BACKTEST",
+      "name": "Backtesting",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/backtests",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Signal Engine.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "signal engine"
+      ],
+      "mnemonic": "SIGNAL",
+      "name": "Signal Engine",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/functions/signal",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Correlation.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "correlation"
+      ],
+      "mnemonic": "CORR",
+      "name": "Correlation",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/risk",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Beta.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "beta"
+      ],
+      "mnemonic": "BETA",
+      "name": "Beta",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/risk",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Factor Lab.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "factor lab"
+      ],
+      "mnemonic": "FACTOR",
+      "name": "Factor Lab",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/factor-lab",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Pair Analysis.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "pair analysis"
+      ],
+      "mnemonic": "PAIR",
+      "name": "Pair Analysis",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/pair",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Regression.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "regression"
+      ],
+      "mnemonic": "REG",
+      "name": "Regression",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/reg",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Statistics.",
+      "implementationStatus": "demo_available",
+      "keywords": [
+        "statistics"
+      ],
+      "mnemonic": "STATS",
+      "name": "Statistics",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/factor-lab",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": true
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Walk-Forward Analysis.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "walk-forward analysis"
+      ],
+      "mnemonic": "WALK",
+      "name": "Walk-Forward Analysis",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/walk",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Monte Carlo.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "monte carlo"
+      ],
+      "mnemonic": "MC",
+      "name": "Monte Carlo",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/mc",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Edge Lab.",
+      "implementationStatus": "available",
+      "keywords": [
+        "edge lab"
+      ],
+      "mnemonic": "EDGE",
+      "name": "Edge Lab",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/edge-lab",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "quant",
+      "description": "Model Lab.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "model lab"
+      ],
+      "mnemonic": "MODEL",
+      "name": "Model Lab",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/model",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "Research Workspace.",
+      "implementationStatus": "available",
+      "keywords": [
+        "research workspace"
+      ],
+      "mnemonic": "RESEARCH",
+      "name": "Research Workspace",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/research",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "Private free-form thesis notes; structured valuation and catalyst fields are not implemented.",
+      "implementationStatus": "available",
+      "keywords": [
+        "investment thesis"
+      ],
+      "mnemonic": "THESIS",
+      "name": "Investment Thesis",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/thesis",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "Idea Tracker.",
+      "implementationStatus": "available",
+      "keywords": [
+        "idea tracker"
+      ],
+      "mnemonic": "IDEA",
+      "name": "Idea Tracker",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/ideas",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "News for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "news"
+      ],
+      "mnemonic": "NEWS",
+      "name": "News",
+      "providerRequirements": [
+        "Licensed research provider"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/news",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "Sentiment.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "sentiment"
+      ],
+      "mnemonic": "SENT",
+      "name": "Sentiment",
+      "providerRequirements": [
+        "Licensed research provider"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/sent",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "Regulatory Filings for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "regulatory filings"
+      ],
+      "mnemonic": "FILINGS",
+      "name": "Regulatory Filings",
+      "providerRequirements": [
+        "Licensed research provider"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/filings",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "research",
+      "description": "Earnings Transcripts for the active security.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "earnings transcripts"
+      ],
+      "mnemonic": "TRANSCRIPTS",
+      "name": "Earnings Transcripts",
+      "providerRequirements": [
+        "Licensed research provider"
+      ],
+      "requiresSecurity": true,
+      "route": "/functions/transcripts",
+      "supportedAssetClasses": [
+        "Equity",
+        "ETF"
+      ],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "data",
+      "description": "Data Explorer.",
+      "implementationStatus": "available",
+      "keywords": [
+        "data explorer"
+      ],
+      "mnemonic": "DATA",
+      "name": "Data Explorer",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/data-catalogue",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "data",
+      "description": "Data Drop.",
+      "implementationStatus": "available",
+      "keywords": [
+        "data drop"
+      ],
+      "mnemonic": "DROP",
+      "name": "Data Drop",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/data-drop",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "data",
+      "description": "Data Catalogue.",
+      "implementationStatus": "available",
+      "keywords": [
+        "data catalogue"
+      ],
+      "mnemonic": "CATALOGUE",
+      "name": "Data Catalogue",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/data-catalogue",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "data",
+      "description": "Data Jobs.",
+      "implementationStatus": "available",
+      "keywords": [
+        "data jobs"
+      ],
+      "mnemonic": "JOBS",
+      "name": "Data Jobs",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/data-jobs",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "data",
+      "description": "API Monitor.",
+      "implementationStatus": "available",
+      "keywords": [
+        "api monitor"
+      ],
+      "mnemonic": "API",
+      "name": "API Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/api-monitor",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "XLS"
+      ],
+      "category": "reports",
+      "description": "Excel Studio.",
+      "implementationStatus": "available",
+      "keywords": [
+        "excel studio"
+      ],
+      "mnemonic": "EXCEL",
+      "name": "Excel Studio",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/excel-studio",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "PPT"
+      ],
+      "category": "reports",
+      "description": "Deck Builder.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "deck builder"
+      ],
+      "mnemonic": "DECK",
+      "name": "Deck Builder",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/deck",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "reports",
+      "description": "PDF Reports.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "pdf reports"
+      ],
+      "mnemonic": "PDF",
+      "name": "PDF Reports",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/pdf",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "tradingview",
+      "description": "Pine Script Studio.",
+      "implementationStatus": "available",
+      "keywords": [
+        "pine script studio"
+      ],
+      "mnemonic": "PINE",
+      "name": "Pine Script Studio",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/tradingview",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "tradingview",
+      "description": "TradingView Alert Inbox.",
+      "implementationStatus": "in_development",
+      "keywords": [
+        "tradingview alert inbox"
+      ],
+      "mnemonic": "TV ALERTS",
+      "name": "TradingView Alert Inbox",
+      "providerRequirements": [
+        "Implementation pending"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/tv-alerts",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Watchlists.",
+      "implementationStatus": "available",
+      "keywords": [
+        "watchlists"
+      ],
+      "mnemonic": "WATCH",
+      "name": "Watchlists",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/watchlists",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Alerts.",
+      "implementationStatus": "available",
+      "keywords": [
+        "alerts"
+      ],
+      "mnemonic": "ALERT",
+      "name": "Alerts",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/alerts",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "System Health.",
+      "implementationStatus": "available",
+      "keywords": [
+        "system health"
+      ],
+      "mnemonic": "HEALTH",
+      "name": "System Health",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/system-health",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Reconciliation.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "reconciliation"
+      ],
+      "mnemonic": "RECON",
+      "name": "Reconciliation",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/reconciliation",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Settings.",
+      "implementationStatus": "available",
+      "keywords": [
+        "settings"
+      ],
+      "mnemonic": "SETTINGS",
+      "name": "Settings",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/settings/connections",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Connections.",
+      "implementationStatus": "available",
+      "keywords": [
+        "connections"
+      ],
+      "mnemonic": "CONN",
+      "name": "Connections",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/settings/connections",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Security Settings.",
+      "implementationStatus": "available",
+      "keywords": [
+        "security settings"
+      ],
+      "mnemonic": "SECURITY",
+      "name": "Security Settings",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/settings/security",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "system",
+      "description": "Function Directory.",
+      "implementationStatus": "available",
+      "keywords": [
+        "function directory"
+      ],
+      "mnemonic": "FUNC",
+      "name": "Function Directory",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/functions",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [],
+      "category": "ai",
+      "description": "KnK AI.",
+      "implementationStatus": "provider_required",
+      "keywords": [
+        "knk ai"
+      ],
+      "mnemonic": "AI",
+      "name": "KnK AI",
+      "providerRequirements": [
+        "AI provider"
+      ],
+      "requiresSecurity": false,
+      "route": "/functions/ai",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "net asset value",
+        "main portfolio",
+        "show my portfolio"
+      ],
+      "category": "portfolio",
+      "description": "Portfolio NAV.",
+      "implementationStatus": "available",
+      "keywords": [
+        "net asset value",
+        "main portfolio",
+        "show my portfolio"
+      ],
+      "mnemonic": "NAV",
+      "name": "Portfolio NAV",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/overview",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "profit and loss",
+        "portfolio pnl"
+      ],
+      "category": "portfolio",
+      "description": "Portfolio P&L.",
+      "implementationStatus": "available",
+      "keywords": [
+        "profit and loss",
+        "portfolio pnl"
+      ],
+      "mnemonic": "PNL",
+      "name": "Portfolio P&L",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/performance",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "trade blotter",
+        "record transaction",
+        "trade monitor"
+      ],
+      "category": "portfolio",
+      "description": "Trade Monitor.",
+      "implementationStatus": "available",
+      "keywords": [
+        "trade blotter",
+        "record transaction",
+        "trade monitor"
+      ],
+      "mnemonic": "TRADES",
+      "name": "Trade Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/trade-monitor",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "risk monitor",
+        "risk trade monitor"
+      ],
+      "category": "risk",
+      "description": "Risk & Trade Monitor.",
+      "implementationStatus": "available",
+      "keywords": [
+        "risk monitor",
+        "risk trade monitor"
+      ],
+      "mnemonic": "RISKMON",
+      "name": "Risk & Trade Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/risk-trade-monitor",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "quant dashboard",
+        "strategy monitor"
+      ],
+      "category": "quant",
+      "description": "Quant Research Monitor.",
+      "implementationStatus": "available",
+      "keywords": [
+        "quant dashboard",
+        "strategy monitor"
+      ],
+      "mnemonic": "QMON",
+      "name": "Quant Research Monitor",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/quant-dashboard",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "equity desk",
+        "equity research"
+      ],
+      "category": "research",
+      "description": "Equity Research Desk.",
+      "implementationStatus": "available",
+      "keywords": [
+        "equity desk",
+        "equity research"
+      ],
+      "mnemonic": "EQUITY",
+      "name": "Equity Research Desk",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/equity",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "koyfin import",
+        "upload koyfin csv"
+      ],
+      "category": "data",
+      "description": "Koyfin File Drop.",
+      "implementationStatus": "available",
+      "keywords": [
+        "koyfin import",
+        "upload koyfin csv"
+      ],
+      "mnemonic": "KOYFIN",
+      "name": "Koyfin File Drop",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/data-drop",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    },
+    {
+      "aliases": [
+        "IMPORT",
+        "import files",
+        "data drop"
+      ],
+      "category": "data",
+      "description": "External Data Drop.",
+      "implementationStatus": "available",
+      "keywords": [
+        "import files",
+        "data drop"
+      ],
+      "mnemonic": "DATADROP",
+      "name": "External Data Drop",
+      "providerRequirements": [],
+      "requiresSecurity": false,
+      "route": "/data-drop",
+      "supportedAssetClasses": [],
+      "supportsMultipleSecurities": false
+    }
+  ],
+  "route_patterns": [
+    "/alerts",
+    "/api-monitor",
+    "/backtests",
+    "/chart/{instrumentId}",
+    "/comparables/{instrumentId}",
+    "/data-catalogue",
+    "/data-drop",
+    "/data-jobs",
+    "/dcf/{instrumentId}",
+    "/edge-lab",
+    "/equity",
+    "/excel-studio",
+    "/factor-lab",
+    "/financials/{instrumentId}",
+    "/functions",
+    "/functions/adv-greeks",
+    "/functions/ai",
+    "/functions/attr",
+    "/functions/bonds",
+    "/functions/ca",
+    "/functions/cal",
+    "/functions/carry",
+    "/functions/cb",
+    "/functions/crypto",
+    "/functions/deck",
+    "/functions/delta",
+    "/functions/dex",
+    "/functions/div",
+    "/functions/duration",
+    "/functions/earn",
+    "/functions/emove",
+    "/functions/est",
+    "/functions/filings",
+    "/functions/fx",
+    "/functions/fxvol",
+    "/functions/gamma",
+    "/functions/gex",
+    "/functions/greeks",
+    "/functions/iv",
+    "/functions/ivs",
+    "/functions/maxpain",
+    "/functions/mc",
+    "/functions/model",
+    "/functions/news",
+    "/functions/oiflow",
+    "/functions/opt",
+    "/functions/optstrat",
+    "/functions/own",
+    "/functions/pair",
+    "/functions/payoff",
+    "/functions/pcr",
+    "/functions/pdf",
+    "/functions/port-greeks",
+    "/functions/rebal",
+    "/functions/reg",
+    "/functions/rho",
+    "/functions/sent",
+    "/functions/short",
+    "/functions/signal",
+    "/functions/skew",
+    "/functions/theta",
+    "/functions/transcripts",
+    "/functions/tv-alerts",
+    "/functions/vega",
+    "/functions/volcone",
+    "/functions/wacc",
+    "/functions/walk",
+    "/heatmap",
+    "/hedge",
+    "/ideas",
+    "/macro",
+    "/markets",
+    "/overview",
+    "/performance",
+    "/portfolio",
+    "/positions",
+    "/quant",
+    "/quant-dashboard",
+    "/quote/{instrumentId}",
+    "/reconciliation",
+    "/research",
+    "/risk",
+    "/risk-trade-monitor",
+    "/sectors",
+    "/security-master",
+    "/security/{instrumentId}",
+    "/settings/connections",
+    "/settings/security",
+    "/stress-tests",
+    "/system-health",
+    "/technicals/{instrumentId}",
+    "/thesis",
+    "/trade-monitor",
+    "/tradingview",
+    "/valuation/{instrumentId}",
+    "/watchlists"
+  ],
+  "source_files": [
+    {
+      "category": "frontend",
+      "digest": "0ef0f9f456ceae2fcf0ea6f60a439948945e94f71e2587f6eee2c8e945dcd60b",
+      "path": "apps/public-web/app/[[...slug]]/page.tsx",
+      "physical_lines": 223
+    },
+    {
+      "category": "frontend",
+      "digest": "cc6db9bcdce85695bfef17cf0a19f60539030306f0e2e76a8aaad336dc751717",
+      "path": "apps/public-web/app/globals.css",
+      "physical_lines": 27
+    },
+    {
+      "category": "frontend",
+      "digest": "71543db8b438526135f9bee0321736e2fc8ff2c85e6755744838c04420591d0a",
+      "path": "apps/public-web/app/layout.tsx",
+      "physical_lines": 15
+    },
+    {
+      "category": "frontend",
+      "digest": "54114fdce916c6cb3124a4a856353b883901d800c7dd7b1934d52b22283d82b5",
+      "path": "apps/public-web/lib/content.ts",
+      "physical_lines": 37
+    },
+    {
+      "category": "frontend",
+      "digest": "7120755768eb5b6f46878d60a49e8f67f62178168bacbfb3a7b6bc0c20d86a19",
+      "path": "apps/public-web/tailwind.config.ts",
+      "physical_lines": 17
+    },
+    {
+      "category": "frontend",
+      "digest": "0e4b1cab87eba49d242d462462df9e2f1f53b8438ac47ee3e88cc94e1d78b683",
+      "path": "apps/terminal-web/app/[[...slug]]/page.tsx",
+      "physical_lines": 5
+    },
+    {
+      "category": "frontend",
+      "digest": "92621b3ba1c9c567ddc6925558fe35ef50837242849298ad8cd95256ca7708a5",
+      "path": "apps/terminal-web/app/backend/[...path]/route.ts",
+      "physical_lines": 52
+    },
+    {
+      "category": "frontend",
+      "digest": "337e9c2ca253a1d533ace996feba11a1eee2e774bbab2dd29e0f5cc19e4cd182",
+      "path": "apps/terminal-web/app/globals.css",
+      "physical_lines": 1482
+    },
+    {
+      "category": "frontend",
+      "digest": "8f4b1350c86cf6bc3f78d837c1f206caaedb62af77ac9dec6366441301d84109",
+      "path": "apps/terminal-web/app/layout.tsx",
+      "physical_lines": 23
+    },
+    {
+      "category": "frontend",
+      "digest": "c64d944fc9bd7748923500ce094b27bf95a8d096a073a3501298f1cd81ac136b",
+      "path": "apps/terminal-web/app/operating.css",
+      "physical_lines": 263
+    },
+    {
+      "category": "frontend",
+      "digest": "b8085b2442d955e11c9ccefde29e6547cd20cefdb099b27414dad7cd644ea46c",
+      "path": "apps/terminal-web/app/providers.tsx",
+      "physical_lines": 9
+    },
+    {
+      "category": "frontend",
+      "digest": "8e985f50ef81b10e9a63ffc5256a611d973d36413018dc8fd4c60d114090c578",
+      "path": "apps/terminal-web/components/broker-monitor.tsx",
+      "physical_lines": 236
+    },
+    {
+      "category": "frontend",
+      "digest": "bfbbaed14b2b4fc53a6b412d8dfa8826d6ff419585f7b0d0c37305da0c2b267b",
+      "path": "apps/terminal-web/components/context.tsx",
+      "physical_lines": 68
+    },
+    {
+      "category": "frontend",
+      "digest": "27ce1bb2073cc5d14d803a17e41fbe585e49fe174f52ce02854b735e51f49f98",
+      "path": "apps/terminal-web/components/core-pages.tsx",
+      "physical_lines": 1674
+    },
+    {
+      "category": "frontend",
+      "digest": "860f6e6e3ece2d252e9b0a97f0d2470f98a8decdfdb8641279759d53327607e9",
+      "path": "apps/terminal-web/components/lab-pages.tsx",
+      "physical_lines": 1322
+    },
+    {
+      "category": "frontend",
+      "digest": "7a8228329ae3ca268f36bc868a45fadc20562349cc1c627192ff3d1fe2a6b1ca",
+      "path": "apps/terminal-web/components/operating-pages.tsx",
+      "physical_lines": 1380
+    },
+    {
+      "category": "frontend",
+      "digest": "f4ab1ac57a50fcd5e3d730a3d01d10270fb374c4096a20502b6d23654c75ad5b",
+      "path": "apps/terminal-web/components/pages.tsx",
+      "physical_lines": 95
+    },
+    {
+      "category": "frontend",
+      "digest": "b5d7891a432285ee4fdab74e541abe14824cf9de663215dbc9b563efe2e6e01f",
+      "path": "apps/terminal-web/components/security-pages.tsx",
+      "physical_lines": 541
+    },
+    {
+      "category": "frontend",
+      "digest": "a811b298e3a44ac7eb7cd892b4e4b85166ebf29381b0886c76fa71d751387569",
+      "path": "apps/terminal-web/components/shell.tsx",
+      "physical_lines": 1256
+    },
+    {
+      "category": "frontend",
+      "digest": "154f3c033051c5ceb5fa8af664bf7d5f1a4daf55315bd6ca24499aa1224e59f2",
+      "path": "apps/terminal-web/components/source-preferences.tsx",
+      "physical_lines": 182
+    },
+    {
+      "category": "frontend",
+      "digest": "446a66f9d3e023c206dae2de1426e09bd19af1ee27db9298064a9528ef6ab287",
+      "path": "apps/terminal-web/components/system-pages.tsx",
+      "physical_lines": 464
+    },
+    {
+      "category": "frontend",
+      "digest": "c66931f6e312b30e085f96dfa0a19fd1ecd012ffd690d9e5df89d39cf30ac15c",
+      "path": "apps/terminal-web/components/types.ts",
+      "physical_lines": 187
+    },
+    {
+      "category": "frontend",
+      "digest": "ab02c6984ca920b8b75c1297170cd0845a1dbf99a626f77fc5d75dc307a2b0b3",
+      "path": "apps/terminal-web/components/ui.tsx",
+      "physical_lines": 855
+    },
+    {
+      "category": "frontend",
+      "digest": "a177f2c3b363f1a4a3c59d0381d139b88c6aa694fbf2d476b2d0c70315447935",
+      "path": "apps/terminal-web/components/workspace.ts",
+      "physical_lines": 34
+    },
+    {
+      "category": "frontend",
+      "digest": "f229dc315b0ae9e8e031d899457e0a999e019feea61b0bbba1e87da35c4275fd",
+      "path": "apps/terminal-web/lib/routes.ts",
+      "physical_lines": 73
+    },
+    {
+      "category": "frontend",
+      "digest": "2bbea35598f837196770b93fec084bd26c63de85b3a4129cf869e201b38a3568",
+      "path": "apps/terminal-web/tailwind.config.ts",
+      "physical_lines": 18
+    },
+    {
+      "category": "tests",
+      "digest": "b1afdd2a29ee2a7da9e43f53b9f509aae39a92428d653f18cd37f949489f2b7c",
+      "path": "apps/terminal-web/tests/workspace.test.ts",
+      "physical_lines": 18
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "80411d7b4a5f488bb7b990c8b2330221780937bca4879a4bddbcc9b8d38df941",
+      "path": "infrastructure/scripts/backup.py",
+      "physical_lines": 15
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "f8b6e30759fd442504d109ee8ab658a1d6c04f616fb4c540316dad68b7853318",
+      "path": "infrastructure/scripts/health.py",
+      "physical_lines": 11
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "00b8835eda1ceada8dbb7dfbd3273a0edfd2a39a79e230f7e57fb96458b96cb3",
+      "path": "infrastructure/scripts/restore.py",
+      "physical_lines": 9
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "376762b9362fa72a3b589dcb1c5041d347569b1a925bcdd122701e3c5291465f",
+      "path": "infrastructure/scripts/verify_backup.py",
+      "physical_lines": 12
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "9b2cb771e53f7fe655b8d9fb57fe2600a88769e46b742c0b93a8ce6fb5ca68e6",
+      "path": "infrastructure/scripts/verify_portfolio_release.py",
+      "physical_lines": 77
+    },
+    {
+      "category": "backend",
+      "digest": "775d910f11edc37230a7b04c1f016de569498c1f6dea1dc6d6627334051964fa",
+      "path": "migrations/env.py",
+      "physical_lines": 54
+    },
+    {
+      "category": "backend",
+      "digest": "2690523bda4b3d364ec6796bb3403a42c92a09bbcbaf6ceb96d7e7d76560234c",
+      "path": "migrations/versions/0001_core_schema.py",
+      "physical_lines": 36
+    },
+    {
+      "category": "backend",
+      "digest": "33daa4cd59191e15f86014ac99034040db539ac9661e869779dc42e2b58cc9b5",
+      "path": "migrations/versions/0002_terminal_workspace.py",
+      "physical_lines": 18
+    },
+    {
+      "category": "backend",
+      "digest": "f106f10626d6bc0b6e4a8286dcfdc69dbf076b067a25252bfc72aadc7cdcb621",
+      "path": "migrations/versions/0003_portfolio_operations.py",
+      "physical_lines": 29
+    },
+    {
+      "category": "frontend",
+      "digest": "4030fdcba3c3e3ffc1fc60e249d5d4e39ea4f83f58bd8bc03807078004ccfab3",
+      "path": "packages/api-client/src/index.ts",
+      "physical_lines": 203
+    },
+    {
+      "category": "frontend",
+      "digest": "78e0befff640e5477b7434889d50ed8e30d25e41bf0c5fa7a8fff6cb87ad1e6b",
+      "path": "packages/design-system/src/index.tsx",
+      "physical_lines": 84
+    },
+    {
+      "category": "backend",
+      "digest": "b953bb71556a118f6cb9ab66d4bc8d74daf0f6ae35ae25bd6c1f39a7b6f99495",
+      "path": "packages/domain/src/index.ts",
+      "physical_lines": 252
+    },
+    {
+      "category": "tests",
+      "digest": "efdf442f66e92b3dfb56ab434147e51f73e2a15570da143354795294a25d2ef9",
+      "path": "packages/domain/tests/domain.test.ts",
+      "physical_lines": 23
+    },
+    {
+      "category": "frontend",
+      "digest": "e5574a16a52550b2925747cb7bc7a5144861fd19b9d5068da5e546c201eb6a15",
+      "path": "packages/search/src/index.ts",
+      "physical_lines": 31
+    },
+    {
+      "category": "frontend",
+      "digest": "03d4b885b0eb724a85d0e982510413335f68ace9567aa93027be2dd34b0a7f18",
+      "path": "packages/terminal-functions/src/index.ts",
+      "physical_lines": 33
+    },
+    {
+      "category": "tests",
+      "digest": "b17e86d9b43c93309bc1d39265aca59f592cfe5eed87c049f4af02451fdfa0a1",
+      "path": "packages/terminal-functions/tests/registry.test.ts",
+      "physical_lines": 17
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "6244887ecee01b659b847c08b0ef474a41c9fd0c87eaa3b45a08118b98b8ab7d",
+      "path": "scripts/acceptance.ps1",
+      "physical_lines": 44
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "efbacce5a312153a146ccfac8c73fd8efdbaca5795b2a849ec9da05e81d48e81",
+      "path": "scripts/acceptance.sh",
+      "physical_lines": 39
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "98199536abfd47a8ca34de5314e6204218e9ae83009a07e533207af6c2b7028b",
+      "path": "scripts/bootstrap.ps1",
+      "physical_lines": 17
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "36ebaa1c581206ae9ef53a6dbec78fc9bb8781880339268f05ac467f6f8d331a",
+      "path": "scripts/bootstrap.sh",
+      "physical_lines": 13
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "4a4a5c8545e3ca3d58048a7b5072ab5626d74f4c7a2b400abd0778061c3693c9",
+      "path": "scripts/wait-for-services.ps1",
+      "physical_lines": 24
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "36c493d01567cba9bd8158244d9105b904c35c64d92e2227d19b15b04eb3fe9c",
+      "path": "scripts/wait-for-services.sh",
+      "physical_lines": 15
+    },
+    {
+      "category": "backend",
+      "digest": "0934c1dfd0e2a42a84f59863e027ee57468912839ad2d9ec894c4cda1a65b7d2",
+      "path": "services/api/app/__init__.py",
+      "physical_lines": 1
+    },
+    {
+      "category": "backend",
+      "digest": "929f56f9cf72a46f80f77967af7eae8cd69f3c01ea3f8e990ab7f3ac9e39f799",
+      "path": "services/api/app/broker_api.py",
+      "physical_lines": 197
+    },
+    {
+      "category": "backend",
+      "digest": "eb48e28f8ad5ac97473e31989fa1a4b5a0cfb822de4141af796727cc97dba7af",
+      "path": "services/api/app/config.py",
+      "physical_lines": 32
+    },
+    {
+      "category": "backend",
+      "digest": "3f3c251e40daf8794fff09d110c52f6bef55be1940e510d28336c5c69a9d1faa",
+      "path": "services/api/app/curated_fundamentals.py",
+      "physical_lines": 41
+    },
+    {
+      "category": "backend",
+      "digest": "3482abe6255749473189736e378b59877607c851fdbc241adb32c99e1a58f954",
+      "path": "services/api/app/data_drop.py",
+      "physical_lines": 207
+    },
+    {
+      "category": "backend",
+      "digest": "293187034dfb1c5177afb818a2080a539c97de7bc37fbb09cca2046439f09c11",
+      "path": "services/api/app/data_drop_api.py",
+      "physical_lines": 202
+    },
+    {
+      "category": "backend",
+      "digest": "9c2b6110f812785fa5f4a1f87d658c061ce5fdc950b8c6cedfba8414b872bdc9",
+      "path": "services/api/app/data_mapping.py",
+      "physical_lines": 223
+    },
+    {
+      "category": "backend",
+      "digest": "bbcb919a9bdb7578c640fd3ccd94593811caa2bf93e7fccb66e8d3acf7a5df23",
+      "path": "services/api/app/database.py",
+      "physical_lines": 27
+    },
+    {
+      "category": "backend",
+      "digest": "e934302ad624be2cdef8998a56683d5d85a5c1c99f6ed5808e8dec3dd62dbcfe",
+      "path": "services/api/app/desks_api.py",
+      "physical_lines": 75
+    },
+    {
+      "category": "backend",
+      "digest": "770c19d7cd68d0bc35381c3e572436fbec24685b5d5aba44393ec642420e90b3",
+      "path": "services/api/app/domain.py",
+      "physical_lines": 152
+    },
+    {
+      "category": "backend",
+      "digest": "fb83ea6ff5677261024e5deb7dff79578d09cedc4e524db1c4c7deb3257f486e",
+      "path": "services/api/app/factor_statistics.py",
+      "physical_lines": 38
+    },
+    {
+      "category": "backend",
+      "digest": "eb2b88bfa65f2bb781198f0e020479efe19ccaa90c1ad6be864babb7081e2c7e",
+      "path": "services/api/app/main.py",
+      "physical_lines": 605
+    },
+    {
+      "category": "backend",
+      "digest": "498da3a0fcbcad199e61484e2eb767757bd27dccfa816877047cc7e640b2500e",
+      "path": "services/api/app/models.py",
+      "physical_lines": 1029
+    },
+    {
+      "category": "backend",
+      "digest": "b892fb8fd119595bf1ba6b82ce040222ae7ffaa496cb19b9fb2e03e3e2de40e3",
+      "path": "services/api/app/object_storage.py",
+      "physical_lines": 65
+    },
+    {
+      "category": "backend",
+      "digest": "1b1cc023a5d9c591d48322d1424fc563dea7eaa18f6291a9493cf51c4261f56f",
+      "path": "services/api/app/portfolio_api.py",
+      "physical_lines": 231
+    },
+    {
+      "category": "backend",
+      "digest": "4225893f5bab67bdefd5783a6b8783d8dc19bd63a83dc0f3829d81ab635782ab",
+      "path": "services/api/app/portfolio_engine.py",
+      "physical_lines": 237
+    },
+    {
+      "category": "backend",
+      "digest": "9d87a57d05523746d109cdff9d9adc9b5fc47c4bc77ad0d367b166e95fd51fcd",
+      "path": "services/api/app/portfolio_operations.py",
+      "physical_lines": 243
+    },
+    {
+      "category": "backend",
+      "digest": "c974b53215c877ffaa507cddb25acb28a64660c1b48c1c71aec8865c070250ae",
+      "path": "services/api/app/portfolio_seed.py",
+      "physical_lines": 140
+    },
+    {
+      "category": "backend",
+      "digest": "e95a7f5c3c65a0a456a4cb4d4b96a17a8f23afa7886c98807fcff88ea7b1d687",
+      "path": "services/api/app/portfolio_valuation.py",
+      "physical_lines": 476
+    },
+    {
+      "category": "backend",
+      "digest": "a51edf636e466acdac8b55ad352ec7799a6346f4f8ab5caaaf294aabfc742c05",
+      "path": "services/api/app/price_sources.py",
+      "physical_lines": 173
+    },
+    {
+      "category": "backend",
+      "digest": "b74b36941b9266ceff78fda64ab5fce01e084a83cc876490ba385f702d36dcce",
+      "path": "services/api/app/providers/__init__.py",
+      "physical_lines": 1
+    },
+    {
+      "category": "backend",
+      "digest": "df51bdacd35dafcfdd45a2e4670a256328019145614e86848ddcc1bd59223cea",
+      "path": "services/api/app/providers/base.py",
+      "physical_lines": 93
+    },
+    {
+      "category": "backend",
+      "digest": "2f38d241998edea25bd16b95080564727683df5fb453cde1ed65544e8a92ed9b",
+      "path": "services/api/app/providers/fred.py",
+      "physical_lines": 175
+    },
+    {
+      "category": "backend",
+      "digest": "3d786a3b3b75f6c47b553535000c783be9ad991f6641030bfeefe509e2002745",
+      "path": "services/api/app/repositories.py",
+      "physical_lines": 423
+    },
+    {
+      "category": "backend",
+      "digest": "a4507f00ecf31dfe15b4dee2ea34ca244c527a6582d01d58d63d4d9089d1a1b1",
+      "path": "services/api/app/services.py",
+      "physical_lines": 1197
+    },
+    {
+      "category": "backend",
+      "digest": "f71303e2b63e82403c4dd34d17363b364dd659d4dcb7a2dd7104a96a5baae1bb",
+      "path": "services/api/app/terminal_analytics.py",
+      "physical_lines": 265
+    },
+    {
+      "category": "backend",
+      "digest": "d4ede884f86b8385d3b1eb1b1dfd03de849f5c658873b4eed922ebe2a502e9d1",
+      "path": "services/api/app/terminal_api.py",
+      "physical_lines": 459
+    },
+    {
+      "category": "backend",
+      "digest": "966dba711350adb41bd29daab6d4273f6eee53064e2fb027596bf76ade4fe8dc",
+      "path": "services/api/app/terminal_worker.py",
+      "physical_lines": 117
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "0ca22eb9392e3743fde66b3c466716a0d79bfe2c19ca4c26a4bb02a2fc58c21b",
+      "path": "services/api/scripts/migrate_demo.py",
+      "physical_lines": 13
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "e46bb2886177f44c2080f4e7c20e645985061570c43a6f58c30dd911bd8c41c4",
+      "path": "services/api/scripts/seed_demo.py",
+      "physical_lines": 28
+    },
+    {
+      "category": "tests",
+      "digest": "37e688d14dccf57dc1b02bc78b47c71eab2ca4702dcd393b96d61a8eefdbbb85",
+      "path": "services/api/tests/conftest.py",
+      "physical_lines": 20
+    },
+    {
+      "category": "tests",
+      "digest": "0fefbc9a495a30b19c54fab60381bcdf4e5606187c316ebafed6e80e1432c6f1",
+      "path": "services/api/tests/test_api.py",
+      "physical_lines": 72
+    },
+    {
+      "category": "tests",
+      "digest": "32bed6b0cb8fc4f10a254532b26a1c28e31dbb1d99461e2b36fcfc185b050fe8",
+      "path": "services/api/tests/test_broker_agent.py",
+      "physical_lines": 161
+    },
+    {
+      "category": "tests",
+      "digest": "a045184bdec4ad329d4e0240f11714828bfde6c8741a76bd76fd6e8c37698303",
+      "path": "services/api/tests/test_domain_core.py",
+      "physical_lines": 47
+    },
+    {
+      "category": "tests",
+      "digest": "a4788778ed366da569814a191a8c2e668d896ffc29cf708ae8c9900d56afebf7",
+      "path": "services/api/tests/test_fred_provider.py",
+      "physical_lines": 28
+    },
+    {
+      "category": "tests",
+      "digest": "9161e9493cb8c6154999ddef9255f8e64ca43d3b440971e3be7cd62533fc7a71",
+      "path": "services/api/tests/test_no_execution_strings.py",
+      "physical_lines": 38
+    },
+    {
+      "category": "tests",
+      "digest": "281c4b609faf11acd0fa1b75f4edd41bfc6667a2f4e4fc503d70a26e738e0c01",
+      "path": "services/api/tests/test_operating_api.py",
+      "physical_lines": 101
+    },
+    {
+      "category": "tests",
+      "digest": "e3807c8699073b1f3d40d757e2f86f08a8c4c53ba2c09f26f043ef24771ed4ff",
+      "path": "services/api/tests/test_portfolio_accounting.py",
+      "physical_lines": 196
+    },
+    {
+      "category": "tests",
+      "digest": "0369b2dfc8508cdcf638ac0a4a1d21d08bf79db33fe5fe6a486dc2a96e80fe84",
+      "path": "services/api/tests/test_portfolio_operations.py",
+      "physical_lines": 151
+    },
+    {
+      "category": "tests",
+      "digest": "1566a271ad44c678b01ff628919d84f15c953c6988a90fae03fe49654767078f",
+      "path": "services/api/tests/test_seed_entrypoint.py",
+      "physical_lines": 24
+    },
+    {
+      "category": "tests",
+      "digest": "f29e6be9c0e03e6e54bc69114e934e65f7272fa0d5a01055957ebd0c10b6c7f5",
+      "path": "services/api/tests/test_terminal_v2.py",
+      "physical_lines": 166
+    },
+    {
+      "category": "tests",
+      "digest": "d35253dd140a44f4c43d0f63eb5932b5f5a687d3257d3046adbb8a212ec5b0ec",
+      "path": "services/api/tests/test_upload_report_pine.py",
+      "physical_lines": 34
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "329f2557445ba1436c6074a883c52b56b60e9b7b643fda76c312e07da32624ba",
+      "path": "services/broker-agent/agent/__init__.py",
+      "physical_lines": 1
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "61a396aee8800730b3b24d07f01e521f801733df9ac76d51ff4f87f916efae71",
+      "path": "services/broker-agent/agent/main.py",
+      "physical_lines": 59
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "5335df03e88af218614572031e3e72570585cbfc08937e104d344efc2e0dd5b0",
+      "path": "services/local-agent/agent.py",
+      "physical_lines": 223
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "0d2420a90eca638e3fd421ee05e576d185823bdc83d7f138870b470a0b8a70c1",
+      "path": "services/local-agent/broker_reader.py",
+      "physical_lines": 97
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "1acfca8028ab0ed42905d9ed51cda941146d5033c24e94f30f55bda7c91e8ac2",
+      "path": "services/report-engine/app/__init__.py",
+      "physical_lines": 1
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "4b60dc5ff76362e747e6684fc6a113bbfd1391d647f761d750d35ddd029727bf",
+      "path": "services/report-engine/app/main.py",
+      "physical_lines": 66
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "dd5da779ecee682173a36947691283d9c08d28d338a5a339d032ed082142ae64",
+      "path": "services/worker-data/app/__init__.py",
+      "physical_lines": 1
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "a619eaac8bfae1f6353b7dcb2fea581a869b845a64aab537778bd221009bd77e",
+      "path": "services/worker-data/app/main.py",
+      "physical_lines": 104
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "820c6a1d85c8767e8f327dd1bf82e6880c49f65455d65c8079e5d745f11996c2",
+      "path": "services/worker-quant/app/__init__.py",
+      "physical_lines": 1
+    },
+    {
+      "category": "workers_agents_reports_infrastructure",
+      "digest": "3bd645c302f641e65450065f15de3e0f3290095bd96ee33fbf8d874ff1847fd4",
+      "path": "services/worker-quant/app/main.py",
+      "physical_lines": 48
+    },
+    {
+      "category": "tests",
+      "digest": "6a481821e62d23aa210a111d818da3e4e5a1e9b3b3ad932b2997217875bb87c0",
+      "path": "tests/e2e/operating.spec.ts",
+      "physical_lines": 159
+    },
+    {
+      "category": "tests",
+      "digest": "84eff8280fe23cdfaa76e3138a4a23c46565a7fbf3cb948e3257bd028eb67b3b",
+      "path": "tests/e2e/servers.ts",
+      "physical_lines": 55
+    },
+    {
+      "category": "tests",
+      "digest": "34e3cdced77651d315603be782b95f5f997b6b33a2bc7f883d01a1859850b6ef",
+      "path": "tests/e2e/terminal.spec.ts",
+      "physical_lines": 431
+    }
+  ],
+  "test_files": [
+    "apps/terminal-web/tests/workspace.test.ts",
+    "packages/domain/tests/domain.test.ts",
+    "packages/terminal-functions/tests/registry.test.ts",
+    "services/api/tests/conftest.py",
+    "services/api/tests/test_api.py",
+    "services/api/tests/test_broker_agent.py",
+    "services/api/tests/test_domain_core.py",
+    "services/api/tests/test_fred_provider.py",
+    "services/api/tests/test_no_execution_strings.py",
+    "services/api/tests/test_operating_api.py",
+    "services/api/tests/test_portfolio_accounting.py",
+    "services/api/tests/test_portfolio_operations.py",
+    "services/api/tests/test_seed_entrypoint.py",
+    "services/api/tests/test_terminal_v2.py",
+    "services/api/tests/test_upload_report_pine.py",
+    "tests/e2e/operating.spec.ts",
+    "tests/e2e/servers.ts",
+    "tests/e2e/terminal.spec.ts"
+  ]
+}
