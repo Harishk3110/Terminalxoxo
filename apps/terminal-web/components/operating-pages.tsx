@@ -10,6 +10,7 @@ import {
   Pencil,
   RefreshCw,
   Settings2,
+  Save,
   Upload,
   X,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   Empty,
   Field,
   IconButton,
+  Kpis,
   LineChart,
   Panel,
   money,
@@ -1121,14 +1123,56 @@ export function OperatingDeskPage({
     source: string;
     as_of: string;
   }>("equity-desk", "/api/v1/desks/equity", desk === "equity");
-  const quant = useApi<{ strategies: Row[]; runs: Row[]; candidates: Row[] }>(
-    "operating-quant",
-    "/api/v1/desks/quant",
-    desk !== "equity",
-  );
+  const quant = useApi<{
+    strategies: Row[];
+    runs: Row[];
+    candidates: Row[];
+    summary: Row;
+  }>("operating-quant", "/api/v1/desks/quant", desk !== "equity");
   const [name, setName] = useState(""),
     [hypothesis, setHypothesis] = useState(""),
     [version, setVersion] = useState("");
+  const [configuration, setConfiguration] = useState({
+    economic_rationale: "",
+    universe: "",
+    features: "",
+    target: "",
+    signal_definition: "",
+    position_sizing: "",
+    rebalance_frequency: "DAILY",
+    fee_bps: 5,
+    slippage_bps: 5,
+    training_start: "",
+    training_end: "",
+    validation_start: "",
+    validation_end: "",
+    test_start: "",
+    test_end: "",
+  });
+  const [selectedCandidate, setSelectedCandidate] = useState<Row | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [reviewState, setReviewState] = useState("RESEARCH");
+  const [evidenceIds, setEvidenceIds] = useState("");
+  const review = useMutation({
+    mutationFn: () =>
+      knkApi.post(`/api/v1/desks/candidates/${selectedCandidate?.id}/review`, {
+        note: reviewNote,
+        state: reviewState,
+        analysis_run_ids: evidenceIds
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean),
+      }),
+    onSuccess: async () => {
+      const refreshed = await quant.refetch();
+      setSelectedCandidate(
+        (current) =>
+          refreshed.data?.candidates.find((row) => row.id === current?.id) ??
+          current,
+      );
+      setReviewNote("");
+    },
+  });
   const files = useApi<{ items: FileRecord[] }>(
     "data-drop-inbox",
     "/api/v1/data-drop/files",
@@ -1140,6 +1184,22 @@ export function OperatingDeskPage({
         name,
         hypothesis,
         dataset_version_id: version,
+        configuration: {
+          ...configuration,
+          universe: configuration.universe
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+          features: configuration.features
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+          ...Object.fromEntries(
+            Object.entries(configuration)
+              .filter(([key]) => key.endsWith("_start") || key.endsWith("_end"))
+              .map(([key, value]) => [key, value || null]),
+          ),
+        },
       }),
     onSuccess: () => {
       quant.refetch();
@@ -1175,6 +1235,34 @@ export function OperatingDeskPage({
           {desk === "equity" ? "Research notes" : "Backtests"}
         </button>
       </PageTitle>
+      {desk === "quant" && (
+        <Kpis
+          source="Latest 100 research jobs"
+          items={[
+            {
+              label: "Completed backtests",
+              value: number(quant.data?.summary?.completed_backtests, 0),
+            },
+            {
+              label: "Failed backtests",
+              value: number(quant.data?.summary?.failed_backtests, 0),
+            },
+            {
+              label: "Model runs",
+              value: number(quant.data?.summary?.model_runs, 0),
+            },
+            {
+              label: "Best held-out Sharpe",
+              value: number(quant.data?.summary?.best_oos_sharpe),
+            },
+            { label: "Queued", value: number(quant.data?.summary?.queued, 0) },
+            {
+              label: "Running",
+              value: number(quant.data?.summary?.running, 0),
+            },
+          ]}
+        />
+      )}
       <div className="page-grid operation-two-column">
         {desk === "equity" ? (
           <>
@@ -1233,6 +1321,14 @@ export function OperatingDeskPage({
             >
               <DataTable
                 id="quant-registry"
+                onSelect={
+                  desk === "edge"
+                    ? (row) => {
+                        setSelectedCandidate(row);
+                        setReviewState(String(row.state));
+                      }
+                    : undefined
+                }
                 rows={
                   (desk === "edge"
                     ? quant.data?.candidates
@@ -1269,11 +1365,13 @@ export function OperatingDeskPage({
                     />
                   </Field>
                   <Field label="Dataset version">
-                    <select
+                    <input
+                      aria-label="Candidate dataset version"
+                      list="candidate-dataset-versions"
                       value={version}
                       onChange={(e) => setVersion(e.target.value)}
-                    >
-                      <option value="">Select imported version</option>
+                    />
+                    <datalist id="candidate-dataset-versions">
                       {files.data?.items
                         .filter((f) => f.dataset_version_id)
                         .map((f) => (
@@ -1281,8 +1379,84 @@ export function OperatingDeskPage({
                             {f.filename} / {f.dataset_version_id?.slice(0, 8)}
                           </option>
                         ))}
+                    </datalist>
+                  </Field>
+                  {(
+                    [
+                      "economic_rationale",
+                      "universe",
+                      "features",
+                      "target",
+                      "signal_definition",
+                      "position_sizing",
+                    ] as const
+                  ).map((key) => (
+                    <Field label={key.replaceAll("_", " ")} key={key}>
+                      <input
+                        value={configuration[key]}
+                        onChange={(e) =>
+                          setConfiguration({
+                            ...configuration,
+                            [key]: e.target.value,
+                          })
+                        }
+                      />
+                    </Field>
+                  ))}
+                  <Field label="Rebalance">
+                    <select
+                      value={configuration.rebalance_frequency}
+                      onChange={(e) =>
+                        setConfiguration({
+                          ...configuration,
+                          rebalance_frequency: e.target.value,
+                        })
+                      }
+                    >
+                      <option>DAILY</option>
+                      <option>WEEKLY</option>
+                      <option>MONTHLY</option>
                     </select>
                   </Field>
+                  {(["fee_bps", "slippage_bps"] as const).map((key) => (
+                    <Field label={key.replaceAll("_", " ")} key={key}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={500}
+                        value={configuration[key]}
+                        onChange={(e) =>
+                          setConfiguration({
+                            ...configuration,
+                            [key]: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </Field>
+                  ))}
+                  {(
+                    [
+                      "training_start",
+                      "training_end",
+                      "validation_start",
+                      "validation_end",
+                      "test_start",
+                      "test_end",
+                    ] as const
+                  ).map((key) => (
+                    <Field label={key.replaceAll("_", " ")} key={key}>
+                      <input
+                        type="date"
+                        value={configuration[key]}
+                        onChange={(e) =>
+                          setConfiguration({
+                            ...configuration,
+                            [key]: e.target.value,
+                          })
+                        }
+                      />
+                    </Field>
+                  ))}
                   <button
                     disabled={
                       !version ||
@@ -1296,6 +1470,50 @@ export function OperatingDeskPage({
                   </button>
                   <Notice error={candidate.error} />
                   <Badge>OOS / PAPER VALIDATION REQUIRED</Badge>
+                  {selectedCandidate && (
+                    <>
+                      <h3>{String(selectedCandidate.name)} / review</h3>
+                      <Field label="Decision">
+                        <select
+                          value={reviewState}
+                          onChange={(e) => setReviewState(e.target.value)}
+                        >
+                          {[
+                            "IDEA",
+                            "RESEARCH",
+                            "FAILED_VALIDATION",
+                            "REJECTED",
+                            "ARCHIVED",
+                          ].map((value) => (
+                            <option key={value}>{value}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Completed run IDs">
+                        <input
+                          value={evidenceIds}
+                          onChange={(e) => setEvidenceIds(e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Review note">
+                        <textarea
+                          value={reviewNote}
+                          onChange={(e) => setReviewNote(e.target.value)}
+                        />
+                      </Field>
+                      <button
+                        disabled={reviewNote.length < 10 || review.isPending}
+                        onClick={() => review.mutate()}
+                      >
+                        <Save size={13} />
+                        Record review
+                      </button>
+                      <Notice error={review.error} />
+                      <pre className="section-pad">
+                        {JSON.stringify(selectedCandidate.review, null, 2)}
+                      </pre>
+                    </>
+                  )}
                 </div>
               </Panel>
             ) : (
@@ -1310,10 +1528,22 @@ export function OperatingDeskPage({
                     { key: "name", label: "Run", size: 210 },
                     { key: "kind", label: "Type" },
                     { key: "status", label: "Status" },
+                    {
+                      key: "runtime_seconds",
+                      label: "Runtime s",
+                      numeric: true,
+                    },
+                    { key: "stage", label: "Stage", size: 260 },
                   ]}
                   onSelect={(r) =>
                     open(
-                      r.kind === "stress" ? "/stress-tests" : "/backtests",
+                      r.kind === "model"
+                        ? "/model-lab"
+                        : r.kind === "alpha"
+                          ? "/alpha"
+                          : r.kind === "monte_carlo"
+                            ? "/monte-carlo"
+                            : "/backtests",
                       String(r.kind).toUpperCase(),
                     )
                   }

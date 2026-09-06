@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Reproducible Quant Research
+
+- Added saved NET/GROSS/cost alpha with CAPM/HAC inference and versioned factor returns.
+- Added hash-verified OHLC research snapshots and explicit demo/source-aware inputs.
+- Added offline multi-security backtesting, prior-published FX, next-open fills, costs, exposure caps and saved gross counterfactuals.
+- Added purged chronological model training, artifacts, expanding-window evaluation and held-out cost simulations.
+- Added seeded return-path Monte Carlo, measured technical-factor IC/quantiles/cost sensitivity and research review evidence.
+- Kept missing inputs, unsupported corporate-action/point-in-time workflows and unverified promotion explicit.
+
 ## Audited Risk, Stress and Manual Hedge Analysis
 
 - Added current-weight historical, parametric, Monte Carlo and EWMA risk with explicit sample/data states and saved settings.

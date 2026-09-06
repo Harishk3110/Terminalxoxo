@@ -87,17 +87,19 @@ def test_cancelled_run_never_publishes_a_result(monkeypatch):
 def test_upload_validation_import_and_backtest(monkeypatch):
     import pandas as pd
     dates = pd.date_range('2024-01-01', periods=240, freq='B')
-    csv = 'day,px\n' + '\n'.join(f'{d.date()},{100 + .1*i + 10*math.sin(i/8)}' for i, d in enumerate(dates))
+    csv = 'day,px,open,high,low\n' + '\n'.join(f'{d.date()},{100 + .1*i + 10*math.sin(i/8)},{100 + .1*i + 10*math.sin(i/8)},{102 + .1*i + 10*math.sin(i/8)},{98 + .1*i + 10*math.sin(i/8)}' for i, d in enumerate(dates))
     preview = client.post('/api/v1/uploads/preview', files={'file': ('fixture.csv', csv, 'text/csv')})
     assert preview.status_code == 200, preview.text
     upload = preview.json()
-    payload = {'upload_id': upload['upload_id'], 'name': 'Unit fixture', 'mapping': {'date': 'day', 'close': 'px'}, 'licence': 'Self-created test data'}
+    payload = {'upload_id': upload['upload_id'], 'name': 'Unit fixture', 'mapping': {'date': 'day', 'close': 'px', 'open': 'open', 'high': 'high', 'low': 'low'}, 'licence': 'Self-created test data'}
     assert client.post('/api/v1/uploads/validate', json=payload).json()['valid']
     imported = client.post('/api/v1/uploads/import', json=payload)
     assert imported.status_code == 200, imported.text
     dataset = imported.json()
     monkeypatch.setattr('app.terminal_api.launch_worker', lambda run_id: None)
-    run = client.post('/api/v1/terminal/runs', json={'kind': 'backtest', 'name': 'Uploaded data test', 'parameters': {'dataset_id': dataset['dataset_id'], 'fast': 5, 'slow': 15}}).json()
+    queued = client.post('/api/v1/terminal/runs', json={'kind': 'backtest', 'name': 'Uploaded data test', 'parameters': {'dataset_id': dataset['dataset_id'], 'base_currency': 'USD', 'fast': 5, 'slow': 15}})
+    assert queued.status_code == 202, queued.text
+    run = queued.json()
     execute_run(run['id'])
     result = client.get(f"/api/v1/terminal/runs/{run['id']}").json()
     assert result['status'] == 'SUCCEEDED', result['error']
@@ -162,7 +164,7 @@ def test_private_api_requires_authentication_in_every_environment(monkeypatch, e
 
 def test_backtest_costs_affect_results():
     with SessionLocal() as session:
-        cheap = backtest_result(session, {'symbol': 'SPY', 'fast': 5, 'slow': 15, 'fee_bps': 0, 'slippage_bps': 0})
-        costly = backtest_result(session, {'symbol': 'SPY', 'fast': 5, 'slow': 15, 'fee_bps': 50, 'slippage_bps': 20})
+        cheap = backtest_result(session, {'symbol': 'SPY', 'base_currency': 'USD', 'fast': 5, 'slow': 15, 'fee_bps': 0, 'slippage_bps': 0})
+        costly = backtest_result(session, {'symbol': 'SPY', 'base_currency': 'USD', 'fast': 5, 'slow': 15, 'fee_bps': 50, 'slippage_bps': 20})
         assert cheap['final_equity'] != costly['final_equity']
         assert len(cheap['equity_curve']) >= 80

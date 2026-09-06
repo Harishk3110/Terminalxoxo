@@ -15,6 +15,10 @@ supports local operation and isolated tests. Redis and object storage support
 durable workers and imported artifacts. No frontend embeds a current NAV constant.
 
 Data and quant workers execute research jobs. Reports are internal artifacts.
+Quant inputs are immutable hash-verified object-store datasets; the worker dispatch
+is an explicit allowlist. Offline Backtrader handles simulated fills, statsmodels
+handles alpha inference and scikit-learn handles purged model evaluation. These
+research engines do not share any execution channel with IBKR.
 IBKR synchronisation reads paper-account data and supports manual reconciliation;
 there are no broker order-execution methods.
 

@@ -39,6 +39,20 @@ export function BacktestPage() {
   const client = useQueryClient();
   const [form, setForm] = useTabState("backtest-config", {
     symbol: "SPY",
+    additional_symbols: "",
+    source_mode: "SOURCE_AWARE",
+    base_currency: "SGD",
+    strategy: "SMA",
+    weighting: "EQUAL",
+    direction: "LONG_ONLY",
+    frequency: "WEEKLY",
+    gross_limit: 0.95,
+    position_limit: 0.95,
+    sector_limit: 1,
+    minimum_cash: 0.05,
+    top_n: 3,
+    spread_bps: 0,
+    short_borrow_rate: 0.03,
     fast: 20,
     slow: 50,
     capital: 0,
@@ -50,7 +64,7 @@ export function BacktestPage() {
     dataset_version_id: activeTab.route.includes("/version/")
       ? activeTab.route.split("/")[5]
       : "",
-    start: "",
+    start: "2020-01-01",
     end: "",
   });
   const [runId, setRunId] = useTabState(
@@ -83,9 +97,16 @@ export function BacktestPage() {
     mutationFn: () =>
       knkApi.post<Run>("/api/v1/terminal/runs", {
         kind: "backtest",
-        name: `${form.symbol} / MA ${form.fast}:${form.slow}`,
+        name: `${form.symbol} / ${form.strategy} ${form.fast}:${form.slow}`,
         parameters: {
           ...form,
+          symbols: [
+            form.symbol,
+            ...form.additional_symbols
+              .split(",")
+              .map((value) => value.trim().toUpperCase())
+              .filter(Boolean),
+          ],
           capital:
             form.capital || Number(portfolio.data?.portfolio.reference_capital),
         },
@@ -98,6 +119,13 @@ export function BacktestPage() {
     },
   });
   const result = current.data?.result;
+  const refetchRecent = recent.refetch;
+  useEffect(() => {
+    if (
+      ["SUCCEEDED", "FAILED", "CANCELLED"].includes(current.data?.status ?? "")
+    )
+      void refetchRecent();
+  }, [current.data?.status, refetchRecent]);
   const active = ["QUEUED", "RUNNING"].includes(current.data?.status ?? "");
   const exportRun = async () => {
     const report = await knkApi.get<{ download_url: string }>(
@@ -106,7 +134,7 @@ export function BacktestPage() {
     window.open(knkApi.downloadUrl(report.download_url), "_blank", "noopener");
   };
   return (
-    <>
+    <div className="research-page">
       <PageTitle code="BACKTEST" title="Backtest Lab">
         <Badge>{current.data?.status ?? "TEMPLATE READY"}</Badge>
         <button
@@ -137,15 +165,12 @@ export function BacktestPage() {
         )}
       </PageTitle>
       <Panel
-        title="Moving-average crossover / approved template"
+        title="Example research strategy / offline simulation"
         source="Versioned strategy parameters"
         asOf={bootstrap.as_of}
         quality="ASSUMPTIONS"
       >
-        <div
-          className="compact-form"
-          style={{ gridTemplateColumns: "repeat(5,minmax(0,1fr))" }}
-        >
+        <div className="performance-controls">
           <Field label="Security">
             <select
               aria-label="Backtest security"
@@ -161,6 +186,95 @@ export function BacktestPage() {
                 ))}
             </select>
           </Field>
+          <Field label="Additional securities">
+            <input
+              aria-label="Backtest additional securities"
+              value={form.additional_symbols}
+              onChange={(e) =>
+                setForm({ ...form, additional_symbols: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Price source">
+            <select
+              aria-label="Backtest source"
+              value={form.source_mode}
+              onChange={(e) =>
+                setForm({ ...form, source_mode: e.target.value })
+              }
+            >
+              <option value="SOURCE_AWARE">Source-aware history</option>
+              <option value="DEMO_RESEARCH">Independent DEMO research</option>
+            </select>
+          </Field>
+          <Field label="Base currency">
+            <select
+              aria-label="Backtest currency"
+              value={form.base_currency}
+              onChange={(e) =>
+                setForm({ ...form, base_currency: e.target.value })
+              }
+            >
+              <option>SGD</option>
+              <option>USD</option>
+              <option>EUR</option>
+              <option>GBP</option>
+            </select>
+          </Field>
+          <Field label="Strategy">
+            <select
+              aria-label="Backtest strategy"
+              value={form.strategy}
+              onChange={(e) => setForm({ ...form, strategy: e.target.value })}
+            >
+              {[
+                "SMA",
+                "RSI",
+                "MACD",
+                "BREAKOUT",
+                "MOMENTUM",
+                "MEAN_REVERSION",
+                "CROSS_SECTIONAL",
+                "LOW_VOL",
+                "INVERSE_VOL",
+                "RISK_PARITY",
+                "MULTIFACTOR",
+              ].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Weighting">
+            <select
+              aria-label="Backtest weighting"
+              value={form.weighting}
+              onChange={(e) => setForm({ ...form, weighting: e.target.value })}
+            >
+              {["EQUAL", "SIGNAL", "INVERSE_VOL", "RISK_PARITY"].map(
+                (value) => (
+                  <option key={value}>{value}</option>
+                ),
+              )}
+            </select>
+          </Field>
+          <Field label="Direction">
+            <select
+              value={form.direction}
+              onChange={(e) => setForm({ ...form, direction: e.target.value })}
+            >
+              <option>LONG_ONLY</option>
+              <option>LONG_SHORT</option>
+            </select>
+          </Field>
+          <Field label="Rebalance">
+            <select
+              value={form.frequency}
+              onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+            >
+              <option>DAILY</option>
+              <option>WEEKLY</option>
+            </select>
+          </Field>
           <Field label="Dataset">
             <select
               aria-label="Backtest dataset"
@@ -173,7 +287,7 @@ export function BacktestPage() {
                 })
               }
             >
-              <option value="">DemoProvider daily prices</option>
+              <option value="">Snapshot selected source</option>
               {datasets.data?.items
                 .filter(
                   (d) =>
@@ -187,14 +301,41 @@ export function BacktestPage() {
             </select>
           </Field>
           {(
-            ["fast", "slow", "capital", "fee_bps", "slippage_bps"] as const
+            [
+              "fast",
+              "slow",
+              "capital",
+              "fee_bps",
+              "slippage_bps",
+              "spread_bps",
+              "gross_limit",
+              "position_limit",
+              "sector_limit",
+              "minimum_cash",
+              "top_n",
+              "short_borrow_rate",
+            ] as const
           ).map((k) => (
             <Field key={k} label={k.replaceAll("_", " ")}>
               <input
                 aria-label={`Backtest ${k}`}
                 className="assumption"
                 type="number"
-                min={k.includes("bps") ? 0 : 1}
+                min={
+                  k.includes("bps") ||
+                  k.includes("limit") ||
+                  k === "short_borrow_rate" ||
+                  k === "minimum_cash"
+                    ? 0
+                    : 1
+                }
+                step={
+                  k.includes("limit") ||
+                  k === "short_borrow_rate" ||
+                  k === "minimum_cash"
+                    ? 0.01
+                    : 1
+                }
                 value={
                   k === "capital"
                     ? form.capital ||
@@ -226,7 +367,20 @@ export function BacktestPage() {
             <select
               aria-label="Saved backtest"
               value={runId}
-              onChange={(e) => setRunId(e.target.value)}
+              onChange={(e) => {
+                setRunId(e.target.value);
+                const saved = recent.data?.items.find(
+                  (row) => row.id === e.target.value,
+                );
+                if (saved)
+                  setForm({
+                    ...form,
+                    ...saved.parameters,
+                    additional_symbols: Array.isArray(saved.parameters.symbols)
+                      ? saved.parameters.symbols.slice(1).join(",")
+                      : String(saved.parameters.additional_symbols ?? ""),
+                  } as typeof form);
+              }}
             >
               <option value="">Select run</option>
               {recent.data?.items.map((r) => (
@@ -256,6 +410,11 @@ export function BacktestPage() {
             className: "negative",
           },
           { label: "Trades", value: number(result?.metrics?.trade_count, 0) },
+          { label: "Turnover", value: pct(result?.metrics?.turnover) },
+          {
+            label: `Fees / ${String(result?.currency ?? form.base_currency)}`,
+            value: number(result?.metrics?.commission),
+          },
         ]}
       />
       <div className="page-grid analytics-grid">
@@ -272,7 +431,7 @@ export function BacktestPage() {
               label="Backtest equity curve"
               rows={records(result.equity_curve ?? [])}
               keys={[
-                { key: "equity", name: "MA crossover" },
+                { key: "equity", name: "Strategy" },
                 { key: "benchmark", name: "Buy and hold", color: COLORS.blue },
               ]}
             />
@@ -314,32 +473,83 @@ export function BacktestPage() {
             columns={[
               { key: "entry", label: "Entry date", size: 160 },
               { key: "exit", label: "Exit date", size: 160 },
-              { key: "quantity", label: "Quantity", numeric: true },
-              { key: "entry_price", label: "Entry", numeric: true },
-              { key: "exit_price", label: "Exit", numeric: true },
+              { key: "symbol", label: "Security" },
+              {
+                key: "gross_pnl",
+                label: "Gross P&L",
+                numeric: true,
+                money: true,
+              },
               { key: "pnl", label: "P&L", numeric: true, money: true },
             ]}
           />
         </Panel>
+        <Panel
+          className="wide-panel"
+          title="Simulated fills / next open"
+          source={result?.source}
+          quality={result?.quality}
+          asOf={result?.as_of}
+        >
+          <DataTable
+            id="backtest-fills"
+            rows={Array.isArray(result?.fills) ? (result.fills as Row[]) : []}
+            columns={[
+              { key: "date", label: "Date" },
+              { key: "symbol", label: "Security" },
+              { key: "quantity", label: "Signed quantity", numeric: true },
+              { key: "price", label: "Base-currency price", numeric: true },
+              { key: "fee", label: "Recorded costs", numeric: true },
+            ]}
+          />
+        </Panel>
       </div>
-    </>
+    </div>
   );
 }
 
 export function FactorPage() {
   const [lookback, setLookback] = useTabState("factor-lookback", 63);
+  const [factor, setFactor] = useTabState("factor-name", "MOMENTUM");
+  const [horizon, setHorizon] = useTabState("factor-forward", 5);
+  const [cost, setCost] = useTabState("factor-cost", 10);
   const query = useApi<{
     items: Row[];
     source: string;
     as_of: string;
     quality: string;
     warnings: string[];
-    diagnostics?: { state: string; in_sample: Row; out_of_sample: Row };
-  }>("factor", `/api/v1/factors?lookback=${lookback}`);
+    diagnostics?: {
+      state: string;
+      in_sample: Row;
+      out_of_sample: Row;
+      ic?: Row[];
+      quantile_returns?: Row[];
+    };
+  }>(
+    "factor",
+    `/api/v1/factors?lookback=${lookback}&factor=${factor}&horizon=${horizon}&cost_bps=${cost}`,
+  );
   const d = query.data;
   return (
-    <>
-      <PageTitle code="FACTOR" title="Factor Lab / Momentum">
+    <div className="research-page">
+      <PageTitle code="FACTOR" title="Factor Lab">
+        <select
+          aria-label="Factor type"
+          value={factor}
+          onChange={(e) => setFactor(e.target.value)}
+        >
+          {[
+            "MOMENTUM",
+            "REVERSAL",
+            "VOLATILITY",
+            "BETA",
+            "TREND",
+            "DISTANCE_MA",
+          ].map((value) => (
+            <option key={value}>{value}</option>
+          ))}
+        </select>
         <select
           aria-label="Factor horizon"
           value={lookback}
@@ -352,15 +562,36 @@ export function FactorPage() {
             [252, "12M"],
           ].map(([v, l]) => (
             <option key={v} value={v}>
-              {l} momentum
+              {l} lookback
             </option>
           ))}
         </select>
-        <Badge>CALCULATED</Badge>
+        <select
+          aria-label="Factor forward horizon"
+          value={horizon}
+          onChange={(e) => setHorizon(Number(e.target.value))}
+        >
+          {[1, 5, 21].map((value) => (
+            <option value={value} key={value}>
+              {value}D forward
+            </option>
+          ))}
+        </select>
+        <Field label="Entry cost bp">
+          <input
+            aria-label="Factor cost"
+            type="number"
+            min={0}
+            max={500}
+            value={cost}
+            onChange={(e) => setCost(Number(e.target.value))}
+          />
+        </Field>
+        <Badge>{d?.diagnostics?.state ?? "NOT RUN"}</Badge>
       </PageTitle>
       <div className="page-grid analytics-grid">
         <Panel
-          title="Cross-sectional momentum rank"
+          title={`Cross-sectional ${factor.toLowerCase().replaceAll("_", " ")} rank`}
           source={d?.source}
           asOf={d?.as_of}
           quality={d?.quality}
@@ -443,11 +674,12 @@ export function FactorPage() {
               { key: "symbol", label: "Security", size: 90 },
               {
                 key: "factor",
-                label: "Momentum",
+                label: "Raw factor",
                 numeric: true,
                 percent: true,
               },
               { key: "zscore", label: "Z-score", numeric: true },
+              { key: "winsorised", label: "Winsorised", numeric: true },
               { key: "rank", label: "Rank", numeric: true, size: 70 },
               { key: "quantile", label: "Quantile", numeric: true, size: 80 },
               {
@@ -461,8 +693,43 @@ export function FactorPage() {
             ]}
           />
         </Panel>
+        <Panel
+          title="Historical rank / Pearson IC"
+          source={d?.source}
+          quality={d?.quality}
+          asOf={d?.as_of}
+        >
+          <LineChart
+            label="Factor IC history"
+            rows={d?.diagnostics?.ic ?? []}
+            keys={[
+              { key: "ic", name: "Rank IC" },
+              { key: "pearson_ic", name: "Pearson IC", color: COLORS.blue },
+            ]}
+          />
+        </Panel>
+        <Panel
+          title="Forward quantile returns / cost sensitivity"
+          source={d?.source}
+          quality={d?.quality}
+          asOf={d?.as_of}
+        >
+          <LineChart
+            label="Factor quantile returns"
+            rows={d?.diagnostics?.quantile_returns ?? []}
+            keys={[
+              { key: "q5", name: "Q5" },
+              { key: "q1", name: "Q1", color: COLORS.blue },
+              {
+                key: "spread_after_entry_cost",
+                name: "Spread after entry cost",
+                color: COLORS.red,
+              },
+            ]}
+          />
+        </Panel>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1030,21 +1297,20 @@ export function ResearchPage() {
           asOf={query.data?.items[0]?.as_of as string}
           quality="PRIVATE"
         >
-          {query.data?.items
-            .map((note) => (
-              <button
-                key={String(note.id)}
-                className="scenario-row"
-                onClick={() => {
-                  setId(String(note.id));
-                  setTitle(String(note.title));
-                  setBody(String(note.body));
-                  setStatus("");
-                }}
-              >
-                {String(note.title)}
-              </button>
-            ))}
+          {query.data?.items.map((note) => (
+            <button
+              key={String(note.id)}
+              className="scenario-row"
+              onClick={() => {
+                setId(String(note.id));
+                setTitle(String(note.title));
+                setBody(String(note.body));
+                setStatus("");
+              }}
+            >
+              {String(note.title)}
+            </button>
+          ))}
         </Panel>
         <Panel
           title="Research document"

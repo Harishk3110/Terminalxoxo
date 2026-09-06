@@ -50,3 +50,20 @@ the actual engines; navigation or a screenshot alone does not certify them.
 - Both final browser checks passed: risk/model/hedge review and persisted stress/export.
 - Statistical risk excludes cash-FX/liability/nonlinear option risk. VIX-to-option
   mapping, measured duration and futures/FX VaR remain unavailable, not simulated as live.
+
+## Quant Checkpoint
+
+- 665 sprint tests, 97 API tests and 231 frontend tests passed.
+- Subsequent focused runs: 28 factor/input/cap tests and nine alpha/review tests passed.
+- Node 22 production builds, new-module Ruff and broker-action scan passed.
+- Model coefficient/feature causality, purged partitions, seed reproducibility,
+  next-open fills, multi-security costs, covariance weighting, cash/sector caps,
+  source hashes and prior-published FX tested.
+- Browser model/artifact download, saved alpha, Monte Carlo and factor controls
+  passed. Multi-security SGD backtests with saved gross/cost/FX evidence passed.
+- Screenshot review found flex/grid overlap; scoped scroll and fixed-height plot
+  tracks were added. Final model geometry checks and 1440px/390px images passed.
+- The first factor browser assertion assumed SPY was in the rendered virtual
+  window. The corrected assertion checks an actually visible factor row.
+- Limits and pending workflows are explicit in QUANT_RESEARCH.md and
+  ALPHA_METHODOLOGY.md. A positive demo result is not certified alpha or an edge.

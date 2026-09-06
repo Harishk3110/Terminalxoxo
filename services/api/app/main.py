@@ -30,6 +30,7 @@ from .data_drop_api import router as data_drop_router
 from .desks_api import router as desks_router
 from .broker_api import router as broker_router
 from .risk_api import router as risk_router
+from .alpha_api import router as alpha_router
 from .terminal_analytics import FUNCTIONS, portfolio_analytics
 
 try:
@@ -60,6 +61,7 @@ app.include_router(data_drop_router)
 app.include_router(desks_router)
 app.include_router(broker_router)
 app.include_router(risk_router)
+app.include_router(alpha_router)
 
 app.add_middleware(
     CORSMiddleware,

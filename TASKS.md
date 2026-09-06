@@ -13,7 +13,8 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Complete portfolio/NAV/position/performance acceptance workflows.
 - [x] Verify current-weight risk, audited limits, trade/reconciliation, linear/correlation stress and saved manual hedge workflows.
 - [ ] Extend risk with measured duration, option repricing and futures/FX covariance where supported input data exist.
-- [ ] Complete quant/factor/alpha/model/walk-forward acceptance.
+- [x] Verify saved alpha, technical factors, offline multi-security backtests, model/expanding-window evaluation, Monte Carlo and candidate review records.
+- [ ] Complete corporate-action/weekly/intraday backtests, point-in-time fundamental factors, detailed alpha attribution and general strategy walk-forward optimisation.
 - [ ] Complete equity/DCF/comparables/thesis acceptance.
 - [ ] Complete options-chain/Greeks/gamma/GEX acceptance.
 - [ ] Complete provider/file-source/freshness acceptance.

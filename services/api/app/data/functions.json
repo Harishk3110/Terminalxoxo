@@ -1,5 +1,25 @@
 [
   {
+    "mnemonic": "ALPHA",
+    "name": "Alpha Analysis",
+    "description": "Saved portfolio and strategy alpha with HAC inference and versioned factor inputs.",
+    "category": "quant",
+    "keywords": [
+      "alpha",
+      "capm",
+      "jensen",
+      "fama french",
+      "regression"
+    ],
+    "aliases": [],
+    "requiresSecurity": false,
+    "supportsMultipleSecurities": false,
+    "supportedAssetClasses": [],
+    "route": "/alpha",
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
+  },
+  {
     "mnemonic": "HOME",
     "name": "Portfolio Command Centre",
     "description": "KnK main portfolio operating centre.",
@@ -1347,10 +1367,10 @@
     "requiresSecurity": false,
     "supportsMultipleSecurities": false,
     "supportedAssetClasses": [],
-    "route": "/functions/walk",
-    "implementationStatus": "in_development",
+    "route": "/walk-forward",
+    "implementationStatus": "demo_available",
     "providerRequirements": [
-      "Implementation pending"
+      "Versioned OHLC history; model expanding-window evaluation"
     ]
   },
   {
@@ -1365,10 +1385,10 @@
     "requiresSecurity": false,
     "supportsMultipleSecurities": false,
     "supportedAssetClasses": [],
-    "route": "/functions/mc",
-    "implementationStatus": "in_development",
+    "route": "/monte-carlo",
+    "implementationStatus": "demo_available",
     "providerRequirements": [
-      "Implementation pending"
+      "At least 60 complete saved daily returns"
     ]
   },
   {
@@ -1399,10 +1419,10 @@
     "requiresSecurity": false,
     "supportsMultipleSecurities": false,
     "supportedAssetClasses": [],
-    "route": "/functions/model",
-    "implementationStatus": "in_development",
+    "route": "/model-lab",
+    "implementationStatus": "demo_available",
     "providerRequirements": [
-      "Implementation pending"
+      "At least 240 complete labelled OHLC observations"
     ]
   },
   {

@@ -865,7 +865,10 @@ class DatasetService:
         return {"upload_id": upload.id, "dataset_id": dataset.id, "version_id": version.id, "columns": columns, "preview": rows[:20], "row_count": len(rows), "quality": QUALITY_DEMO}
 
     def list(self) -> list[dict]:
-        return [to_jsonable({"id": item.id, "name": item.name, "dataset_type": item.dataset_type, "source": item.source, "quality": item.quality, "created_at": item.created_at}) for item in self.repo.list_datasets()]
+        latest = {}
+        for version in self.session.scalars(select(models.DatasetVersion).order_by(models.DatasetVersion.version.desc())).all():
+            latest.setdefault(version.dataset_id, version)
+        return [to_jsonable({"id": item.id, "name": item.name, "dataset_type": item.dataset_type, "source": item.source, "quality": item.quality, "created_at": item.created_at, "latest_version_id": latest[item.id].id if item.id in latest else None, "latest_version": latest[item.id].version if item.id in latest else None}) for item in self.repo.list_datasets()]
 
 
 def infer_tabular(data: bytes, suffix: str) -> tuple[list[dict], list[dict]]:

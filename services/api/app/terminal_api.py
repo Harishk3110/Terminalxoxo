@@ -147,8 +147,11 @@ def dcf(key: str, growth: float = .08, wacc: float = .10, terminal_growth: float
 
 
 @router.get("/factors")
-def factors(lookback: int = 63, session: Session = Depends(get_session)):
-    return factor_analysis(session, lookback)
+def factors(lookback: int = 63, factor: str = "MOMENTUM", horizon: int = 5, cost_bps: float = 10, session: Session = Depends(get_session)):
+    try:
+        return factor_analysis(session, lookback, factor, horizon, cost_bps)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def run_payload(run):
@@ -170,12 +173,21 @@ def launch_worker(run_id):
 
 
 @router.post("/terminal/runs", status_code=202)
-def start_run(payload: RunRequest, session: Session = Depends(get_session)):
-    if payload.kind not in ("stress", "backtest"):
+def start_run(payload: RunRequest, request: Request, session: Session = Depends(get_session)):
+    from .portfolio_api import identity
+    from .portfolio_operations import audit
+    actor = identity(request, session)
+    if payload.kind not in ("stress", "backtest", "model", "monte_carlo"):
         raise HTTPException(422, "Unknown analytical template")
     if len(session.scalars(select(models.AnalysisRun.id).where(models.AnalysisRun.status.in_(["QUEUED", "RUNNING"]))).all()) >= 4:
         raise HTTPException(429, "Four analytical jobs are already active")
     params = dict(payload.parameters)
+    if payload.kind == "monte_carlo":
+        from .monte_carlo import pin_monte_carlo
+        try:
+            params = pin_monte_carlo(session, params)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     if payload.kind == "stress":
         from .portfolio_valuation import PortfolioValuationService
         try:
@@ -189,9 +201,28 @@ def start_run(payload: RunRequest, session: Session = Depends(get_session)):
         params["dataset_version_id"] = version.id
         params["mapping"] = (version.schema_json or {}).get("mapping", {"date": "date", "close": "close"})
         params["suffix"] = (version.schema_json or {}).get("suffix", "csv")
+    if payload.kind in ("backtest", "model"):
+        from .model_lab import ModelSettings
+        from .research_inputs import ResearchInput, pin_input
+        try:
+            if payload.kind == "model":
+                params["settings"] = ModelSettings(**params.get("settings", {})).model_dump()
+                source = ResearchInput(**{key: params[key] for key in ResearchInput.model_fields if params.get(key)})
+                evidence = pin_input(session, source)
+                params.update({"symbol": source.symbol, "dataset_id": evidence["dataset_id"], "dataset_version_id": evidence["dataset_version_id"], "input_hash": evidence["content_hash"]})
+            else:
+                from .backtest_engine import BacktestSettings
+                from .backtest_inputs import pin_backtest_inputs
+                BacktestSettings(**{key: params[key] for key in BacktestSettings.model_fields if key in params})
+                params = pin_backtest_inputs(session, params)
+        except ValueError as exc:
+            session.rollback()
+            raise HTTPException(422, str(exc)) from exc
     now = datetime.now(timezone.utc).isoformat()
-    run = models.AnalysisRun(kind=payload.kind, name=payload.name, parameters=params, status="QUEUED", history=[{"state": "QUEUED", "at": now, "message": "Immutable inputs stored"}])
+    run = models.AnalysisRun(kind=payload.kind, name=payload.name, parameters=params, status="QUEUED", history=[{"state": "QUEUED", "at": now, "actor": actor, "message": "Immutable inputs stored"}])
     session.add(run)
+    session.flush()
+    audit(session, "ANALYSIS_RUN_QUEUED", "analysis_run", run.id, {"kind": run.kind, "dataset_version_id": params.get("dataset_version_id"), "input_hash": params.get("input_hash")}, actor)
     session.commit()
     try:
         launch_worker(run.id)
@@ -218,14 +249,35 @@ def run_detail(run_id: str, session: Session = Depends(get_session)):
 
 
 @router.post("/terminal/runs/{run_id}/cancel")
-def cancel_run(run_id: str, session: Session = Depends(get_session)):
+def cancel_run(run_id: str, request: Request, session: Session = Depends(get_session)):
+    from .portfolio_api import identity
+    from .portfolio_operations import audit
+    actor = identity(request, session)
     run = session.get(models.AnalysisRun, run_id)
     if not run or run.status not in ("QUEUED", "RUNNING"):
         raise HTTPException(409, "Run is not active")
     run.status = "CANCELLED"
     run.history = [*run.history, {"state": "CANCELLED", "at": datetime.now(timezone.utc).isoformat(), "message": "Cancellation requested; worker result will be discarded"}]
+    audit(session, "ANALYSIS_RUN_CANCELLED", "analysis_run", run.id, {"kind": run.kind}, actor)
     session.commit()
     return run_payload(run)
+
+
+@router.get("/terminal/runs/{run_id}/model-artifact")
+def model_artifact(run_id: str, session: Session = Depends(get_session)):
+    run = session.get(models.AnalysisRun, run_id)
+    if not run or run.kind != "model" or run.status != "SUCCEEDED":
+        raise HTTPException(404, "Completed model not found")
+    artifact = (run.result or {}).get("artifact")
+    if not artifact:
+        raise HTTPException(404, "Model artifact is unavailable")
+    try:
+        content = ObjectStorage().get_bytes(artifact["object_key"])
+    except OSError as exc:
+        raise HTTPException(404, "Model artifact is unavailable") from exc
+    if hashlib.sha256(content).hexdigest() != artifact["content_hash"]:
+        raise HTTPException(409, "Model artifact failed integrity verification")
+    return Response(content, media_type="application/octet-stream", headers={"Content-Disposition": f'attachment; filename="model-{run.id}.joblib"', "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/terminal/runs/{run_id}/export")

@@ -1,6 +1,7 @@
 "use client";
 import { PerformanceWorkspace } from "./performance-page";
 import { HedgeWorkspace } from "./hedge-page";
+import { MonteCarloWorkspace } from "./monte-carlo-page";
 import dynamic from "next/dynamic";
 import { SourcePreferencesPage } from "./source-preferences";
 import { BrokerMonitorPage } from "./broker-monitor";
@@ -36,6 +37,12 @@ const ResearchPage = dynamic(() =>
 );
 const PinePage = dynamic(() => import("./lab-pages").then((m) => m.PinePage));
 const ExcelPage = dynamic(() => import("./lab-pages").then((m) => m.ExcelPage));
+const AlphaWorkspace = dynamic(() =>
+  import("./alpha-page").then((m) => m.AlphaWorkspace),
+);
+const ModelWorkspace = dynamic(() =>
+  import("./model-page").then((m) => m.ModelWorkspace),
+);
 
 export function PageRouter({ route }: { route: string }) {
   if (route === "/broker-monitor") return <BrokerMonitorPage />;
@@ -48,6 +55,10 @@ export function PageRouter({ route }: { route: string }) {
   if (route === "/edge-lab") return <OperatingDeskPage desk="edge" />;
   if (["/portfolio", "/positions"].includes(route)) return <PortfolioPage />;
   if (route === "/performance") return <PerformanceWorkspace />;
+  if (route === "/alpha") return <AlphaWorkspace />;
+  if (route === "/monte-carlo") return <MonteCarloWorkspace />;
+  if (["/model-lab", "/walk-forward"].includes(route))
+    return <ModelWorkspace />;
   if (route === "/risk") return <RiskPage />;
   if (route === "/stress-tests") return <StressPage />;
   if (route === "/macro") return <MacroPage />;

@@ -226,15 +226,19 @@ def valuation(session: Session, key: str, growth=.08, wacc=.10, terminal_growth=
     return {**data, "forecast": forecast, "enterprise_value": enterprise, "equity_value": equity, "fair_value": equity / latest["shares"], "growth": growth, "wacc": wacc, "terminal_growth": terminal_growth}
 
 
-def factor_analysis(session: Session, lookback=63):
+def factor_analysis(session: Session, lookback=63, factor="MOMENTUM", horizon=5, cost_bps=10):
     universe = [q for q in quotes(session) if q["asset_class"] in ("Equity", "ETF")]
-    frame = price_frame(session, [q["id"] for q in universe], 730)
+    if not 5 <= lookback <= 500 or not 1 <= horizon <= 63 or not math.isfinite(cost_bps) or not 0 <= cost_bps <= 500:
+        raise ValueError("Invalid factor lookback, horizon or cost assumption")
+    frame = pd.DataFrame({q["id"]: pd.Series({pd.Timestamp(row["date"]): row["close"] for row in history(session, q["id"], 800)["items"] if not row.get("as_of") or pd.Timestamp(row["as_of"]).date() == pd.Timestamp(row["date"]).date()}, dtype=float) for q in universe}).sort_index()
     if lookback < 5 or len(frame) <= lookback + 1:
         return {"items": [], "lookback": lookback, "source": "SOURCE-AWARE HISTORY", "as_of": None, "quality": "INSUFFICIENT DATA", "diagnostics": {"state": "INSUFFICIENT DATA", "warnings": ["Requested factor lookback exceeds available history"]}, "warnings": ["Requested factor lookback exceeds available history"]}
-    signal = frame.iloc[-1] / frame.iloc[-lookback - 1] - 1
-    zscore = (signal - signal.mean()) / signal.std() if signal.std() else signal * 0
-    ranked = sorted(universe, key=lambda q: signal[q["id"]], reverse=True)
-    rows = [{"symbol": q["symbol"], "sector": q["sector"], "factor": float(signal[q["id"]]), "zscore": float(zscore[q["id"]]), "rank": i + 1, "quantile": min(5, i * 5 // len(ranked) + 1), "volatility": float(frame[q["id"]].pct_change().std()) * math.sqrt(252), "source": q["source"], "quality": q["quality"], "as_of": q["as_of"]} for i, q in enumerate(ranked)]
-    from .factor_statistics import factor_statistics
-    diagnostics = factor_statistics(frame, lookback)
-    return {"items": rows, "lookback": lookback, "source": " / ".join(sorted({q["source"] for q in universe})), "as_of": frame.index[-1].isoformat(), "quality": "DEMO DATA" if all(q["market_state"] == "DEMO" for q in universe) else "MIXED SOURCES", "diagnostics": diagnostics, "warnings": diagnostics["warnings"] + ["Source-aware trailing momentum. Latest signals have no observable forward return; historical IC is reported separately."]}
+    from .factor_statistics import factor_signals, factor_statistics
+    benchmark = next((q["id"] for q in universe if q["symbol"] == "SPY"), None)
+    signal = factor_signals(frame, lookback, factor, benchmark).iloc[-1].replace([np.inf, -np.inf], np.nan).dropna()
+    winsorised = signal.clip(signal.quantile(.025), signal.quantile(.975))
+    zscore = (winsorised-winsorised.mean())/winsorised.std() if winsorised.std() else winsorised*0
+    ranked = sorted([q for q in universe if q["id"] in signal], key=lambda q: signal[q["id"]], reverse=True)
+    rows = [{"symbol": q["symbol"], "sector": q["sector"], "country": q["country"], "factor": safe_number(signal[q["id"]]), "winsorised": safe_number(winsorised[q["id"]]), "zscore": safe_number(zscore[q["id"]]), "rank": i+1, "quantile": 5-min(4, i*5//len(ranked)), "volatility": safe_number(frame[q["id"]].pct_change(fill_method=None).std()*math.sqrt(252)), "source": q["source"], "quality": q["quality"], "as_of": q["as_of"]} for i,q in enumerate(ranked)]
+    diagnostics = factor_statistics(frame, lookback, horizon, factor, benchmark, cost_bps)
+    return {"items": rows, "lookback": lookback, "factor": factor, "source": " / ".join(sorted({q["source"] for q in universe})), "as_of": frame.index[-1].isoformat(), "quality": "DEMO DATA" if all(q["market_state"] == "DEMO" for q in universe) else "MIXED SOURCES", "diagnostics": diagnostics, "warnings": diagnostics["warnings"] + ["Source-aware native-currency technical factors. Latest signals have no observable forward return; historical IC is reported separately. No missing-price fill. Z-scores winsorise the latest cross-section at 2.5/97.5 percentiles."]}

@@ -53,5 +53,15 @@ The local 8000 process has not been restarted with these code changes; isolated
 test servers are not evidence that the user's 3001 terminal is running.
 
 Whole-backend lint/type failures from the earlier baseline remain disclosed.
+Quant checkpoint: 665 sprint tests, 97 full API tests and 231 frontend tests passed.
+Subsequent focused runs passed 28 factor/input/cap tests and nine alpha/review tests.
+Node 22 production builds passed; new quant modules passed Ruff and the broker-
+action scan passed. The first browser run found a virtualised-row test assumption
+and screenshot review exposed flex-shrunk panels. Scoped scrolling/dimensions fixed
+the overlaps. Both final browser workflows passed: saved alpha/model/artifact/MC/
+factor checks and multi-security SGD backtests with pinned FX, costs and fills.
+1440px/390px screenshots were inspected. Corporate-action backtests, point-in-time
+fundamental factors, full attribution and general strategy walk-forward optimisation
+remain explicitly incomplete. No live user-facing 3001 deployment is claimed.
 Docker Linux daemon was unavailable; Vercel CLI was logged out; no cloud URL is
 verified. Existing local data and historical runs are retained.
