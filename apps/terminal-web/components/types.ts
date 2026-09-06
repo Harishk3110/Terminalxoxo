@@ -105,6 +105,8 @@ export interface RunResult extends Row {
   quality: string;
   warnings: string[];
   calculation_version: string;
+  state?: string;
+  factor_contributions?: Row[];
   pre_nav?: number;
   loss?: number;
   impact?: number;

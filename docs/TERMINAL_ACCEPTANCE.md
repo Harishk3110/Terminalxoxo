@@ -36,3 +36,17 @@ The original user acceptance spans manual BUY -> cash/positions/NAV/performance/
 risk/audit updates, persisted backtests and research, gamma/GEX, imported Koyfin
 price fallback, restart persistence and final tests. These must be verified against
 the actual engines; navigation or a screenshot alone does not certify them.
+
+## Risk Checkpoint
+
+- 625 sprint tests, 95 API tests and 231 frontend tests passed.
+- Twenty subsequent risk/hedge/operations tests and eight broker/limit tests passed.
+- Covariance/component reconciliation, seeded Monte Carlo, missing-data states,
+  risk-limit persistence, amended fills, voids, ETF FX sizing and saved hedge inputs tested.
+- Node 22 production build passed; forbidden broker-action source scan passed.
+- Browser limit changes, model settings, hedge calculation, durable review and refresh passed.
+- Screenshot review caught short mobile hedge panels; scoped height/persistence
+  fixes passed the final browser rerun with geometry assertions at 1440px/390px.
+- Both final browser checks passed: risk/model/hedge review and persisted stress/export.
+- Statistical risk excludes cash-FX/liability/nonlinear option risk. VIX-to-option
+  mapping, measured duration and futures/FX VaR remain unavailable, not simulated as live.

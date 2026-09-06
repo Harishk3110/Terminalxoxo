@@ -9,7 +9,7 @@ from typing import Any, Literal
 from .money import ZERO, money
 
 ExposureKind = Literal["POSITION", "CASH", "BALANCE"]
-DIMENSIONS = ("sector", "country", "currency", "asset_class")
+DIMENSIONS = ("sector", "country", "currency", "asset_class", "industry")
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,7 @@ class ExposureItem:
     stale: bool = False
     price_available: bool = True
     fx_available: bool = True
+    industry: str | None = None
 
     def __post_init__(self) -> None:
         if not self.identifier or self.kind not in {"POSITION", "CASH", "BALANCE"}:
@@ -36,7 +37,7 @@ class ExposureItem:
     def group(self, dimension: str) -> str | None:
         if dimension not in DIMENSIONS:
             raise ValueError("Unsupported exposure dimension")
-        if self.kind != "POSITION" and dimension in {"sector", "country"}:
+        if self.kind != "POSITION" and dimension in {"sector", "country", "industry"}:
             return None
         label = getattr(self, dimension)
         return str(label).strip() if label and str(label).strip() else "Unclassified"

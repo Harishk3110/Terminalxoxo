@@ -1,4 +1,18 @@
 /* Portfolio operating desks retain the compact terminal grid. */
+.risk-policy-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 0 0 290px;
+  min-height: 290px;
+}
+@media (max-width: 900px) {
+  .risk-policy-grid {
+    grid-template-columns: 1fr;
+    flex-basis: auto;
+  }
+  .risk-policy-grid > .terminal-panel {
+    min-height: 270px;
+  }
+}
 .performance-controls {
   display: flex;
   flex-shrink: 0;
@@ -285,5 +299,27 @@
   }
   .desk-strip button {
     padding: 0 11px;
+  }
+}
+.hedge-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-rows: minmax(410px, auto) minmax(440px, auto);
+  flex: none;
+}
+.hedge-grid .panel-content {
+  overflow: auto;
+}
+.hedge-grid .panel-content > * {
+  flex-shrink: 0;
+}
+.hedge-grid .data-table {
+  flex: 0 0 230px;
+  min-height: 230px;
+}
+@media (max-width: 900px) {
+  .hedge-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: minmax(460px, auto);
   }
 }

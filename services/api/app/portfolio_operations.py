@@ -14,7 +14,7 @@ from .portfolio_domain.types import AccountingPolicy
 from .portfolio_domain.money import money, stored_decimal
 from .portfolio_engine import LedgerState, TRANSACTION_TYPES, decimal
 from .portfolio_valuation import PortfolioValuationService, jsonable, load_entries
-from .price_sources import FxRateResolver, close_of_day
+from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .transaction_context import record_context
 from .portfolio_domain.transaction_cash import enrich_cash_effects
 from .transaction_views import transaction_views
@@ -181,10 +181,21 @@ class TradeMonitorService:
         risks = {r.trade_id: r for r in self.session.scalars(select(models.TradeRiskSnapshot).join(models.TradeEvent, models.TradeEvent.id == models.TradeRiskSnapshot.trade_id).where(models.TradeEvent.portfolio_id == portfolio.id)).all()}
         rows = self.session.scalars(select(models.TradeEvent).where(models.TradeEvent.portfolio_id == portfolio.id).order_by(models.TradeEvent.created_at.desc()).limit(500)).all()
         result = []
+        instruments = {r.symbol: r for r in self.session.scalars(select(models.Instrument)).all()}
+        marks = MarketPriceResolver(self.session, [r.id for r in instruments.values()])
+        now = datetime.now(timezone.utc)
         for row in rows:
             risk = risks.get(row.id)
             txn = txns.get(row.transaction_id, {})
-            result.append({**txn, "id": row.id, "transaction_id": row.transaction_id, "detected_at": row.created_at.isoformat(), "review_state": row.review_state, "pre_beta": risk.before.get("beta") if risk else None, "post_beta": risk.after.get("beta") if risk else None, "breaches": risk.breaches if risk else [], **row.payload})
+            symbol = txn.get("symbol") or row.payload.get("symbol")
+            mark = marks.resolve(instruments[symbol].id, now) if symbol in instruments else None
+            sector = instruments[symbol].sector if symbol in instruments else None
+            def exposure(snapshot, key, value):
+                if not snapshot or snapshot.get("nav") is None:
+                    return None
+                items = snapshot.get("positions", []) if key == "symbol" else snapshot.get("exposures", {}).get("sector", [])
+                return next((r.get("weight") for r in items if r.get(key if key == "symbol" else "name") == value), 0)
+            result.append({**txn, "id": row.id, "transaction_id": row.transaction_id, "detected_at": row.created_at.isoformat(), "review_state": row.review_state, "pre_beta": risk.before.get("beta") if risk else None, "post_beta": risk.after.get("beta") if risk else None, "weight_before": exposure(risk.before, "symbol", symbol) if risk else None, "weight_after": exposure(risk.after, "symbol", symbol) if risk else None, "sector_weight_before": exposure(risk.before, "sector", sector) if risk and sector else None, "sector_weight_after": exposure(risk.after, "sector", sector) if risk and sector else None, "risk_as_of": risk.after.get("as_of") if risk else None, "current_price": str(mark.value) if mark else None, "current_price_provenance": marks.describe(instruments[symbol].id, now) if symbol in instruments else None, "breaches": risk.breaches if risk else [], **row.payload})
         return result
 
     def review(self, trade_id, state, note, actor=None):
@@ -231,7 +242,8 @@ class PortfolioReconciliationService:
             compare("QUANTITY_MISMATCH", symbol, left.get("quantity", "0"), right.get("quantity", "0"), Decimal(".00000001"))
             compare("COST_BASIS_MISMATCH", symbol, left.get("average_cost"), right.get("average_cost"))
         details = self.session.execute(select(models.TransactionDetail, models.PortfolioTransaction).join(models.PortfolioTransaction, models.PortfolioTransaction.id == models.TransactionDetail.transaction_id).where(models.PortfolioTransaction.portfolio_id == portfolio_id)).all()
-        linked = {d.metadata_json.get("execution_id"): (d, t) for d, t in details if d.metadata_json.get("execution_id")}
+        effective = {t["id"]: t for t in data["transactions"] if t.get("ledger_state") != "VOID"}
+        linked = {d.metadata_json.get("execution_id"): effective[t.id] for d, t in details if d.metadata_json.get("execution_id") and t.id in effective}
         snapshots = self.session.scalars(select(models.BrokerAccountSnapshot).where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id).order_by(models.BrokerAccountSnapshot.as_of)).all()
         fills = {f["execution_id"]: f for s in snapshots if s.payload.get("account_fingerprint") == broker.payload.get("account_fingerprint") for f in s.payload.get("fills", [])}
         for fill in fills.values():
@@ -239,10 +251,9 @@ class PortfolioReconciliationService:
             if pair is None:
                 observations.append({"type": "UNMATCHED_BROKER_FILL", "key": fill["execution_id"], "internal": None, "external": fill, "difference": None, "severity": "WARN", "snapshot_id": broker.id})
             else:
-                detail, transaction = pair
-                compare("FILL_QUANTITY_MISMATCH", fill["execution_id"], transaction.quantity, fill["quantity"], Decimal(".00000001"))
-                compare("FILL_PRICE_MISMATCH", fill["execution_id"], transaction.price, fill["price"], Decimal(".00000001"))
-                compare("COMMISSION_MISMATCH", fill["execution_id"], detail.commission, fill.get("commission"))
+                compare("FILL_QUANTITY_MISMATCH", fill["execution_id"], pair.get("quantity"), fill["quantity"], Decimal(".00000001"))
+                compare("FILL_PRICE_MISMATCH", fill["execution_id"], pair.get("price"), fill["price"], Decimal(".00000001"))
+                compare("COMMISSION_MISMATCH", fill["execution_id"], pair.get("commission"), fill.get("commission"))
         existing = self.session.scalars(select(models.PortfolioReconciliationBreak).where(models.PortfolioReconciliationBreak.portfolio_id == portfolio_id, models.PortfolioReconciliationBreak.state == "OPEN")).all()
         current_keys = {(o["type"], o["key"]) for o in observations}
         for row in existing:

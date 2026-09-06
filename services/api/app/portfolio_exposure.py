@@ -25,6 +25,7 @@ def exposure_service(
                 asset_class=row.get("asset_class") or "Unclassified",
                 sector=row.get("sector"),
                 country=row.get("country"),
+                industry=row.get("industry"),
                 stale=bool(
                     row["price_provenance"].get("stale") or row["fx_provenance"].get("stale")
                 ),

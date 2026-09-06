@@ -50,7 +50,7 @@ def test_currency_overdraft_is_preserved_in_gross_assets_and_liabilities_after_s
         assert D(data["balance_sheet"]["difference"]) == 0
         assert data["balance_sheet"]["reconciliation_state"] == "BALANCED"
         assert data["balance_sheet"]["state"] == data["state"] == "AVAILABLE"
-        assert data["calculation_version"] == "knk-nav-4.7"
+        assert data["calculation_version"] == "knk-nav-4.8"
     assert D(before["balance_sheet"]["items"]["payables"]) == D(260)
     assert D(before["balance_sheet"]["items"]["cash_overdrafts"]) == 0
     assert D(after["balance_sheet"]["items"]["payables"]) == 0

@@ -87,8 +87,23 @@ def test_manual_trade_review_and_duplicate(accounting_session):
     trades = TradeMonitorService(accounting_session).list()
     trade = next(r for r in trades if r["id"] == result["trade_event_id"])
     assert trade["review_state"] == "REQUIRES_REVIEW"
+    assert float(trade["weight_after"]) > float(trade["weight_before"])
+    assert float(trade["sector_weight_after"]) > float(trade["sector_weight_before"])
+    assert trade["risk_as_of"]
     TradeMonitorService(accounting_session).review(trade["id"], "REVIEWED", "Reviewed recorded fill and cash.")
     assert accounting_session.get(models.TradeEvent, trade["id"]).review_state == "REVIEWED"
+
+
+def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(accounting_session):
+    from app.hedge_engine import HedgeRequest, HedgeService
+    result = HedgeService(accounting_session).create("KNK_MAIN", HedgeRequest(target=.2, fee_bps=2), None)
+    assert result["var_state"] == "AVAILABLE"
+    assert result["var_after"] is not None
+    assert result["hedge_beta"] == pytest.approx(1)
+    assert result["hedge_inputs"]["price_provenance"]["source"]
+    assert result["beta_after"] == pytest.approx(.2, abs=.02)
+    run = accounting_session.get(models.AnalysisRun, result["id"])
+    assert run.parameters["_portfolio"]["valuation_run_id"] == result["valuation_run_id"]
 
 
 def test_transaction_import_is_atomic(drop, accounting_session):

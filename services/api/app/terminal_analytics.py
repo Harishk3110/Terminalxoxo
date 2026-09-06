@@ -171,38 +171,13 @@ SCENARIOS = [
 
 
 def scenario_library():
-    return [{"id": str(i), "name": name, "category": category, "equity_shock": equity * 100, "fx_shock": fx * 100, "rates_bp": rate, "scope": scope} for i, (name, category, equity, fx, rate, scope) in enumerate(SCENARIOS)]
+    return [{"id": str(i), "name": name, "category": category, "equity_shock": 0 if name == "Correlation convergence" else equity * 100, "fx_shock": fx * 100, "rates_bp": rate, "scope": scope, "model": "CORRELATION" if name == "Correlation convergence" else "VOLATILITY" if scope == "Volatility" else "LINEAR"} for i, (name, category, equity, fx, rate, scope) in enumerate(SCENARIOS)]
 
 
 def stress_result(session: Session, parameters: dict):
+    from .stress_engine import calculate_stress
     data = parameters.get("_portfolio") or portfolio_analytics(session)
-    if data.get("account_source") == "BROKER":
-        raise ValueError("Broker snapshot risk is unavailable; reconcile and explicitly use the internal-ledger analytical view")
-    if data["portfolio"]["nav"] is None or any(p["beta"] is None for p in data["positions"]):
-        raise ValueError("Stress calculation requires a complete NAV and sufficient position beta history")
-    equity = float(parameters.get("equity_shock", -10)) / 100
-    fx = float(parameters.get("fx_shock", 0)) / 100
-    rates = float(parameters.get("rates_bp", 0)) / 10000
-    scope = parameters.get("scope", "All")
-    if not all(math.isfinite(v) for v in (equity, fx, rates)) or not -.95 <= equity <= 2 or not -.95 <= fx <= 2 or abs(rates) > .1:
-        raise ValueError("Shock assumptions exceed permitted bounds")
-    rows = []
-    for p in data["positions"]:
-        applies = scope == "All" or scope.lower() in p["sector"].lower()
-        shock = equity * p["beta"] if applies else 0
-        rate_shock = -16 * rates if p["symbol"] == "TLT" else 0
-        currency_shock = fx if p["currency"] == "USD" else 0
-        shock = max(-1, (1 + shock + rate_shock) * (1 + currency_shock) - 1)
-        value = float(p["market_value"])
-        rows.append({"symbol": p["symbol"], "sector": p["sector"], "country": p["country"], "currency": p["currency"], "market_value": value, "beta": p["beta"], "shock": shock, "pnl": round(value * shock, 2), "post_value": round(value * (1 + shock), 2), "fx_impact": round(value * currency_shock, 2)})
-    for cash in data.get("cash", []):
-        if cash["currency"] == "USD" and cash.get("base_value") is not None:
-            value = float(cash["base_value"])
-            rows.append({"symbol": "USD CASH", "sector": "Cash", "country": "Currency", "currency": "USD", "market_value": value, "beta": 0, "shock": fx, "pnl": round(value * fx, 2), "post_value": round(value * (1 + fx), 2), "fx_impact": round(value * fx, 2)})
-    loss = round(sum(p["pnl"] for p in rows), 2)
-    nav = float(data["portfolio"]["nav"])
-    worst = min(rows, key=lambda p: p["pnl"], default={})
-    return {"pre_nav": nav, "loss": loss, "impact": loss / nav if nav else 0, "post_nav": nav + loss, "worst_position": worst.get("symbol"), "currency_impact": sum(r["fx_impact"] for r in rows), "contributions": rows, "parameters": {k: v for k, v in parameters.items() if not k.startswith("_")}, "source": data["source"], "as_of": data["as_of"], "quality": data["quality"], "calculation_version": VERSION, "warnings": ["Scenario estimate, not a forecast. Linear historical beta; constant holdings; no liquidity, tax or second-order effects.", "Rates use assumed duration 16 for TLT only. Direct volatility sensitivity is unavailable; VIX scenarios report zero direct impact."]}
+    return calculate_stress(data, parameters)
 
 
 def fundamentals(session: Session, key: str):

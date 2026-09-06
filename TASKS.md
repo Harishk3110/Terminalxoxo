@@ -11,7 +11,8 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Remove ignored retired-app directory on disk (execution-policy restriction).
 - [x] Complete SGD 100,000 audited demo correction and verify data preservation.
 - [ ] Complete portfolio/NAV/position/performance acceptance workflows.
-- [ ] Complete risk/trade/reconciliation/stress/hedge acceptance.
+- [x] Verify current-weight risk, audited limits, trade/reconciliation, linear/correlation stress and saved manual hedge workflows.
+- [ ] Extend risk with measured duration, option repricing and futures/FX covariance where supported input data exist.
 - [ ] Complete quant/factor/alpha/model/walk-forward acceptance.
 - [ ] Complete equity/DCF/comparables/thesis acceptance.
 - [ ] Complete options-chain/Greeks/gamma/GEX acceptance.

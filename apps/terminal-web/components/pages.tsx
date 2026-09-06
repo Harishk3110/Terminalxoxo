@@ -1,5 +1,6 @@
 "use client";
 import { PerformanceWorkspace } from "./performance-page";
+import { HedgeWorkspace } from "./hedge-page";
 import dynamic from "next/dynamic";
 import { SourcePreferencesPage } from "./source-preferences";
 import { BrokerMonitorPage } from "./broker-monitor";
@@ -9,13 +10,7 @@ import {
   DataDropOperationsPage,
   OperatingDeskPage,
 } from "./operating-pages";
-import {
-  PortfolioPage,
-  RiskPage,
-  StressPage,
-  MacroPage,
-  HedgePage,
-} from "./core-pages";
+import { PortfolioPage, RiskPage, StressPage, MacroPage } from "./core-pages";
 import {
   AuthPage,
   AlertsPage,
@@ -56,7 +51,7 @@ export function PageRouter({ route }: { route: string }) {
   if (route === "/risk") return <RiskPage />;
   if (route === "/stress-tests") return <StressPage />;
   if (route === "/macro") return <MacroPage />;
-  if (route === "/hedge") return <HedgePage />;
+  if (route === "/hedge") return <HedgeWorkspace />;
   if (route.startsWith("/backtests")) return <BacktestPage />;
   if (route === "/factor-lab") return <FactorPage />;
   if (["/quant", "/strategies"].includes(route)) return <QuantPage />;

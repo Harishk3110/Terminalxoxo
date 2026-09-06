@@ -36,6 +36,7 @@ import { AccountingDialog } from "./ledger/accounting-dialog";
 import { PortfolioDirectory } from "./ledger/portfolio-directory";
 import { TransactionCorrectionDialog } from "./ledger/transaction-correction";
 import { TransactionEntryDialog } from "./ledger/transaction-entry";
+import { RiskPolicyPanels } from "./risk-policy-panels";
 
 type OperatingData = PortfolioData & {
   portfolio: PortfolioData["portfolio"] & Row;
@@ -489,8 +490,33 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
             rows={query.data?.items ?? []}
             columns={[
               ...tradeColumns,
+              { key: "current_price", label: "Current mark", numeric: true },
               { key: "commission", label: "Commission", numeric: true },
               { key: "pre_beta", label: "Pre beta", numeric: true },
+              {
+                key: "weight_before",
+                label: "Weight before",
+                numeric: true,
+                percent: true,
+              },
+              {
+                key: "weight_after",
+                label: "Weight after",
+                numeric: true,
+                percent: true,
+              },
+              {
+                key: "sector_weight_before",
+                label: "Sector before",
+                numeric: true,
+                percent: true,
+              },
+              {
+                key: "sector_weight_after",
+                label: "Sector after",
+                numeric: true,
+                percent: true,
+              },
               { key: "post_beta", label: "Post beta", numeric: true },
             ]}
             onSelect={setSelected}
@@ -606,6 +632,7 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
             title="Position risk contributions"
             source={data?.source}
             quality={data?.quality}
+            asOf={data?.as_of}
           >
             <DataTable
               id="risk-monitor-positions"
@@ -660,6 +687,7 @@ export function TradeMonitorPage({ risk = false }: { risk?: boolean }) {
           </Panel>
         </div>
       )}
+      {risk && <RiskPolicyPanels />}
       {form && <TransactionEntryDialog onClose={() => setForm(false)} />}
     </>
   );

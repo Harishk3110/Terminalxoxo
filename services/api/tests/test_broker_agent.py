@@ -61,6 +61,15 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(accountin
     assert added["trade_event_id"]
     assert approve_fill(approval, request, session)["duplicate"]
     assert not any(r["type"] == "UNMATCHED_BROKER_FILL" for r in PortfolioReconciliationService(session).reconcile()["items"])
+    from app.ledger_contracts import AmendmentRequest, RevisionRequest
+    from app.ledger_revisions import PortfolioTransactionService
+    corrections = PortfolioTransactionService(session)
+    corrections.revise(main.portfolio_id, added["id"], AmendmentRequest(expected_version=1, reason="Correct the recorded commission", changes={"commission": "2"}), actor=user.id)
+    session.commit()
+    assert any(r["type"] == "COMMISSION_MISMATCH" and r["internal"] == "2" for r in PortfolioReconciliationService(session).reconcile()["items"])
+    corrections.revise(main.portfolio_id, added["id"], RevisionRequest(expected_version=2, reason="Void duplicate internal allocation"), actor=user.id)
+    session.commit()
+    assert any(r["type"] == "UNMATCHED_BROKER_FILL" for r in PortfolioReconciliationService(session).reconcile()["items"])
     agent.revoked_at = now
     session.commit()
     assert not current_snapshot(session, main.portfolio_id)[1]

@@ -27,7 +27,7 @@ from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, 
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.7"
+VERSION = "knk-nav-4.8"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -295,7 +295,7 @@ class PortfolioValuationService:
                 position_rows.append({
                     "id": instrument_id, "instrument_id": instrument_id, "symbol": item.symbol, "name": item.name,
                     **measurement.payload(),
-                    "currency": item.currency, "sector": item.sector or "Unclassified", "country": item.country,
+                    "currency": item.currency, "sector": item.sector or "Unclassified", "country": item.country, "industry": item.industry or "Unclassified",
                     "asset_class": item.asset_class, "contract_multiplier": lot.multiplier,
                     "source": provenance["source"], "quality": provenance["data_state"], "as_of": provenance["as_of"],
                     "price_provenance": provenance, "fx_provenance": fx_provenance, "fx_rate": rate,
@@ -377,7 +377,10 @@ class PortfolioValuationService:
 
         performance, performance_warnings = metric_summary(curve, state.flow_events, end, float(profile.configuration.get("risk_free_rate", 0)))
         warnings.extend(performance_warnings)
-        risk, correlations = self.risk(histories, last_positions, benchmark.id if benchmark else None, nav, performance)
+        risk, correlations = self.risk(histories, last_positions, benchmark.id if benchmark else None, nav, performance, profile.configuration.get("risk_settings"))
+        risk_model = correlations.pop("model")
+        if risk_model["state"] != "AVAILABLE":
+            warnings.append("Risk: " + risk_model["reason"])
         position_weights = position_exposures([
             ExposurePosition(row["instrument_id"], row["sector"], position_values.get(row["instrument_id"]),
                              Decimal(str(row["beta"])) if row["beta"] is not None else None)
@@ -392,8 +395,13 @@ class PortfolioValuationService:
             "top_five_concentration": sum(sorted((abs(float(p["weight"])) for p in last_positions), reverse=True)[:5]),
             "max_sector_weight": number(max((abs(r["weight"]) for r in exposure["sector"]), default=ZERO)) if nav and all(r["weight"] is not None for r in exposure["sector"]) else None,
             "max_currency_weight": number(max((abs(r["weight"]) for r in exposure["currency"]), default=ZERO)) if nav and all(r["weight"] is not None for r in exposure["currency"]) else None,
+            "max_country_weight": number(max((abs(r["weight"]) for r in exposure["country"]), default=ZERO)) if nav and all(r["weight"] is not None for r in exposure["country"]) else None,
+            "max_industry_weight": number(max((abs(r["weight"]) for r in exposure["industry"]), default=ZERO)) if nav and all(r["weight"] is not None for r in exposure["industry"]) else None,
+            "stale_exposure": number(marked_exposure.freshness()["stale_nav_pct"]),
             "cash_weight": float(total_cash / nav) if nav else None,
         })
+        for metric, source in (("var_loss_95", "var_95"), ("cvar_loss_95", "cvar_95"), ("drawdown_loss", "current_drawdown")):
+            risk[metric] = abs(risk[source]) if risk.get(source) is not None else None
         if nav is None:
             risk = {key: value if key == "observations" else None for key, value in risk.items()}
             for row in last_positions:
@@ -404,6 +412,8 @@ class PortfolioValuationService:
         limits = self.session.execute(select(models.RiskLimit, models.RiskPolicy).join(models.RiskPolicy, models.RiskPolicy.id == models.RiskLimit.policy_id).where(models.RiskPolicy.portfolio_id == portfolio.id, models.RiskPolicy.enabled.is_(True))).all()
         breaches = []
         for limit, _ in limits:
+            if limit.id in profile.configuration.get("disabled_risk_limit_ids", []):
+                continue
             actual = risk.get(limit.metric)
             if actual is not None and (actual > float(limit.threshold) if limit.direction == "MAX" else actual < float(limit.threshold)):
                 breaches.append({"limit_id": limit.id, "metric": limit.metric, "value": actual, "threshold": str(limit.threshold), "severity": "WARN", "state": "OPEN", "as_of": now.isoformat()})
@@ -504,7 +514,7 @@ class PortfolioValuationService:
             "accounting": {"items": [row.payload() for row in postings], "totals": posting_totals,
                            "reconciliation": {"state": "BREAK" if any(posting_differences.values()) else "BALANCED",
                                               "differences": posting_differences}},
-            "performance": performance, "risk": risk, "curve": curve, "monthly": monthly, "correlation": correlations,
+            "performance": performance, "risk": risk, "risk_model": risk_model, "curve": curve, "monthly": monthly, "correlation": correlations,
             "exposures": exposure, "attribution": attribution, "breaches": breaches,
             "exposure_balances": balance_exposure_rows,
             "exposure_methodology": "Signed marked positions, economic cash and net outstanding manual balance buckets; sector and country exclude cash and balance buckets; currency and asset class include them; settlement receivables/payables already included in economic cash",
@@ -515,31 +525,16 @@ class PortfolioValuationService:
         })
 
     @staticmethod
-    def risk(histories, positions, benchmark_id, nav, performance):
+    def risk(histories, positions, benchmark_id, nav, performance, settings=None):
+        from .risk_statistics import RiskSettings, calculate_risk
         frame = pd.DataFrame(histories).sort_index()
-        frame = frame.loc[[d.weekday() < 5 for d in frame.index]]
-        returns = frame.pct_change(fill_method=None).dropna()
-        weights = pd.Series({p["instrument_id"]: float(p["weight"]) for p in positions}, dtype=float)
-        empty = {"beta": None, "volatility": None, "var_95": None, "var_99": None, "cvar_95": None, "max_drawdown": performance.get("max_drawdown"), "current_drawdown": performance.get("current_drawdown"), "gross_exposure": float(weights.abs().sum()), "net_exposure": float(weights.sum()), "concentration": float(weights.abs().max()) if len(weights) else 0, "observations": len(returns)}
-        symbols = {p["instrument_id"]: p["symbol"] for p in positions}
-        ordered = sorted(returns.columns, key=lambda key: symbols.get(key, "SPY"))
-        corr = returns[ordered].corr()
-        correlations = {"symbols": [symbols.get(k, "SPY") for k in corr.columns], "values": [[number(value) for value in row] for row in corr.values]}
-        if len(returns) < 60 or nav is None or not len(weights):
-            return empty, correlations
-        assets = returns.reindex(columns=weights.index)
-        weighted = assets.mul(weights, axis=1).sum(axis=1)
-        q = float(weighted.quantile(.05))
-        tail = weighted[weighted <= q]
-        covariance = assets.cov() * 252
-        marginal = covariance @ weights
-        variance = float(weights @ marginal)
-        volatility = math.sqrt(max(variance, 0))
-        benchmark = returns[benchmark_id] if benchmark_id in returns else None
-        beta = float(weighted.cov(benchmark) / benchmark.var()) if benchmark is not None and benchmark.var() else None
+        ordered = sorted(positions, key=lambda row: row["symbol"])
+        weights = pd.Series({row["instrument_id"]: float(row["weight"]) for row in ordered}, dtype=float)
+        result = calculate_risk(frame, weights, float(nav) if nav is not None else None, benchmark_id,
+                                RiskSettings.model_validate(settings or {}))
         for row in positions:
-            asset = assets[row["instrument_id"]]
-            row["beta"] = float(asset.cov(benchmark) / benchmark.var()) if benchmark is not None and benchmark.var() else None
-            row["risk_contribution"] = float(weights[row["instrument_id"]] * marginal[row["instrument_id"]] / variance) if variance else None
-            row["marginal_volatility"] = float(marginal[row["instrument_id"]] / volatility) if volatility else None
-        return {**empty, "beta": beta, "volatility": volatility, "var_95": min(0, q * float(nav)), "var_99": min(0, float(weighted.quantile(.01)) * float(nav)), "cvar_95": min(0, float(tail.mean()) * float(nav)) if len(tail) else None}, correlations
+            row.update(result.positions.get(row["instrument_id"], {}))
+        risk = {**result.metrics, "max_drawdown": performance.get("max_drawdown"),
+                "current_drawdown": performance.get("current_drawdown")}
+        evidence = {**result.evidence, "symbols": [row["symbol"] for row in ordered]}
+        return risk, {"symbols": evidence["symbols"], "values": evidence["values"], "model": evidence}

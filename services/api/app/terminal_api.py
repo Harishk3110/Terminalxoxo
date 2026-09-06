@@ -177,7 +177,11 @@ def start_run(payload: RunRequest, session: Session = Depends(get_session)):
         raise HTTPException(429, "Four analytical jobs are already active")
     params = dict(payload.parameters)
     if payload.kind == "stress":
-        params["_portfolio"] = portfolio_analytics(session)
+        from .portfolio_valuation import PortfolioValuationService
+        try:
+            params["_portfolio"] = PortfolioValuationService(session).latest(params.get("portfolio", "KNK_MAIN"))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     if payload.kind == "backtest" and params.get("dataset_id"):
         version = session.get(models.DatasetVersion, params["dataset_version_id"]) if params.get("dataset_version_id") else session.scalar(select(models.DatasetVersion).where(models.DatasetVersion.dataset_id == params["dataset_id"]).order_by(models.DatasetVersion.version.desc()))
         if not version or version.dataset_id != params["dataset_id"]:

@@ -665,7 +665,9 @@ export function RiskPage() {
               },
               yAxis: {
                 type: "value",
-                axisLabel: { formatter: (value: number) => `${(value * 100).toFixed(0)}%` },
+                axisLabel: {
+                  formatter: (value: number) => `${(value * 100).toFixed(0)}%`,
+                },
                 splitLine: { lineStyle: { color: COLORS.grid } },
               },
               series: [
@@ -820,6 +822,11 @@ export function StressPage() {
   const contributions = useMemo(() => result?.contributions ?? [], [result]);
   const rows = useMemo(() => {
     if (view === "Positions" || view === "Contribution") return contributions;
+    if (view === "Factors")
+      return (result?.factor_contributions ?? []).map((row: Row) => ({
+        ...row,
+        group: row.factor,
+      }));
     if (view === "Assumptions")
       return Object.entries(current.data?.parameters ?? scenario).map(
         ([factor, value]) => ({ factor, value: String(value) }),
@@ -840,7 +847,7 @@ export function StressPage() {
       map.set(key, existing);
     }
     return [...map.values()];
-  }, [view, contributions, current.data, scenario]);
+  }, [view, contributions, current.data, scenario, result]);
   const exportRun = async () => {
     if (!runId) return;
     const r = await knkApi.get<{ download_url: string }>(
@@ -851,8 +858,9 @@ export function StressPage() {
   return (
     <>
       <PageTitle code="STRESS" title="Stress Testing">
-        <Badge>DEMO DATA</Badge>
-        <Badge>CALCULATED</Badge>
+        <Badge>INTERNAL LEDGER</Badge>
+        <Badge>{result?.quality ?? "ASSUMPTIONS"}</Badge>
+        <Badge>{result?.state ?? "NOT RUN"}</Badge>
       </PageTitle>
       <div className="stress-layout">
         <Panel
@@ -912,6 +920,44 @@ export function StressPage() {
             quality="ASSUMPTIONS"
           >
             <div className="scenario-config">
+              <Field label="Model">
+                <select
+                  aria-label="Stress model"
+                  value={String(scenario.model ?? "LINEAR")}
+                  onChange={(e) =>
+                    setScenario({
+                      ...scenario,
+                      model: e.target.value,
+                      scope: "All",
+                      equity_shock: 0,
+                      fx_shock: 0,
+                      rates_bp: 0,
+                    })
+                  }
+                >
+                  <option value="LINEAR">Linear factors</option>
+                  <option value="CORRELATION">Correlation convergence</option>
+                  <option value="VOLATILITY">VIX mapping unavailable</option>
+                </select>
+              </Field>
+              {scenario.model === "CORRELATION" && (
+                <Field label="Correlation convergence (0-1)">
+                  <input
+                    aria-label="Correlation convergence"
+                    type="number"
+                    min="0"
+                    max="1"
+                    step=".1"
+                    value={Number(scenario.correlation_convergence ?? 1)}
+                    onChange={(e) =>
+                      setScenario({
+                        ...scenario,
+                        correlation_convergence: Number(e.target.value),
+                      })
+                    }
+                  />
+                </Field>
+              )}
               {(["equity_shock", "fx_shock", "rates_bp"] as const).map(
                 (k, i) => (
                   <Field
@@ -930,6 +976,10 @@ export function StressPage() {
                         ["Equity shock", "FX shock", "Rates shock"][i]
                       }
                       type="number"
+                      disabled={
+                        scenario.model === "CORRELATION" ||
+                        scenario.model === "VOLATILITY"
+                      }
                       step={k === "rates_bp" ? 25 : 1}
                       min={k === "rates_bp" ? -1000 : -95}
                       max={k === "rates_bp" ? 1000 : 200}
@@ -948,6 +998,10 @@ export function StressPage() {
                 <select
                   aria-label="Shock scope"
                   className="assumption"
+                  disabled={
+                    scenario.model === "CORRELATION" ||
+                    scenario.model === "VOLATILITY"
+                  }
                   value={scenario.scope}
                   onChange={(e) =>
                     setScenario({ ...scenario, scope: e.target.value })
@@ -1094,6 +1148,11 @@ export function StressPage() {
                   ]}
                   onSelect={(row) => setRunId(String(row.id))}
                 />
+              ) : result?.state === "UNAVAILABLE" ? (
+                <Empty
+                  title="Scenario unavailable"
+                  detail={result.warnings[0]}
+                />
               ) : result ? (
                 <Chart
                   label="Stress position contribution chart"
@@ -1145,6 +1204,7 @@ export function StressPage() {
                   "Sectors",
                   "Countries",
                   "Currencies",
+                  "Factors",
                   "Assumptions",
                 ].map((t) => (
                   <button
@@ -1392,188 +1452,6 @@ export function MacroPage() {
             Release calendar and central-bank events require a configured event
             source.
           </p>
-        </Panel>
-      </div>
-    </>
-  );
-}
-
-export function HedgePage() {
-  const query = usePortfolio();
-  const { bootstrap } = useTerminal();
-  const data = query.data;
-  const [target, setTarget] = useTabState("hedge-target", 0.8);
-  const [symbol, setSymbol] = useTabState("hedge-symbol", "SPY");
-  const [review, setReview] = useTabState("hedge-review", "DRAFT");
-  const quote = bootstrap.quotes.find((q) => q.symbol === symbol);
-  const nav = data?.portfolio.nav == null ? NaN : Number(data.portfolio.nav);
-  const beta = data?.risk.beta == null ? NaN : Number(data.risk.beta);
-  const fx = Number(
-    data?.positions.find((p) => p.symbol === symbol)?.fx_rate ??
-      data?.positions.find((p) => p.currency === quote?.currency)?.fx_rate ??
-      (quote?.currency === "SGD" ? 1 : NaN),
-  );
-  const unitValue = (quote?.price ?? 0) * fx;
-  const notional = nav * (beta - target);
-  const units = unitValue ? Math.trunc(Math.abs(notional) / unitValue) : 0;
-  const residual = Math.abs(notional) - units * unitValue;
-  if (
-    data &&
-    (!Number.isFinite(nav) ||
-      !Number.isFinite(beta) ||
-      !Number.isFinite(fx) ||
-      !quote?.price)
-  )
-    return (
-      <>
-        <PageTitle code="HEDGE" title="Manual Hedge Analysis">
-          <Badge>UNAVAILABLE</Badge>
-        </PageTitle>
-        <p className="warning-note section-pad">
-          Complete ledger NAV, portfolio beta, hedge price and FX are required.
-          Broker snapshot history is not a ledger risk model. No order
-          transmission is available.
-        </p>
-      </>
-    );
-  const result = [
-    {
-      instrument: symbol,
-      direction:
-        notional >= 0
-          ? "Reduce beta / short exposure"
-          : "Increase beta / long exposure",
-      units,
-      price: quote?.price,
-      fx,
-      notional: units * unitValue,
-      residual,
-      target_beta: target,
-      state: review,
-    },
-  ];
-  return (
-    <>
-      <PageTitle code="HEDGE" title="Manual Hedge Analysis">
-        <Badge>CALCULATED</Badge>
-      </PageTitle>
-      <Kpis
-        source={data?.source}
-        asOf={data?.as_of}
-        items={[
-          { label: "Portfolio NAV", value: money(nav) },
-          { label: "Current beta", value: number(beta) },
-          { label: "Target beta", value: number(target) },
-          { label: "Required notional", value: money(Math.abs(notional)) },
-        ]}
-      />
-      <div className="page-grid analytics-grid">
-        <Panel
-          title="Hedge assumptions"
-          source={quote?.source}
-          asOf={quote?.as_of}
-          quality={quote?.quality}
-        >
-          <div className="compact-form">
-            <Field label="Target beta">
-              <input
-                className="assumption"
-                type="number"
-                step=".05"
-                min="-1"
-                max="3"
-                value={target}
-                onChange={(e) => setTarget(Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Hedge ETF (beta assumption: 1)">
-              <select
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value)}
-              >
-                {bootstrap.quotes
-                  .filter((q) => q.asset_class === "ETF")
-                  .map((q) => (
-                    <option key={q.id}>{q.symbol}</option>
-                  ))}
-              </select>
-            </Field>
-            <Field label="Quote / native currency">
-              <input
-                readOnly
-                value={`${number(quote?.price)} ${quote?.currency}`}
-              />
-            </Field>
-          </div>
-          <p className="warning-note section-pad">
-            MANUAL REVIEW REQUIRED - NO ORDER WILL BE SUBMITTED
-          </p>
-          <div className="control-row">
-            {["DRAFT", "REVIEWED", "ACCEPTED MANUALLY", "REJECTED"].map((v) => (
-              <button
-                key={v}
-                className={review === v ? "amber" : ""}
-                onClick={() => setReview(v)}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          <p className="source-note">
-            Integer ETF units, assumed hedge beta 1, latest spot FX. Transaction
-            costs and nonlinear effects excluded. Review status is saved with
-            the workspace.
-          </p>
-        </Panel>
-        <Panel
-          title="Notional / residual"
-          source={data?.source}
-          asOf={data?.as_of}
-          quality={data?.quality}
-        >
-          <Chart
-            label="Hedge notional"
-            option={{
-              xAxis: {
-                type: "category",
-                data: ["Required", "Rounded", "Residual"],
-              },
-              yAxis: {
-                type: "value",
-                splitLine: { lineStyle: { color: COLORS.grid } },
-              },
-              series: [
-                {
-                  type: "bar",
-                  barMaxWidth: 45,
-                  data: [Math.abs(notional), units * unitValue, residual],
-                },
-              ],
-            }}
-          />
-        </Panel>
-        <Panel
-          className="wide-panel"
-          title="Manual hedge ticket"
-          source={data?.source}
-          asOf={data?.as_of}
-          quality={data?.quality}
-          rows={result}
-        >
-          <DataTable
-            id="hedge-ticket"
-            rows={result}
-            columns={[
-              { key: "instrument", label: "ETF" },
-              { key: "direction", label: "Direction", size: 220 },
-              { key: "units", label: "Units", numeric: true },
-              { key: "price", label: "Price", numeric: true },
-              { key: "fx", label: "FX", numeric: true },
-              { key: "notional", label: "Notional (SGD)", numeric: true },
-              { key: "residual", label: "Residual (SGD)", numeric: true },
-              { key: "state", label: "Review", size: 160 },
-            ]}
-          />
         </Panel>
       </div>
     </>

@@ -39,6 +39,19 @@ formatting and mobile toolbar overlap were corrected. Node 22 build passed.
 
 NAV, lots, corrections, cash, imports, research and saved analysis
 engines are retained. Their complete new acceptance workflow is not yet certified.
+
+Risk checkpoint: 625 sprint tests, 95 API tests and 231 frontend tests passed.
+Historical/parametric/Monte Carlo/EWMA risk, audited limits and saved manual hedge
+analysis are connected. Stress factor/cash/balance attribution reconciles, and
+unsupported VIX mapping returns unavailable rather than zero. A subsequent
+eight-test broker/limit selection verified amended and voided fill reconciliation.
+The saved limit/model/hedge browser workflow passed; screenshot review prompted
+mobile panel-height and input-persistence fixes. Both the final responsive hedge
+workflow and persisted stress/export check then passed against a fresh production
+build. Screenshots were inspected at 1440px and 390px.
+The local 8000 process has not been restarted with these code changes; isolated
+test servers are not evidence that the user's 3001 terminal is running.
+
 Whole-backend lint/type failures from the earlier baseline remain disclosed.
 Docker Linux daemon was unavailable; Vercel CLI was logged out; no cloud URL is
 verified. Existing local data and historical runs are retained.

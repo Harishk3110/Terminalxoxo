@@ -64,7 +64,7 @@ def test_economic_cash_exposure_includes_trade_payable_exactly_once(client: Test
     assert data["balances"] == []
     assert data["state"] == "AVAILABLE"
     assert data["base_currency"] == "SGD"
-    assert data["calculation_version"] == "knk-nav-4.7"
+    assert data["calculation_version"] == "knk-nav-4.8"
     after = exposures(client, end="2026-01-09")
     assert after["groups"] == data["groups"]
 

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Audited Risk, Stress and Manual Hedge Analysis
+
+- Added current-weight historical, parametric, Monte Carlo and EWMA risk with explicit sample/data states and saved settings.
+- Persisted risk limits, breach transitions, repeat-safe alerts and administrator change reasons.
+- Replaced the fixed correlation shock with covariance convergence; made unsupported VIX mapping unavailable instead of a zero-loss claim.
+- Added stress factor/balance contributions and post-shock beta against pinned internal NAV.
+- Replaced browser-only hedge math with saved ETF, net, sector, currency and assumption-based futures estimates, source-aware beta/FX, costs and manual review history.
+- Added before/after trade weights and current marked prices; reconciliation now uses amendments and excludes voided fill allocations.
+- Removed the unused browser-only hedge page and corrected mobile hedge panel sizing.
+
 ## Audited 100K Capital and Exact Performance
 
 - Corrected only the untouched managed demo contribution using an immutable revision; original ledger records and saved runs remain unchanged.
