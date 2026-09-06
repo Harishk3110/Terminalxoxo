@@ -3,6 +3,47 @@
 Controlling scope: PRD_TERMINAL_ONLY.md, 2026-09-07. The previous second-frontend
 scope is cancelled. The 25K line-count target is not a completion certification.
 
+## Current Verification, 2026-09-07
+
+The following supersedes the historical checkpoints below. The requested nine
+milestones are not all accepted: full workbook/deck/PDF packages, several advanced
+domain workflows, backend strict typing and deployed-service checks remain open.
+See TASKS.md, docs/REPORT_READINESS.md and docs/TERMINAL_ACCEPTANCE.md.
+
+- Full backend sprint suite: 782 passed. Full API suite: 98 passed.
+- Frontend unit suite: 232 passed; shared packages: five passed.
+- Node 22 / Next.js 15.5.24 production build, workspace lint and TypeScript passed.
+- New/changed standalone operations modules passed scoped Ruff. Whole-backend
+  strict mypy failed with 1,264 errors in 57 files; these include new code.
+- Browser regression passed 33/34 after the full-workspace bookmark fix and stale
+  NAV-version, heading and chart assertions were corrected. The remaining quant
+  fixture omitted a start date and correctly failed prior-FX validation. Its
+  explicit-date saved-backtest alpha/Monte Carlo rerun passed. Screenshot review
+  then caught oversized alpha result copies in workspace state. The saved-run
+  reference/migration fix passed unit tests and a subsequent four-test browser run
+  covering alpha save/reload/model/MC, hedge persistence and private-route access.
+  All 34 distinct browser workflows passed across the full run and targeted reruns;
+  this is not represented as a single zero-failure full-suite invocation.
+- Subsequent backup/authentication/queue selection: 21 passed, including four
+  added Windows reserved-device path cases. The original archive reverified.
+- API 8000 was restarted with the current backend. Readiness returned HTTP 200;
+  anonymous investment APIs returned 401. Both SQL queue dispatcher heartbeats
+  were observed RUNNING. Redis, the local file agent and IBKR remain offline.
+- Database/object backup verified, isolated restore verified, ten business-table
+  snapshots preserved across restart, including three investment theses.
+- The user-facing frontend on port 3001 could not be launched due to execution
+  policy. The temporary 3002 test server is not a persistent browser deployment.
+- Docker Linux daemon is unavailable; Compose also requires an unset database
+  password. Vercel authentication/deployment is not
+  configured. No public hosted URL or all-services-healthy claim is made.
+
+Pine v6 generation and CSV signal comparison are saved, hash-pinned and tested.
+TradingView compilation remains UNVERIFIED; matching direction signals is not
+fill/P&L equivalence. Existing private XLSX exports received contract-multiplier,
+source-quality, column-alignment and download-integrity fixes, but are not the
+requested complete reporting packages. The standalone unauthenticated hardcoded
+report renderer is disabled and its Compose readiness check reflects that.
+
 ## Verified Terminal-only Checkpoint
 
 Recovery tag pre-terminal-only-cleanup is pushed. All visitor-app source is removed.

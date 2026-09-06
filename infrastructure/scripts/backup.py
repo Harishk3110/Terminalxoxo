@@ -1,15 +1,16 @@
-from __future__ import annotations
-
-from datetime import datetime, timezone
+import argparse
+import json
 from pathlib import Path
 
-
-def main() -> None:
-    target = Path("infrastructure/backups") / f"knk-backup-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}.json"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text('{"status":"demo-backup-created","secrets":"redacted"}\n', encoding="utf-8")
-    print(target)
-
+from backup_archive import create_backup
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Private local SQLite/object backup. Sensitive; no encryption or cloud transfer."
+    )
+    parser.add_argument("--database", type=Path, required=True)
+    parser.add_argument("--objects", type=Path, required=True)
+    parser.add_argument("--destination", type=Path, required=True)
+    parser.add_argument("--acknowledge-unencrypted", action="store_true", required=True)
+    args = parser.parse_args()
+    print(json.dumps(create_backup(args.database, args.objects, args.destination)))

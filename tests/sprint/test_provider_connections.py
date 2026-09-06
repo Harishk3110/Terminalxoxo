@@ -111,7 +111,7 @@ async def test_json_contract_auth_and_no_redirects():
     provider = JsonMarketProvider(
         Settings(
             MARKET_DATA_BASE_URL="https://quotes.example.test/api",
-            MARKET_DATA_API_KEY="server-secret",
+            market_api_key="server-secret",
         ),
         transport=httpx.MockTransport(handler),
     )

@@ -125,7 +125,7 @@ export default function TerminalShell({ route }: { route: string }) {
       };
       conf = {
         ...conf,
-        tabs: match ? conf.tabs : [...conf.tabs, tab],
+        tabs: match ? conf.tabs : [...conf.tabs.slice(-19), tab],
         activeTab: tab.id,
         inspectRunId: ["/stress-tests", "/backtests"].some((p) =>
           initialRoute.current.startsWith(p),
@@ -768,8 +768,18 @@ export default function TerminalShell({ route }: { route: string }) {
               "UNKNOWN"}
           </span>
           <span className="optional-status secondary">
-            WORKERS{" "}
+            QUANT{" "}
             {health.data?.items.find((x) => x.service === "Analytical workers")
+              ?.state ?? "UNKNOWN"}
+          </span>
+          <span className="optional-status secondary">
+            DATA{" "}
+            {health.data?.items.find((x) => x.service === "Data worker")
+              ?.state ?? "UNKNOWN"}
+          </span>
+          <span className="optional-status secondary">
+            REPORT{" "}
+            {health.data?.items.find((x) => x.service === "Report service")
               ?.state ?? "UNKNOWN"}
           </span>
           <button
@@ -796,7 +806,12 @@ export default function TerminalShell({ route }: { route: string }) {
                 ?.detail
             }
           >
-            NAV{" "}
+            NAV AS OF{" "}
+            {timestamp(
+              health.data?.items.find((x) => x.service === "Portfolio NAV")
+                ?.as_of,
+            )}{" "}
+            /{" "}
             {health.data?.items.find((x) => x.service === "Portfolio NAV")
               ?.state ?? "UNKNOWN"}
           </button>
@@ -809,9 +824,16 @@ export default function TerminalShell({ route }: { route: string }) {
               ?.state ?? "UNKNOWN"}
           </button>
           <span className="muted optional-status">
+            DATA QUALITY{" "}
+            {health.data?.items.find((x) => x.service === "Data freshness")
+              ?.state ?? "UNKNOWN"}
+          </span>
+          <span className="muted optional-status">
             BUILD {health.data?.commit ?? "--"}
           </span>
-          <span className="status-environment">LOCAL / PAPER / SGD</span>
+          <span className="status-environment">
+            {health.data?.environment.toUpperCase() ?? "UNKNOWN"} / PAPER / SGD
+          </span>
         </footer>
       </div>
       {palette && (

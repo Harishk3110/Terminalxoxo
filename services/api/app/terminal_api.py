@@ -287,10 +287,11 @@ def export_run(run_id: str, session: Session = Depends(get_session)):
     if not result:
         raise HTTPException(409, "Run has no result")
     rows = result.get("contributions") or result.get("equity_curve") or []
-    sheets = {"Run": [["Field", "Value"], ["Run ID", run_id], ["Name", run["name"]], ["Source", result["source"]], ["Data as of", result["as_of"]], ["Quality", result["quality"]]], "Results": [list(rows[0])] + [list(r.values()) for r in rows] if rows else [["No rows"]], "Assumptions": [["Field", "Value"]] + [[k, json.dumps(v)] for k, v in run["parameters"].items()], "Warnings": [[w] for w in result.get("warnings", [])]}
+    columns = list(dict.fromkeys(key for row in rows for key in row))
+    sheets = {"Run": [["Field", "Value"], ["Run ID", run_id], ["Name", run["name"]], ["Source", result.get("source", "UNAVAILABLE")], ["Data as of", result.get("as_of")], ["Quality", result.get("quality", "UNVERIFIED")]], "Results": [columns] + [[json.dumps(row.get(key)) if isinstance(row.get(key), (dict, list)) else row.get(key) for key in columns] for row in rows] if rows else [["No rows"]], "Assumptions": [["Field", "Value"]] + [[k, json.dumps(v)] for k, v in run["parameters"].items()], "Warnings": [[w] for w in result.get("warnings", [])]}
     if run["kind"] == "stress":
         sheets["Summary"] = [["Pre NAV", "Estimated P&L", "Post NAV"], [result["pre_nav"], result["loss"], ReportFormula("=A2+B2", result["post_nav"])]]
-    return ReportService(session)._write_workbook("terminal-run", sheets)
+    return ReportService(session)._write_workbook("terminal-run", sheets, quality=result.get("quality", "UNVERIFIED"))
 
 
 @router.post("/uploads/preview")
@@ -441,7 +442,10 @@ def terminal_health(session: Session = Depends(get_session)):
     except Exception:
         rows.append({"service": "Object storage", "state": "FAILED", "as_of": now, "detail": "Write/read probe failed"})
     active = session.scalars(select(models.AnalysisRun).where(models.AnalysisRun.status.in_(["QUEUED", "RUNNING"]))).all()
-    rows.append({"service": "Analytical workers", "state": "RUNNING" if active else "IDLE", "as_of": now, "detail": f"{len(active)} active persisted jobs; on-demand processes"})
+    from .worker_health import dispatcher_state, worker_state
+    rows.append({"service": "Analytical workers", **worker_state(session, active)})
+    rows.append({"service": "Data worker", **dispatcher_state(session, "data")})
+    rows.append({"service": "Quant dispatcher", **dispatcher_state(session, "quant")})
     from .price_sources import utc
     from .portfolio_seed import profile_for
     agent = session.scalar(select(models.LocalAgent).where(models.LocalAgent.revoked_at.is_(None)).order_by(models.LocalAgent.last_seen.desc()).limit(1))
@@ -449,18 +453,29 @@ def terminal_health(session: Session = Depends(get_session)):
     rows.append({"service": "Local data agent", "state": "ONLINE" if online else "OFFLINE", "as_of": agent.last_seen.isoformat() if agent and agent.last_seen else None, "detail": "Scoped outbound heartbeat" if online else "No current agent heartbeat"})
     profile = profile_for(session)
     nav = session.scalar(select(models.PortfolioValuationRun).where(models.PortfolioValuationRun.portfolio_id == profile.portfolio_id).order_by(models.PortfolioValuationRun.created_at.desc()).limit(1)) if profile else None
-    rows.append({"service": "Portfolio NAV", "state": nav.status if nav else "NOT_CALCULATED", "as_of": nav.created_at.isoformat() if nav else None, "detail": nav.payload.get("quality") if nav else "No valuation run"})
-    fred = session.scalar(select(models.MacroObservation).where(models.MacroObservation.provider == "FRED").order_by(models.MacroObservation.ingestion_timestamp.desc()).limit(1))
-    rows.append({"service": "FRED", "state": "OBSERVED" if fred else "CONFIGURED" if settings.fred_enabled and settings.fred_api_key else "DEMO", "as_of": fred.ingestion_timestamp.isoformat() if fred else None, "detail": "Persisted FRED observation" if fred else "No connected observations"})
+    rows.append({"service": "Portfolio NAV", "state": nav.status if nav else "NOT_CALCULATED", "as_of": nav.payload.get("as_of") if nav else None, "detail": f"{nav.payload.get('quality')}; calculated {nav.created_at.isoformat()}" if nav else "No valuation run"})
+    rows.append({"service": "Data freshness", "state": "UNAVAILABLE" if not nav else "STALE" if "STALE" in str(nav.payload.get("quality")) else nav.payload.get("quality", "UNAVAILABLE"), "as_of": nav.payload.get("as_of") if nav else None, "detail": "NAV input quality; each provider and instrument retains separate timestamps"})
+    from .provider_data import NAMES, connection, provider_payload
+    for key, name in NAMES.items():
+        provider = provider_payload(session, connection(session, key, settings), key)
+        observed_at = provider["last_failure"] if provider["connection_state"] not in ("CONNECTED", "DEMO") else provider["last_success"]
+        state = provider["connection_state"]
+        if state == "CONNECTED" and (not observed_at or (datetime.now(timezone.utc) - utc(observed_at)).total_seconds() > 300):
+            state = "STALE_OBSERVATION"
+        rows.append({"service": name, "state": state, "as_of": observed_at, "latency_ms": provider["latency_ms"], "detail": f"Last observed connection: {provider['connection_state']}; data sync: {provider['data_freshness']}"})
     from .broker_api import current_snapshot
     broker, broker_active = current_snapshot(session, profile.portfolio_id) if profile else (None, False)
     rows.append({"service": "IBKR paper agent", "state": "READ_ONLY" if broker_active else "OFFLINE", "as_of": broker.as_of.isoformat() if broker else None, "detail": "Observed paired paper snapshot" if broker else "No broker snapshot received"})
-    for name in ("SEC EDGAR", "OpenFIGI", "AI provider", "News provider", "Options provider", "Email alerts", "Telegram", "Sentry", "Backup", "Report service", "Workflow orchestrator"):
+    from .backup_health import backup_state
+    rows.append({"service": "Backup", **backup_state(Path(settings.backup_dir))})
+    rows.append({"service": "Report service", "state": "LIMITED", "as_of": now, "detail": "Private API XLSX exports; full model/deck/PDF rendering unavailable"})
+    for name in ("AI provider", "News provider", "Email alerts", "Telegram", "Sentry", "Workflow orchestrator"):
         rows.append({"service": name, "state": "NOT_VERIFIED", "as_of": now, "detail": "No current heartbeat or configured probe"})
     try:
         commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL, timeout=2).decode().strip()
     except Exception:
         commit = os.environ.get("KNK_COMMIT", "unknown")
+    session.commit()
     return {"items": rows, "as_of": now, "commit": commit, "version": VERSION, "environment": settings.knk_env}
 
 
@@ -481,8 +496,8 @@ def terminal_report(kind: str, session: Session = Depends(get_session)):
     if any(r["market_price"] is None or r["fx_rate"] is None for r in rows):
         return service.portfolio_xlsx()
     rows = [{**r, "fx_rate": float(r["fx_rate"])} for r in rows]
-    sheets = {"Sources": [["Source", "Data as of", "Quality"], [data["source"], data["as_of"], data["quality"]]], "Positions": [["Symbol", "Quantity", "Price", "FX", "Calculated value SGD"]] + [[r["symbol"], float(r["quantity"]), float(r["market_price"]), r["fx_rate"], ReportFormula(f"=B{i+2}*C{i+2}*D{i+2}", float(r["quantity"]) * float(r["market_price"]) * r["fx_rate"])] for i, r in enumerate(rows)], "Risk": [["Metric", "Value"]] + [[k, v] for k, v in data["risk"].items()], "Performance": [["Metric", "Value"]] + [[k, v] for k, v in data["performance"].items()], "Warnings": [[w] for w in data["warnings"]]}
-    return service._write_workbook(kind, sheets)
+    sheets = {"Sources": [["Source", "Data as of", "Quality"], [data["source"], data["as_of"], data["quality"]]], "Positions": [["Symbol", "Quantity", "Price", "FX", "Contract multiplier", "Calculated value SGD"]] + [[r["symbol"], float(r["quantity"]), float(r["market_price"]), r["fx_rate"], float(r.get("contract_multiplier", 1)), ReportFormula(f"=B{i+2}*C{i+2}*D{i+2}*E{i+2}", float(r["quantity"]) * float(r["market_price"]) * r["fx_rate"] * float(r.get("contract_multiplier", 1)))] for i, r in enumerate(rows)], "Risk": [["Metric", "Value"]] + [[k, v] for k, v in data["risk"].items()], "Performance": [["Metric", "Value"]] + [[k, v] for k, v in data["performance"].items()], "Warnings": [[w] for w in data["warnings"]]}
+    return service._write_workbook(kind, sheets, quality=data["quality"])
 
 
 @router.get("/auth/session")
@@ -504,3 +519,17 @@ def logout(request: Request, response: Response, session: Session = Depends(get_
         session.commit()
     response.delete_cookie("knk_session")
     return {"status": "signed_out"}
+
+
+@router.post("/auth/logout-all")
+def logout_all(request: Request, response: Response, session: Session = Depends(get_session)):
+    from .portfolio_api import identity
+    from .portfolio_operations import audit
+    actor = identity(request, session)
+    rows = session.scalars(select(models.UserSession).where(models.UserSession.user_id == actor, models.UserSession.revoked_at.is_(None))).all()
+    for row in rows:
+        row.revoked_at = datetime.now(timezone.utc)
+    audit(session, "AUTH_ALL_SESSIONS_REVOKED", "user", actor, {"count": len(rows)}, actor)
+    session.commit()
+    response.delete_cookie("knk_session")
+    return {"status": "signed_out", "revoked": len(rows)}

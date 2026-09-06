@@ -30,5 +30,24 @@ export function safeConfig(value: unknown): Configuration {
     : { tabs: [], securities: ["AAPL"], rail: true, inspector: true };
   if (!config.tabs.length)
     config.tabs = [{ id: "home", route: "/overview", title: "HOME" }];
+  for (const [id, state] of Object.entries(config.tabStates ?? {})) {
+    const legacy = state["alpha-result"];
+    if (
+      legacy &&
+      typeof legacy === "object" &&
+      "id" in legacy &&
+      typeof legacy.id === "string" &&
+      legacy.id
+    ) {
+      const existing = state["alpha-run"];
+      const migrated: Record<string, unknown> = {
+        ...state,
+        "alpha-run":
+          typeof existing === "string" && existing ? existing : legacy.id,
+      };
+      delete migrated["alpha-result"];
+      config.tabStates = { ...config.tabStates, [id]: migrated };
+    }
+  }
   return config;
 }

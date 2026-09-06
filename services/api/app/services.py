@@ -63,9 +63,7 @@ class DemoIngestionService:
 
     def seed(self, *, reset: bool = False) -> dict[str, int]:
         if reset:
-            for model in reversed(models.Base.metadata.sorted_tables):
-                self.session.execute(model.delete())
-            self.session.flush()
+            raise ValueError("Destructive global reset is disabled. Archive a portfolio and create a new demo instead.")
         elif self.session.execute(select(models.Instrument.id).limit(1)).first():
             return SystemRepository(self.session).counts()
 
@@ -1017,7 +1015,7 @@ class ReportService:
                     sheets[key] = [columns or ["No records"]] + [[json.dumps(row.get(k)) if isinstance(row.get(k), (dict, list)) else row.get(k) for k in columns] for row in value]
             sheets["Sources"] = [["Field", "Value"], *[[k, portfolio[k]] for k in ("source", "as_of", "quality", "calculation_version", "methodology")]]
             sheets["Warnings"] = [["Warning"], *[[w] for w in portfolio["warnings"]]]
-            result = self._write_workbook("portfolio-overview", sheets)
+            result = self._write_workbook("portfolio-overview", sheets, quality=portfolio["quality"])
             return {**result, "quality": portfolio["quality"]}
         performance = PerformanceService(self.session).latest()
         risk = RiskService(self.session).latest()
@@ -1117,7 +1115,7 @@ class ReportService:
             "quality": QUALITY_DEMO,
         }
 
-    def _write_workbook(self, report_slug: str, sheets: dict[str, list[list[Any]]]) -> dict:
+    def _write_workbook(self, report_slug: str, sheets: dict[str, list[list[Any]]], *, quality: str = "UNVERIFIED") -> dict:
         import xlsxwriter
 
         report_id = str(uuid.uuid4())
@@ -1143,7 +1141,7 @@ class ReportService:
         data = output.getvalue()
         key = f"reports/{report_id}/{filename}"
         stored = self.storage.put_bytes(key=key, data=data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        result = {"report_id": report_id, "object_key": stored.object_key, "content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "filename": filename, "status": "SUCCEEDED", "quality": QUALITY_DEMO, "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "download_url": f"/api/v1/reports/{report_id}/download"}
+        result = {"report_id": report_id, "object_key": stored.object_key, "content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "filename": filename, "status": "SUCCEEDED", "quality": quality, "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "download_url": f"/api/v1/reports/{report_id}/download"}
         self.storage.put_bytes(key=f"reports/{report_id}/manifest.json", data=json.dumps(result).encode(), content_type="application/json")
         return result
 
@@ -1166,28 +1164,11 @@ class ReportService:
 
 class PineService:
     def generate(self, strategy_type: str = "moving_average_crossover") -> dict:
-        if strategy_type != "moving_average_crossover":
-            return {"compatibility": "PARTIALLY_SUPPORTED", "reason": "Only moving-average crossover export is fully implemented in this build."}
-        source = """//@version=5
-strategy("KnK Moving Average Crossover", overlay=true, commission_type=strategy.commission.percent, commission_value=input.float(0.05, "Commission %"), slippage=input.int(1, "Slippage ticks"))
-fastLength = input.int(20, "Fast MA")
-slowLength = input.int(50, "Slow MA")
-startTime = input.time(timestamp("2020-01-01"), "Start")
-endTime = input.time(timestamp("2030-01-01"), "End")
-inWindow = time >= startTime and time <= endTime
-fast = ta.sma(close, fastLength)
-slow = ta.sma(close, slowLength)
-longSignal = ta.crossover(fast, slow) and inWindow
-flatSignal = ta.crossunder(fast, slow) and inWindow
-if longSignal
-    strategy.entry("Long", strategy.long)
-if flatSignal
-    strategy.close("Long")
-alertcondition(longSignal, "KnK Long Signal", "Moving average crossover long signal")
-plot(fast, color=color.teal)
-plot(slow, color=color.orange)
-"""
-        return {"compatibility": "SUPPORTED", "strategy_type": strategy_type, "version": "1.0.0", "source": source, "assumptions": ["Manual TradingView import", "No broker integration", "Long-only crossover"]}
+        from .pine_research import PineSettings, generate
+        strategies = {"moving_average_crossover": "SMA", "rsi": "RSI", "macd": "MACD", "breakout": "BREAKOUT"}
+        if strategy_type not in strategies:
+            raise ValueError("Unsupported Pine template")
+        return generate(PineSettings(strategy=strategies[strategy_type]))
 
 
 def fred_default_watchlist() -> list[dict]:

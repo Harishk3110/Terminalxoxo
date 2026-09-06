@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -35,6 +36,7 @@ from .equity_api import router as equity_router
 from .options_api import router as options_router
 from .provider_api import router as provider_router
 from .attachments_api import router as attachments_router
+from .pine_api import router as pine_router
 from .terminal_analytics import FUNCTIONS, portfolio_analytics
 
 try:
@@ -70,10 +72,11 @@ app.include_router(equity_router)
 app.include_router(options_router)
 app.include_router(provider_router)
 app.include_router(attachments_router)
+app.include_router(pine_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Correlation-ID"],
@@ -130,6 +133,9 @@ def startup() -> None:
 async def request_middleware(request: Request, call_next):
     ensure_database_ready()
     path = request.url.path
+    from .auth_guards import origin_allowed
+    if not origin_allowed(request.method, request.headers.get("origin"), request.headers.get("sec-fetch-site"), settings.allowed_origins):
+        return JSONResponse({"detail": "Untrusted request origin"}, status_code=403, headers={"Cache-Control": "no-store"})
     session_paths = {"/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/session", "/api/v1/auth/logout"}
     if path.startswith("/api/") and path not in session_paths and request.method != "OPTIONS":
         from .terminal_api import auth_session
@@ -177,17 +183,6 @@ def redis_client():
         return None
 
 
-def enqueue_job(job_id: str) -> bool:
-    client = redis_client()
-    if client is None:
-        return False
-    try:
-        client.lpush("knk:jobs", job_id)
-        return True
-    except Exception:
-        return False
-
-
 def require_seeded(session: Session) -> None:
     if not session.execute(select(models.Instrument.id).limit(1)).first():
         DemoIngestionService(session).seed(reset=False)
@@ -215,9 +210,15 @@ def ready(session: Session = Depends(get_session)):
             checks["redis"] = "ready"
         except Exception as exc:  # noqa: BLE001
             checks["redis"] = f"failed: {exc.__class__.__name__}"
-    checks["object_storage"] = "local-ready"
-    status = "ready" if checks.get("database") == "ready" else "not-ready"
-    return {"status": status, "checks": checks}
+    from .object_storage import ObjectStorage
+    try:
+        storage = ObjectStorage()
+        storage.put_bytes(key="health/readiness.txt", data=b"knk-ready", content_type="text/plain")
+        checks["object_storage"] = "ready" if storage.get_bytes("health/readiness.txt") == b"knk-ready" else "failed"
+    except Exception:
+        checks["object_storage"] = "failed"
+    status = "ready" if checks.get("database") == checks.get("object_storage") == "ready" else "not-ready"
+    return JSONResponse({"status": status, "checks": checks}, status_code=200 if status == "ready" else 503)
 
 
 @app.get("/metrics")
@@ -266,6 +267,8 @@ def setup_admin(payload: AdminSetupRequest, response: Response, request: Request
 
 @app.post("/api/v1/auth/login")
 def login(payload: LoginRequest, response: Response, request: Request, session: Session = Depends(get_session)):
+    from .auth_guards import check_login_limit
+    check_login_limit(session, payload.email, request.client.host if request.client else None)
     user = session.execute(select(models.User).where(models.User.email == payload.email)).scalars().first()
     if not user or not user.is_active:
         AUTH_FAILURES.inc()
@@ -281,11 +284,15 @@ def login(payload: LoginRequest, response: Response, request: Request, session: 
         raise HTTPException(status_code=401, detail="Invalid credentials") from exc
     totp = session.execute(select(models.TotpSetting).where(models.TotpSetting.user_id == user.id)).scalars().first()
     if totp and totp.enabled and not payload.totp_code:
+        session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="totp_required", ip_address=request.client.host if request.client else None))
+        session.commit()
         raise HTTPException(status_code=401, detail="TOTP code required")
     if payload.totp_code and totp:
         secret = totp.secret_encrypted.removeprefix("local-demo:")
         if not pyotp.TOTP(secret).verify(payload.totp_code):
             AUTH_FAILURES.inc()
+            session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="totp", ip_address=request.client.host if request.client else None))
+            session.commit()
             raise HTTPException(status_code=401, detail="Invalid TOTP code")
     session_id = secrets.token_urlsafe(32)
     session.add(models.UserSession(user_id=user.id, session_hash=token_digest(session_id), expires_at=datetime.now(timezone.utc) + timedelta(hours=8)))
@@ -505,11 +512,12 @@ def jobs(status: str | None = None, session: Session = Depends(get_session)):
 
 @app.post("/api/v1/jobs/provider-health-check")
 def provider_health_job(request: Request, session: Session = Depends(get_session)):
-    job = JobRepository(session).create(job_type="provider_health_check", provider="SYSTEM", parameters={}, correlation_id=correlation_id(request))
-    queued = enqueue_job(job.id)
-    job.status = "QUEUED" if queued else "PENDING"
+    from .portfolio_api import identity
+    actor = identity(request, session, admin=True)
+    job = JobRepository(session).create(job_type="provider_health_check", provider="SYSTEM", parameters={"actor_id": actor}, correlation_id=correlation_id(request))
+    job.status = "QUEUED"
     session.commit()
-    return {"job_id": job.id, "status": job.status, "redis_enqueued": queued}
+    return {"job_id": job.id, "status": job.status, "queue": "DATABASE", "redis_enqueued": False}
 
 
 @app.post("/api/v1/reports/portfolio-xlsx")
@@ -560,13 +568,18 @@ def report_download(report_id: str, session: Session = Depends(get_session)):
     local_path = report.get("local_path")
     if not local_path:
         data = ReportService(session).storage.get_bytes(report["object_key"])
+        if report.get("content_hash") and hashlib.sha256(data).hexdigest() != report["content_hash"]:
+            raise HTTPException(409, "Report failed integrity verification")
         return Response(data, media_type=report["content_type"], headers={"Content-Disposition": f'attachment; filename="{report["filename"]}"'})
     return FileResponse(local_path, filename=report["filename"], media_type=report["content_type"])
 
 
 @app.get("/api/v1/pine/export")
 def pine_export(strategy_type: str = "moving_average_crossover"):
-    return PineService().generate(strategy_type)
+    try:
+        return PineService().generate(strategy_type)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.get("/api/v1/alerts")

@@ -68,6 +68,16 @@ No credentials belong in `NEXT_PUBLIC_*`. See
 
 ## Verification
 
+Private Pine templates and external-export comparison are documented in
+[TradingView Studio](docs/TRADINGVIEW_STUDIO.md). Existing XLSX exports remain
+available; complete model/deck/PDF outputs remain blocked as recorded in
+[Report Readiness](docs/REPORT_READINESS.md).
+
+See [Operations](docs/OPERATIONS_VERIFICATION.md) for real worker queues, expiring
+heartbeats and authentication controls, and [Backup Recovery](docs/LOCAL_BACKUP_RECOVERY.md)
+for checksummed local backups and non-overwriting restores. No automatic reset or
+backup retention deletion is performed. Local archives are private and unencrypted.
+
 ```powershell
 corepack pnpm lint
 corepack pnpm typecheck

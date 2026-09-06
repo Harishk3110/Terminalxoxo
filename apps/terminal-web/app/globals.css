@@ -913,7 +913,11 @@ td:first-child {
   border-top: 1px solid var(--border-primary);
   font-size: 10px;
   white-space: nowrap;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.status-bar > * {
+  flex-shrink: 0;
 }
 .status-bar button {
   border: 0;

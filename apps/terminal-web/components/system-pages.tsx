@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { knkApi } from "@knk/api-client";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, LogOut, RefreshCw } from "lucide-react";
 import { records, useTerminal } from "./context";
 import { Badge, DataTable, Empty, Field, Panel, timestamp } from "./ui";
 import { PageTitle, useApi } from "./core-pages";
@@ -276,11 +276,33 @@ export function AuthPage() {
                 onClick={() =>
                   knkApi
                     .post("/api/v1/auth/logout")
-                    .then(() => { client.clear(); window.location.assign("/login"); })
+                    .then(() => {
+                      client.clear();
+                      window.location.assign("/login");
+                    })
+                    .catch((reason) => setError(reason.message))
                 }
               >
-                Sign out
+                <LogOut size={12} /> Sign out
               </button>
+              <button
+                onClick={() =>
+                  knkApi
+                    .post("/api/v1/auth/logout-all")
+                    .then(() => {
+                      client.clear();
+                      window.location.assign("/login");
+                    })
+                    .catch((reason) => setError(reason.message))
+                }
+              >
+                <LogOut size={12} /> Sign out all sessions
+              </button>
+              {error && (
+                <p className="error-state" role="alert">
+                  {error}
+                </p>
+              )}
             </div>
           ) : (
             <form onSubmit={login} className="modal-body">

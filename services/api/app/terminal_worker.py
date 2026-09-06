@@ -6,6 +6,7 @@ import sys
 from datetime import UTC, datetime
 
 import pandas as pd
+from sqlalchemy import update
 
 from . import models
 from .database import SessionLocal
@@ -72,9 +73,25 @@ def backtest_result(session, params):
 
 
 def execute_run(run_id: str):
+    from .worker_health import heartbeat
+
+    with SessionLocal() as session:
+        claimed = session.execute(
+            update(models.AnalysisRun)
+            .where(models.AnalysisRun.id == run_id, models.AnalysisRun.status == "QUEUED")
+            .values(status="RUNNING", started_at=datetime.now(UTC))
+        )
+        session.commit()
+        if claimed.rowcount != 1:
+            return
+    with heartbeat(run_id):
+        _execute_run(run_id)
+
+
+def _execute_run(run_id: str):
     with SessionLocal() as session:
         run = session.get(models.AnalysisRun, run_id)
-        if not run or run.status != "QUEUED":
+        if not run or run.status != "RUNNING":
             return
         run.status = "RUNNING"
         run.started_at = datetime.now(UTC)

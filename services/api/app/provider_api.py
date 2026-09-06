@@ -22,7 +22,7 @@ from .provider_data import (
     provider_payload,
     record_result,
 )
-from .providers.http import ProviderError, Response
+from .providers.http import ProviderError
 from .providers.reference import MappingJob, cik_value, filing_rows
 from .quant_data import dataset_rows
 from .terminal_analytics import instrument
@@ -86,25 +86,8 @@ async def test_connection(key: str, request: Request, session: Database):
     row = connection(session, key, get_settings())
     require_enabled(row)
     adapter = adapters(get_settings())[key]
-    try:
-        if key == "fred":
-            payload = await adapter.series_metadata(
-                "GDP", request.headers.get("x-correlation-id", "provider-test")
-            )
-            response = Response(payload, b"", "", payload.get("_knk_latency_ms", 0), None)
-        else:
-            response = await adapter.test()
-        record_result(session, row, response=response, actor=actor)
-    except ProviderError as exc:
-        record_result(session, row, error=exc, actor=actor)
-    except Exception:
-        record_result(
-            session,
-            row,
-            error=ProviderError("Provider connection or response validation failed"),
-            actor=actor,
-        )
-    return provider_payload(session, row, key)
+    from .provider_probe import probe
+    return await probe(session, row, key, adapter, actor, request.headers.get("x-correlation-id", "provider-test"))
 
 
 class SecImport(BaseModel):

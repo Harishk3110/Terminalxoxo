@@ -10,7 +10,7 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [x] Disable indexing and test root/login/retired routes.
 - [ ] Remove ignored retired-app directory on disk (execution-policy restriction).
 - [x] Complete SGD 100,000 audited demo correction and verify data preservation.
-- [ ] Complete portfolio/NAV/position/performance acceptance workflows.
+- [x] Verify portfolio/NAV/position/performance resources and manual BUY through cash, NAV, risk, trade review and audit.
 - [x] Verify current-weight risk, audited limits, trade/reconciliation, linear/correlation stress and saved manual hedge workflows.
 - [ ] Extend risk with measured duration, option repricing and futures/FX covariance where supported input data exist.
 - [x] Verify saved alpha, technical factors, offline multi-security backtests, model/expanding-window evaluation, Monte Carlo and candidate review records.
@@ -21,8 +21,14 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Extend options beyond European pricing and selected-underlying positions; historical OI flow/cones require datasets.
 - [x] Verify Data Drop formats, Koyfin approval/revaluation, private attachments, provider controls and SEC/OpenFIGI/JSON adapter tests.
 - [ ] Verify licensed live vendors, full SEC history/curation, separate FX priority and remaining specialized data adapters.
-- [ ] Complete internal Excel/decks/PDF/Pine acceptance.
-- [ ] Verify all operations components and final regression suite.
+- [x] Implement saved Pine v6 templates and user-export direction comparison with honest compilation limits.
+- [x] Fix existing report source metadata, column alignment and contract multiplier formulas.
+- [ ] Complete model XLSX/decks/PDF outputs (artifact runtime unavailable; alternate-engine approval pending).
+- [x] Replace synthetic daemon completion with atomically claimed analytical/provider queues and expiring heartbeats.
+- [x] Verify local database/object backup and isolated non-overwriting restore.
+- [x] Add persisted login throttles, origin checks and per-user all-session revocation.
+- [x] Complete backend/frontend regression and all 34 browser workflows across full/targeted runs, including workspace reload fixes.
+- [ ] Resolve whole-backend strict typing and remaining deployed operations (frontend launch, Docker credentials/daemon, live providers and production controls).
 
 No provider-dependent or incomplete function may be marked AVAILABLE.
 No broker execution capability is permitted.

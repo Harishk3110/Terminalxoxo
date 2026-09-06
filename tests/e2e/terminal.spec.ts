@@ -231,8 +231,12 @@ test("provider states and private session login", async ({ page, context }) => {
   await context.clearCookies();
   await page.goto("/overview");
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByLabel("Email", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_EMAIL!);
-  await page.getByLabel("Password", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_PASSWORD!);
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(process.env.PLAYWRIGHT_TEST_EMAIL!);
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill(process.env.PLAYWRIGHT_TEST_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("**/overview");
   await page.goto("/settings/security");
@@ -241,13 +245,17 @@ test("provider states and private session login", async ({ page, context }) => {
   await expect(
     page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Email", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_EMAIL!);
-  await page.getByLabel("Password", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_PASSWORD!);
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(process.env.PLAYWRIGHT_TEST_EMAIL!);
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill(process.env.PLAYWRIGHT_TEST_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("**/overview");
   await command(page, "CONN");
   await expect(
-    page.getByRole("heading", { name: "Connections / Data Providers" }),
+    page.getByRole("heading", { name: "Connections / Data Sources" }),
   ).toBeVisible();
   await expect(
     page.getByText("NOT_CONFIGURED", { exact: true }).first(),
@@ -338,8 +346,14 @@ for (const viewport of [
       await expect(page.getByTestId("terminal-shell")).toBeVisible();
       await expect(page.locator(".loading-state")).toHaveCount(0);
       await expect(page.locator(".error-state")).toHaveCount(0);
-      if (route !== "portfolio")
+      if (!["portfolio", "hedge"].includes(route))
         await expect(page.locator(".chart canvas")).not.toHaveCount(0);
+      if (route === "hedge") {
+        await expect(page.getByLabel("hedge-history table")).toBeVisible();
+        await expect(
+          page.getByLabel("Hedge target", { exact: true }),
+        ).toBeVisible();
+      }
       const bounds = await page.evaluate(() => ({
         width: innerWidth,
         height: innerHeight,
@@ -380,19 +394,20 @@ for (const viewport of [
       await page.screenshot({
         path: `docs/screenshots/${route}-${viewport.width}.png`,
       });
-      if (process.env.KNK_COMPARE_SCREENSHOTS === "1") await expect(page).toHaveScreenshot(`${route}-${viewport.width}.png`, {
-        animations: "disabled",
-        maskColor: "#111111",
-        mask: [
-          page.locator(".header-clock"),
-          page.locator(".valuation-timestamp"),
-          page.locator(".quote-meta time"),
-          page.locator(".status-bar"),
-          page.locator(".inspector-body"),
-          page.locator(".panel-footer time"),
-          page.locator(".run-history"),
-        ],
-      });
+      if (process.env.KNK_COMPARE_SCREENSHOTS === "1")
+        await expect(page).toHaveScreenshot(`${route}-${viewport.width}.png`, {
+          animations: "disabled",
+          maskColor: "#111111",
+          mask: [
+            page.locator(".header-clock"),
+            page.locator(".valuation-timestamp"),
+            page.locator(".quote-meta time"),
+            page.locator(".status-bar"),
+            page.locator(".inspector-body"),
+            page.locator(".panel-footer time"),
+            page.locator(".run-history"),
+          ],
+        });
     }
   });
 }
@@ -422,13 +437,14 @@ test("mobile monitoring stays within viewport", async ({ page }) => {
   ).toBeLessThanOrEqual(390);
   mkdirSync("docs/screenshots", { recursive: true });
   await page.screenshot({ path: "docs/screenshots/mobile-overview.png" });
-  if (process.env.KNK_COMPARE_SCREENSHOTS === "1") await expect(page).toHaveScreenshot("mobile-overview.png", {
-    maskColor: "#111111",
-    mask: [
-      page.locator(".header-clock"),
-      page.locator(".valuation-timestamp"),
-      page.locator(".status-bar"),
-      page.locator(".panel-footer time"),
-    ],
-  });
+  if (process.env.KNK_COMPARE_SCREENSHOTS === "1")
+    await expect(page).toHaveScreenshot("mobile-overview.png", {
+      maskColor: "#111111",
+      mask: [
+        page.locator(".header-clock"),
+        page.locator(".valuation-timestamp"),
+        page.locator(".status-bar"),
+        page.locator(".panel-footer time"),
+      ],
+    });
 });

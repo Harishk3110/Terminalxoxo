@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## Pine Research and Local Operations
+
+- Add saved Pine v6 SMA/RSI/MACD/breakout templates, costs/exit/date/session controls,
+  source hashes and observed TradingView CSV direction comparisons.
+- Fix existing report provenance, sparse columns, contract multipliers and known
+  download hashes; disable unauthenticated standalone hardcoded demo reports.
+- Replace synthetic daemon loops with real SQL-claimed analytical/provider tasks,
+  expiring worker heartbeats and observed service/readiness indicators.
+- Add database/object checksummed backups and verified isolated restores; archives
+  remain unencrypted and local, with no retention deletion or cloud upload.
+- Add persisted login throttling, mutation-origin checks and all-session revocation.
+- Reject global destructive resets without altering stored history.
+- Preserve bookmarked-page inputs when opening routes from a full 20-tab workspace.
+- Persist alpha analysis references instead of oversized result copies in workspace
+  settings; migrate earlier copies and reload the original saved analysis.
+- Reject Windows device paths in backup archives and include the complete backend
+  sprint suite in CI.
+- Full workbook/deck/PDF authoring remains blocked; see REPORT_READINESS.md.
+
 ## Private Data Connections
 
 - Add recorded SEC/OpenFIGI/market/options adapter controls, read-only imports,

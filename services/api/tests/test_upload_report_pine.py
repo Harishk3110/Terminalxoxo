@@ -29,6 +29,7 @@ def test_pine_export_contains_strategy_rules_without_execution_claims():
     response = client.get("/api/v1/pine/export")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["compatibility"] == "SUPPORTED"
+    assert payload["compatibility"] == "PARTIALLY_SUPPORTED"
+    assert payload["compilation"] == "UNVERIFIED"
     assert "strategy.entry" in payload["source"]
-    assert "broker" not in payload["source"].lower()
+    assert "No broker connection" in payload["source"]

@@ -35,7 +35,7 @@ const JobsPage = dynamic(() => import("./lab-pages").then((m) => m.JobsPage));
 const ResearchPage = dynamic(() =>
   import("./lab-pages").then((m) => m.ResearchPage),
 );
-const PinePage = dynamic(() => import("./lab-pages").then((m) => m.PinePage));
+const PinePage = dynamic(() => import("./pine-page").then((m) => m.PineWorkspace));
 const ExcelPage = dynamic(() => import("./lab-pages").then((m) => m.ExcelPage));
 const AlphaWorkspace = dynamic(() =>
   import("./alpha-page").then((m) => m.AlphaWorkspace),

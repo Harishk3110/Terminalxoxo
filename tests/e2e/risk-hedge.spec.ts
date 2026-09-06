@@ -7,6 +7,29 @@ test("risk limits, model settings and manual hedge reviews persist", async ({
   test.setTimeout(180000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const bootstrap = await (
+    await request.get("/backend/api/v1/terminal/bootstrap")
+  ).json();
+  await page.goto("/overview");
+  await expect(page.getByTestId("terminal-shell")).toBeVisible();
+  await page.evaluate((workspaceId) => {
+    localStorage.setItem(
+      "knk-terminal-v2",
+      JSON.stringify({
+        workspaceId,
+        configuration: {
+          tabs: Array.from({ length: 20 }, (_, i) => ({
+            id: `bookmark-${i}`,
+            title: `Chart ${i}`,
+            route: `/chart/test-${i}`,
+          })),
+          securities: ["AAPL"],
+          rail: true,
+          inspector: false,
+        },
+      }),
+    );
+  }, bootstrap.workspaces[0].id);
   await page.goto("/risk-trade-monitor");
   await page.getByRole("button", { name: "Add risk limit" }).click();
   const dialog = page.getByRole("dialog", { name: "Configure risk limit" });
@@ -69,6 +92,14 @@ test("risk limits, model settings and manual hedge reviews persist", async ({
   expect(runs.items[0].result.var_state).toBe("AVAILABLE");
   expect(runs.items[0].result.beta_after).not.toBeNull();
   await page.reload();
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const saved = JSON.parse(localStorage.getItem("knk-terminal-v2")!);
+        return saved.configuration.tabs.length;
+      }),
+    )
+    .toBe(20);
   await expect(page.getByLabel("Hedge target", { exact: true })).toHaveValue(
     "0.2",
   );

@@ -39,14 +39,25 @@ async def pace(name, interval):
     await asyncio.sleep(max(0, scheduled - now))
 
 
-async def fetch(name, url, *, headers=None, params=None, body=None, interval=0.25, transport=None):
+async def fetch(
+    name,
+    url,
+    *,
+    headers=None,
+    params=None,
+    body=None,
+    interval=0.25,
+    transport=None,
+    timeout=20,
+    attempts=3,
+):
     headers = headers or {}
-    for attempt in range(3):
+    for attempt in range(attempts):
         await pace(name, interval)
         start = time.perf_counter()
         try:
             async with httpx.AsyncClient(
-                timeout=20, transport=transport, follow_redirects=False
+                timeout=timeout, transport=transport, follow_redirects=False
             ) as client:
                 async with client.stream(
                     "POST" if body is not None else "GET",
@@ -63,7 +74,7 @@ async def fetch(name, url, *, headers=None, params=None, body=None, interval=0.2
                             code,
                             response.headers.get("retry-after"),
                         )
-                    if code >= 500 and attempt < 2:
+                    if code >= 500 and attempt < attempts - 1:
                         await asyncio.sleep(2**attempt)
                         continue
                     if code != 200:
@@ -89,7 +100,7 @@ async def fetch(name, url, *, headers=None, params=None, body=None, interval=0.2
                         response.headers.get("ratelimit-remaining"),
                     )
         except httpx.HTTPError as exc:
-            if attempt == 2:
+            if attempt == attempts - 1:
                 raise ProviderError(f"{name} network request failed") from exc
             await asyncio.sleep(2**attempt)
     raise ProviderError(f"{name} request failed")

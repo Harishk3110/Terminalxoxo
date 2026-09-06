@@ -34,8 +34,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -r services/api/requirements.txt -r services/local-agent/requirements.txt
+      - run: python -m pip install -r services/api/requirements.txt -r services/local-agent/requirements.txt -r requirements-dev.txt
       - run: python -m pytest services/api/tests
+      - run: python -m pytest tests/sprint
       - run: python -m py_compile services/worker-data/app/main.py services/worker-quant/app/main.py services/report-engine/app/main.py services/broker-agent/agent/main.py
 
   docker:

@@ -62,10 +62,15 @@ export function AlphaWorkspace() {
     columns: "",
   });
   const [basis, setBasis] = useState("NET");
-  const [report, setReport] = useTabState<AlphaReport | null>(
-    "alpha-result",
-    null,
+  const [runId, setRunId] = useTabState("alpha-run", "");
+  const saved = useApi<{ id: string; result: AlphaReport }>(
+    "alpha-saved-run",
+    `/api/v1/terminal/runs/${encodeURIComponent(runId)}`,
+    !!runId,
   );
+  const report = saved.data
+    ? { ...saved.data.result, id: saved.data.id }
+    : null;
   const books = useApi<{ items: Row[] }>("alpha-books", "/api/v1/portfolios");
   const backtests = useApi<{ items: Run[] }>(
     "alpha-backtests",
@@ -105,7 +110,7 @@ export function AlphaWorkspace() {
         estimated_cost_bps_per_period: Number(form.costs),
       }),
     onSuccess: (value) => {
-      setReport(value);
+      setRunId(value.id);
       history.refetch();
     },
   });
@@ -281,13 +286,13 @@ export function AlphaWorkspace() {
         <Field label="Saved analysis">
           <select
             aria-label="Saved alpha analysis"
-            value={report?.id ?? ""}
+            value={runId}
             onChange={(e) => {
               const run = history.data?.items.find(
                 (item) => item.id === e.target.value,
               );
               if (run?.result) {
-                setReport({ ...run.result, id: run.id });
+                setRunId(run.id);
                 const p = run.result.settings ?? {};
                 const performance = (p.performance as Row) ?? {};
                 const regression = (p.regression as Row) ?? {};
@@ -322,9 +327,9 @@ export function AlphaWorkspace() {
           </select>
         </Field>
       </div>
-      {calculate.error && (
+      {(calculate.error || saved.error) && (
         <p className="error-state" role="alert">
-          {calculate.error.message}
+          {(calculate.error || saved.error)?.message}
         </p>
       )}
       <div className="segmented">

@@ -32,7 +32,7 @@ test("NAV statement shows saved assets and liability components at all terminal 
     );
     await dialog.getByRole("button", { name: "NAV", exact: true }).click();
     const payload = await (await response).json();
-    expect(payload.calculation_version).toBe("knk-nav-4.6");
+    expect(payload.calculation_version).toBe("knk-nav-4.8");
     expect(Number(payload.balance_sheet.difference)).toBe(0);
     await expect(
       dialog.getByRole("table", { name: "Assets statement" }),

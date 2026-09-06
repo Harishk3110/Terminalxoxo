@@ -178,6 +178,8 @@ class FredProvider(MacroDataProvider):
                 params=request_params,
                 headers=headers,
                 transport=self.transport,
+                timeout=self.settings.fred_request_timeout_seconds,
+                attempts=self.settings.fred_max_retries,
             )
             if not isinstance(response.payload, dict):
                 raise ProviderError("FRED response must be an object")

@@ -38,6 +38,7 @@ data/redis/
 uploads/
 reports/generated/
 logs/
+infrastructure/backups/
 .knk-object-store/
 *.db
 *.db-*

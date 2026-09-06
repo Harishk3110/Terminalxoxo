@@ -7,7 +7,45 @@ test("saved alpha, model and Monte Carlo runs render private quant views", async
   test.setTimeout(300000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const queued = await request.post("/backend/api/v1/terminal/runs", {
+    data: {
+      kind: "backtest",
+      name: "Alpha browser fixture",
+      parameters: {
+        symbol: "SPY",
+        source_mode: "DEMO_RESEARCH",
+        strategy: "SMA",
+        start: "2025-01-01",
+      },
+    },
+  });
+  expect(queued.status(), await queued.text()).toBe(202);
+  const source = await queued.json();
+  await expect
+    .poll(
+      async () => {
+        const run = await (
+          await request.get(`/backend/api/v1/terminal/runs/${source.id}`)
+        ).json();
+        return run.status;
+      },
+      { timeout: 120000 },
+    )
+    .toBe("SUCCEEDED");
   await page.goto("/alpha");
+  await page.getByLabel("Alpha return source").selectOption(source.id);
+  const synced = page.waitForResponse((response) => {
+    if (
+      !response.url().includes("/api/v1/workspaces/") ||
+      response.request().method() !== "POST"
+    )
+      return false;
+    const states =
+      response.request().postDataJSON()?.configuration?.tabStates ?? {};
+    return Object.values(states).some(
+      (state) => !!(state as Record<string, unknown>)["alpha-run"],
+    );
+  });
   await page
     .getByRole("button", { name: "Calculate Alpha", exact: true })
     .click();
@@ -15,6 +53,12 @@ test("saved alpha, model and Monte Carlo runs render private quant views", async
     "market_excess",
     { timeout: 30000 },
   );
+  expect((await synced).ok()).toBeTruthy();
+  await page.reload();
+  await expect(page.getByLabel("alpha-coefficients table")).toContainText(
+    "market_excess",
+  );
+  await expect(page.getByText(/server sync failed/)).toHaveCount(0);
   await page.goto("/model-lab");
   await page.getByLabel("Model source").selectOption("DEMO_RESEARCH");
   await page.getByRole("button", { name: "Train model", exact: true }).click();
@@ -67,6 +111,7 @@ test("saved alpha, model and Monte Carlo runs render private quant views", async
     });
   }
   await page.goto("/monte-carlo");
+  await page.getByLabel("Monte Carlo return source").selectOption(source.id);
   await page.getByLabel("Monte Carlo paths").fill("200");
   await page.getByLabel("Monte Carlo horizon").fill("30");
   await page

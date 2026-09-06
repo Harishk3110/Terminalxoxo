@@ -118,18 +118,20 @@ services:
       context: .
       dockerfile: infrastructure/docker/python.Dockerfile
       args:
-        SERVICE_DIR: worker-data
-    command: python -m app.main --daemon
+        SERVICE_DIR: api
+    command: python -m app.queue_worker --kind data --daemon
     env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env for PostgreSQL}
       REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_BUCKET: knk-terminal-local
     depends_on:
       - api
       - redis
       - postgres
     healthcheck:
-      test: ["CMD", "python", "-m", "app.main", "--healthcheck"]
+      test: ["CMD", "python", "-m", "app.queue_worker", "--kind", "data", "--healthcheck"]
       interval: 15s
       timeout: 8s
       retries: 10
@@ -140,17 +142,19 @@ services:
       context: .
       dockerfile: infrastructure/docker/python.Dockerfile
       args:
-        SERVICE_DIR: worker-quant
-    command: python -m app.main --daemon
+        SERVICE_DIR: api
+    command: python -m app.queue_worker --kind quant --daemon
     env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env for PostgreSQL}
       REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_BUCKET: knk-terminal-local
     depends_on:
       - api
       - postgres
     healthcheck:
-      test: ["CMD", "python", "-m", "app.main", "--healthcheck"]
+      test: ["CMD", "python", "-m", "app.queue_worker", "--kind", "quant", "--healthcheck"]
       interval: 15s
       timeout: 8s
       retries: 10
@@ -167,7 +171,7 @@ services:
     ports:
       - "127.0.0.1:8010:8010"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health/live', timeout=5).read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health/ready', timeout=5).read()"]
       interval: 15s
       timeout: 8s
       retries: 10

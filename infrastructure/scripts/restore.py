@@ -1,9 +1,14 @@
-from __future__ import annotations
+import argparse
+import json
+from pathlib import Path
 
-
-def main() -> None:
-    print("Demo restore check completed. Production restore requires selected backup artifact.")
-
+from backup_archive import restore_backup
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Restore to a NEW isolated directory. Never overwrites the active workspace."
+    )
+    parser.add_argument("archive", type=Path)
+    parser.add_argument("--target", type=Path, required=True)
+    args = parser.parse_args()
+    print(json.dumps(restore_backup(args.archive, args.target)))
