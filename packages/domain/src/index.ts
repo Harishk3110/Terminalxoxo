@@ -203,23 +203,6 @@ export const demoOptionChain = [
   { strike: 240, callDelta: 0.36, putDelta: -0.62, impliedVolatility: 0.26, openInterest: 19760, gammaExposure: 1764000 }
 ];
 
-export const publicResearch = [
-  {
-    slug: "demo-quality-growth-framework",
-    title: "Quality Growth Framework",
-    summary: "A sanitized example of how KnK Capital evaluates durable compounding businesses.",
-    publishedAt: "2026-09-05",
-    status: "Published demo"
-  },
-  {
-    slug: "demo-risk-first-portfolio-construction",
-    title: "Risk-First Portfolio Construction",
-    summary: "A public methodology note using only non-private fixture data.",
-    publishedAt: "2026-09-05",
-    status: "Published demo"
-  }
-];
-
 export function calculateSimpleReturn(startValue: number, endValue: number): number {
   if (startValue <= 0) {
     throw new Error("startValue must be positive");

@@ -20,7 +20,7 @@ Acceptance entries are marked PASS only after the listed command exits 0.
 | Frontend typecheck | `corepack pnpm typecheck` | Exit 0 | Exit 0 | PASS | `docs/BUILD_EVIDENCE.md` |
 | Frontend lint | `corepack pnpm lint` | Exit 0 | Exit 0 | PASS | `docs/BUILD_EVIDENCE.md` |
 | Workspace tests | `corepack pnpm test` | Exit 0 | Exit 0; 3 Vitest tests passed, security scan passed; some packages still echo-only | PASS | `docs/BUILD_EVIDENCE.md` |
-| Frontend production build | `corepack pnpm --filter @knk/public-web build`; `corepack pnpm --filter @knk/terminal-web build` | Exit 0 for both apps | Exit 0 for both; route reports generated | PASS | `docs/BUILD_EVIDENCE.md` |
+| Frontend production build | `corepack pnpm --filter @knk/terminal-web build` | Exit 0 | Terminal build recorded separately | See current acceptance | `docs/TERMINAL_ACCEPTANCE.md` |
 | E2E terminal journey | `PLAYWRIGHT_RUN_ID=manual-20260905h corepack pnpm test-e2e` | Exit 0 | `1 passed`; Chromium installed and UI/API smoke passed | PASS | `tests/e2e/smoke.spec.ts` |
 | Docker Compose config | `docker compose config --quiet` | Exit 0 | Exit 0 | PASS | `docs/BUILD_EVIDENCE.md` |
 | Docker Compose build | `docker compose build` | Exit 0 | Exit 1; Docker Desktop Linux engine not reachable | FAIL | `docs/BUILD_EVIDENCE.md` |

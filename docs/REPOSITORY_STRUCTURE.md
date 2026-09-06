@@ -1,7 +1,6 @@
 # Repository Structure
 
 ```text
-apps/public-web        Public KnK Capital website
 apps/terminal-web      Private terminal shell
 services/api           FastAPI backend
 services/worker-data   Data ingestion worker

@@ -25,7 +25,6 @@ Remote: `https://github.com/Harishk3110/Terminalxoxo.git`
 | Frontend typecheck | `corepack pnpm typecheck` | 0 | All workspace TypeScript typechecks passed. |
 | Frontend lint | `corepack pnpm lint` | 0 | All package TS checks passed; Next lint for public and terminal had no warnings/errors. |
 | Frontend tests/security | `corepack pnpm test` | 0 | 3 Vitest domain tests passed; security guard reported no forbidden broker action method names in application source. Some packages still have echo-only test scripts. |
-| Public production build | `corepack pnpm --filter @knk/public-web build` | 0 | Next build passed; `/[[...slug]]` dynamic route and `/_not-found` generated. |
 | Terminal production build | `corepack pnpm --filter @knk/terminal-web build` | 0 | Next build passed; `/[[...slug]]` dynamic route and `/_not-found` generated. |
 | Docker Compose config | `docker compose config --quiet` | 0 | Compose YAML validates. |
 | Docker Compose build | `docker compose build` | 1 | Failed before build because Docker Desktop Linux engine was unavailable at `npipe:////./pipe/dockerDesktopLinuxEngine`. |

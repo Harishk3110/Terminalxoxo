@@ -14,9 +14,9 @@ def test_environment_badges_are_explicit():
     assert payload["paper_only"] is True
 
 
-def test_public_content_does_not_return_private_portfolio_data():
+def test_public_content_route_is_removed():
     response = client.get("/api/v1/public/content")
-    assert response.status_code == 200
+    assert response.status_code == 404
     text = response.text.lower()
     assert "portfolio_transactions" not in text
     assert "broker_password" not in text

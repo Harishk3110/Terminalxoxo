@@ -1,3 +1,3 @@
 # @knk/research
 
-Investment theses, idea tracking, research notes, source attachments, and private/public publishing workflows.
+Private investment theses, idea tracking, research notes and source attachments.

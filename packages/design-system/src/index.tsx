@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Database, Lock, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
@@ -65,20 +65,6 @@ export function StatBlock({
         {value}
       </p>
       {sublabel ? <p className="mt-1 text-sm text-slate-500">{sublabel}</p> : null}
-    </section>
-  );
-}
-
-export function SecurityNotice() {
-  return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-        <Lock className="h-4 w-4" />
-        Public/private separation active
-      </div>
-      <p className="mt-2 text-sm text-slate-600">
-        Public routes use sanitized content only. Private portfolio, broker, research draft, and signal data stay behind authenticated terminal APIs.
-      </p>
     </section>
   );
 }

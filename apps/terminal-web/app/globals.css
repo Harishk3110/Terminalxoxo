@@ -23,6 +23,27 @@
   --analytics-purple: #b28dff;
   --focus-white: #ffffff;
 }
+.terminal-login {
+  height: 100dvh;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 16px;
+  overflow: auto;
+}
+.terminal-login h1 {
+  color: var(--knk-amber);
+  font-size: 20px;
+  margin: 0 0 24px;
+}
+.terminal-login .page-grid {
+  min-height: 360px;
+}
+@media (max-width: 600px) {
+  .terminal-login .page-grid {
+    display: flex;
+    flex-direction: column;
+  }
+}
 * {
   box-sizing: border-box;
   letter-spacing: 0;

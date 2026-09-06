@@ -15,7 +15,6 @@ Auth:
 
 Public:
 
-- `GET /api/v1/public/content`
 
 Discovery and reference:
 

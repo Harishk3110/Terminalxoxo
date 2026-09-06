@@ -11,7 +11,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models
-from .config import get_settings
 from .database import get_session
 from .portfolio_operations import PortfolioLedgerService, TradeMonitorService, PortfolioReconciliationService, audit
 from .portfolio_seed import reset_main_demo
@@ -26,8 +25,6 @@ router = APIRouter(prefix="/api/v1/operations")
 def identity(request: Request, session: Session, admin: bool = False) -> str | None:
     from .terminal_api import auth_session
     user = auth_session(request, session)
-    if get_settings().knk_env == "local-demo" and not user["authenticated"]:
-        return None
     if not user["authenticated"] or admin and str(user.get("role", "")).upper() != "ADMIN":
         raise HTTPException(403, "Administrator access required" if admin else "Authentication required")
     return session.scalar(select(models.User.id).where(models.User.email == user["email"]))

@@ -7,6 +7,7 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "KnK Capital Terminal",
   description: "Private institutional investment terminal for KnK Capital.",
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export default function RootLayout({

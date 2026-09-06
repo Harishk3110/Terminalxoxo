@@ -12,13 +12,12 @@ Financial calculations live in `services/api/app/domain.py` and service classes,
 
 ## Services
 
-- `services/api`: FastAPI `/api/v1` application, auth setup/login, provider state, FRED ingestion, macro dashboard, portfolio ledger, performance, risk, hedge, datasets, jobs, reports, Pine export, health, metrics, and public/private separation.
+- `services/api`: authenticated investment APIs, sessions, providers, ledger, performance, risk, hedge, data, research jobs and internal reports.
 - `services/worker-data`: Redis-backed job consumer that updates persisted `ingestion_jobs`.
 - `services/worker-quant`: analytical worker boundary with DB health check.
 - `services/report-engine`: independent report service that generates real `.xlsx` files.
 - `services/broker-agent`: read-only local heartbeat/status agent. No execution capability exists.
 - `apps/terminal-web`: private Next.js terminal, backed by `@knk/api-client`.
-- `apps/public-web`: sanitized public site.
 
 ## Persistence
 
@@ -38,7 +37,7 @@ FRED follows the same raw-to-curated path when credentials are configured:
 
 ## Safety Boundaries
 
-- Public API returns sanitized research content only.
+- All investment API routes, including legacy aliases, require authentication.
 - Private terminal API owns portfolios, transactions, strategies, risk, provider state, jobs, and uploads.
 - Broker agent is read-only.
 - Repository-wide no-execution tests fail if forbidden broker action method names appear in application source.

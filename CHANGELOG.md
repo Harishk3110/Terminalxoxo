@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Terminal-only Scope Correction
+
+- Pushed recovery tag pre-terminal-only-cleanup before removing visitor frontend source.
+- Retained the private terminal and analytical engines as the sole product.
+- Required authentication for investment pages and APIs, including demo and legacy aliases.
+- Added noindex/no-store, opaque sessions, logout and private-route regression coverage.
+- Removed the second frontend's workspace, Compose, environment and deployment configuration.
+
 ## Portfolio-First Operating Model - 2026-09-06
 
 - Replaced market-first HOME with the KNK_MAIN Portfolio Command Centre while retaining the approved terminal shell.

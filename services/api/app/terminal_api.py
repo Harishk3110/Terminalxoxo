@@ -348,13 +348,14 @@ class ResearchRequest(BaseModel):
 @router.post("/research")
 def save_research(payload: ResearchRequest, session: Session = Depends(get_session)):
     row = session.get(models.ResearchNote, payload.id) if payload.id else None
-    if payload.id and (not row or row.visibility == "PUBLIC"):
-        raise HTTPException(409, "Public records require a separate publishing review")
+    if payload.id and not row:
+        raise HTTPException(404, "Research note not found")
     if row is None:
         row = models.ResearchNote(title=payload.title, body=payload.body, instrument_id=payload.instrument_id, visibility="PRIVATE")
         session.add(row)
     else:
         row.title, row.body = payload.title, payload.body
+        row.visibility = "PRIVATE"
     session.commit()
     return {"id": row.id, "status": "saved", "visibility": row.visibility}
 
@@ -430,30 +431,20 @@ def terminal_report(kind: str, session: Session = Depends(get_session)):
 
 @router.get("/auth/session")
 def auth_session(request: Request, session: Session = Depends(get_session)):
-    from .main import hasher
-    token = request.cookies.get("knk_session")
-    if token:
-        for row in session.scalars(select(models.UserSession).where(models.UserSession.revoked_at.is_(None), models.UserSession.expires_at > datetime.now(timezone.utc))).all():
-            try:
-                if hasher.verify(row.session_hash, token):
-                    user = session.get(models.User, row.user_id)
-                    return {"authenticated": True, "email": user.email, "role": user.role, "setup_required": False}
-            except Exception:
-                pass
-    return {"authenticated": False, "setup_required": session.scalar(select(models.User.id).limit(1)) is None, "demo_access": get_settings().knk_env == "local-demo"}
+    from .auth_sessions import find_session
+    row = find_session(session, request.cookies.get("knk_session"))
+    user = session.get(models.User, row.user_id) if row else None
+    if user and user.is_active:
+        return {"authenticated": True, "email": user.email, "role": user.role, "setup_required": False}
+    return {"authenticated": False, "setup_required": get_settings().knk_env == "local-demo" and session.scalar(select(models.User.id).limit(1)) is None}
 
 
 @router.post("/auth/logout")
 def logout(request: Request, response: Response, session: Session = Depends(get_session)):
-    from .main import hasher
-    token = request.cookies.get("knk_session")
-    if token:
-        for row in session.scalars(select(models.UserSession).where(models.UserSession.revoked_at.is_(None))).all():
-            try:
-                if hasher.verify(row.session_hash, token):
-                    row.revoked_at = datetime.now(timezone.utc)
-            except Exception:
-                pass
+    from .auth_sessions import find_session
+    row = find_session(session, request.cookies.get("knk_session"))
+    if row:
+        row.revoked_at = datetime.now(timezone.utc)
         session.commit()
     response.delete_cookie("knk_session")
     return {"status": "signed_out"}

@@ -6,13 +6,12 @@
 python -m pip install -r services/api/requirements.txt
 corepack pnpm install
 python -m alembic upgrade head
-python services/api/scripts/seed_demo.py --reset
+python services/api/scripts/seed_demo.py
 python -m pytest services/api/tests
 corepack pnpm typecheck
 corepack pnpm lint
 corepack pnpm test
-corepack pnpm --filter @knk/public-web build
-corepack pnpm --filter @knk/terminal-web build
+NEXT_PUBLIC_APP_ENV=test corepack pnpm --filter @knk/terminal-web build
 corepack pnpm test-e2e
 ```
 
@@ -21,8 +20,7 @@ corepack pnpm test-e2e
 API:
 
 ```bash
-cd services/api
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --app-dir services/api --host 127.0.0.1 --port 8000
 ```
 
 Terminal:

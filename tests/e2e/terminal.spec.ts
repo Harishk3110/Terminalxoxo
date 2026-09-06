@@ -227,21 +227,24 @@ test("table controls, security context menu and resized inspector", async ({
   ).toBeVisible();
 });
 
-test("provider states and private session login", async ({ page, request }) => {
-  const setup = await request.get("/backend/api/v1/auth/session");
-  if ((await setup.json()).setup_required)
-    await request.post("/backend/api/v1/auth/setup", {
-      data: { email: "qa@knk.example", password: "KnK-QA-only-2026!" },
-    });
-  await page.goto("/settings/security");
-  await page.getByLabel("Email", { exact: true }).fill("qa@knk.example");
-  await page.getByLabel("Password", { exact: true }).fill("KnK-QA-only-2026!");
+test("provider states and private session login", async ({ page, context }) => {
+  await context.clearCookies();
+  await page.goto("/overview");
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel("Email", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_EMAIL!);
+  await page.getByLabel("Password", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL("**/overview");
+  await page.goto("/settings/security");
   await expect(page.getByText("AUTHENTICATED", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
+  await page.getByLabel("Email", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_EMAIL!);
+  await page.getByLabel("Password", { exact: true }).fill(process.env.PLAYWRIGHT_TEST_PASSWORD!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL("**/overview");
   await command(page, "CONN");
   await expect(
     page.getByRole("heading", { name: "Connections / Data Providers" }),

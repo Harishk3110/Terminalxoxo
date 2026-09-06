@@ -13,7 +13,7 @@ A full-height investment workstation, not an outer-scrolling dashboard. Desktop 
 - Working portfolio ledger, performance, risk, stress, hedge, macro, research, data import, backtest and export workflows.
 - Persist inputs, calculation version, data timestamp, warnings, results and job history.
 - Never show synthetic data as live, broker balances as ledger balances, or execution readiness without a connection.
-- Preserve the public website and read-only broker boundary.
+- Preserve the private terminal and read-only broker boundary; there is no visitor frontend.
 - Verify interactions, geometry, screenshots, unit tests, API tests, build and Compose configuration.
 
 ## Acceptance boundary

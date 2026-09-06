@@ -16,13 +16,16 @@ jobs:
           version: 9.15.4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test-unit
       - run: pnpm security-check
       - run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_ENV: test
+          KNK_API_URL: http://127.0.0.1:8000
 
   python:
     runs-on: ubuntu-latest
@@ -39,4 +42,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose -f docker-compose.yml build
+      - run: docker build -f infrastructure/docker/node.Dockerfile -t knk-terminal-web .
+      - run: docker build -f infrastructure/docker/python.Dockerfile --build-arg SERVICE_DIR=api -t knk-api .

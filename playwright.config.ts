@@ -11,6 +11,6 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["json", {outputFile:"logs/terminal-e2e-results.json"}]],
   expect: { timeout: 15000, toHaveScreenshot: { maxDiffPixelRatio: 0.02 } },
-  use: { baseURL: "http://127.0.0.1:3002", trace: "retain-on-failure", screenshot: "only-on-failure" },
+  use: { baseURL: "http://127.0.0.1:3002", storageState: "logs/e2e-auth.json", trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [{ name: "chromium", use: {...devices["Desktop Chrome"]} }],
 });

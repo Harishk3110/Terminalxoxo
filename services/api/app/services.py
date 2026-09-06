@@ -346,7 +346,6 @@ class DemoIngestionService:
             self.session.add(thesis)
             self.session.flush()
             self.session.add(models.ThesisSource(thesis_id=thesis.id, source_type="demo-research", citation="KnK deterministic research fixture"))
-        self.session.add(models.ResearchNote(instrument_id=instruments["AAPL"].id, title="Public demo research note", body="This public note contains only sanitized demo research content.", visibility="PUBLIC"))
         self.session.add(models.ResearchNote(instrument_id=instruments["MSFT"].id, title="Private demo thesis note", body="Private portfolio research note backed by deterministic demo data.", visibility="PRIVATE"))
         self.session.add(models.DecisionJournal(decision_type="REFERENCE_PORTFOLIO_SEED", rationale="Seeded SGD 70,000 reference portfolio for local deterministic acceptance."))
         strategy_specs = [

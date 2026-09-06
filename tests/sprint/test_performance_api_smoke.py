@@ -10,12 +10,13 @@ from sqlalchemy import select
 
 
 @pytest.fixture
-def performance_client(ledger_session):
+def performance_client(ledger_session, session_token):
     app = FastAPI()
     app.include_router(portfolios)
     app.include_router(router)
     app.dependency_overrides[get_session] = lambda: ledger_session
     with TestClient(app) as client:
+        client.cookies.set("knk_session", session_token)
         yield client
 
 

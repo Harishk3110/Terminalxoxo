@@ -151,11 +151,13 @@ def test_storage_rejects_path_traversal():
         ObjectStorage().get_bytes('../config.py')
 
 
-def test_private_api_is_protected_outside_local_demo(monkeypatch):
-    monkeypatch.setattr(settings, 'knk_env', 'production-paper')
-    assert client.get('/api/v1/terminal/portfolio').status_code == 401
-    assert client.get('/api/v1/workspaces').status_code == 401
-    assert client.get('/api/v1/public/content').status_code == 200
+@pytest.mark.parametrize('environment', ['local-demo', 'production-paper'])
+def test_private_api_requires_authentication_in_every_environment(monkeypatch, environment):
+    monkeypatch.setattr(settings, 'knk_env', environment)
+    with TestClient(app) as anonymous:
+        assert anonymous.get('/api/v1/terminal/portfolio').status_code == 401
+        assert anonymous.get('/api/v1/workspaces').status_code == 401
+    assert client.get('/api/v1/public/content').status_code == 404
 
 
 def test_backtest_costs_affect_results():

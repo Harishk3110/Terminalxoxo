@@ -1,120 +1,80 @@
+KnK Capital Terminal is a private internal portfolio, equity research, quantitative research, options analytics and risk-monitoring platform.
+
 # KnK Capital Terminal
 
-Repository: `Terminalxoxo`
+One frontend: `apps/terminal-web`. The existing black-and-amber shell opens the
+Portfolio Command Centre after sign-in. All investment APIs require a session,
+including deterministic demo mode. Broker connections are read-only; transactions
+record manual activity and never transmit orders.
 
-KnK Capital Terminal is a local portfolio, equity, quant and risk workstation for KnK Capital. HOME is the Portfolio Command Centre for KNK_MAIN, with an explicit SGD 70,000 demonstration opening ledger, source-aware NAV and auditable trade reviews. The approved dense black/amber shell, persistent workspaces, inspector and public website are preserved. Stress and version-pinned moving-average backtests run as persisted jobs in separate processes.
+## Start
 
-The registry contains 110 functions, including NAV, PNL, TRADES, RISKMON, QMON, EQUITY, KOYFIN and DATADROP. CSV/XLSX/JSON files pass through mapping, validation and explicit approval into immutable raw/curated versions. Koyfin means permitted exported files, not a direct API or live feed. The local agent supports OS-vault pairing and an optional read-only paper-account reader. See [Portfolio Acceptance](docs/PORTFOLIO_ACCEPTANCE.md), [Local Agent](docs/LOCAL_DATA_AGENT.md), and [Status](STATUS.md) for measured results and remaining limitations.
+Use Node.js 22, pnpm 9.15.4 and Python 3.12. Install frontend and Python dependencies:
 
-The build remains deliberately safe:
-
-- Demo mode works without external credentials and labels seeded records as `DEMO DATA`.
-- FRED is `NOT_CONFIGURED` until `FRED_ENABLED=true` and `FRED_API_KEY` are supplied.
-- Broker integration is read-only by design.
-- No broker order execution methods are present in application source.
-- Public content is separated from private portfolio, provider, research, strategy, and risk APIs.
-
-## Run Locally
-
-For the current Vercel project settings, startup status and verified limitations,
-see [Production Hosting Status](docs/PRODUCTION_HOSTING_STATUS.md). Use Node.js 22
-and pnpm 9.15.4. Hosted terminal builds require a public HTTPS `KNK_API_URL`;
-local production builds require `NEXT_PUBLIC_APP_ENV=local` explicitly.
-
-```bash
-corepack prepare pnpm@9.15.4 --activate
-corepack pnpm install
-python -m pip install -r services/api/requirements.txt
-python -m alembic upgrade head
-python services/api/scripts/seed_demo.py
+```powershell
+corepack pnpm install --frozen-lockfile
+python -m pip install -r requirements-dev.txt
 ```
 
-API:
+The default `corepack pnpm dev` starts the terminal, API, required workers,
+PostgreSQL, Redis and object storage with Docker Compose. Configure the ignored
+`.env` from `.env.example` first. Supply `POSTGRES_PASSWORD`, `DATABASE_URL`,
+`MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`; retain existing persistent-volume
+credentials. Never commit the populated environment file.
 
-```bash
+For local SQLite operation, run the following in separate terminals from this
+repository's root. Existing records are retained by migrations and normal seeding.
+
+```powershell
+$env:KNK_ENV='local-demo'
+$env:DATABASE_URL='sqlite:///./knk_terminal.db'
+python -m alembic upgrade head
 python -m uvicorn app.main:app --app-dir services/api --host 127.0.0.1 --port 8000
 ```
 
-Terminal web:
-
-```bash
-corepack pnpm --filter @knk/terminal-web dev --hostname 127.0.0.1 --port 3001
+```powershell
+corepack pnpm dev:terminal
 ```
 
-Open http://127.0.0.1:3001/overview, or http://127.0.0.1:3001/stress-tests for the scenario workspace. Run the API from the repository root so it uses the same database as migrations. KNK_API_URL controls the terminal's server-side API proxy (default http://127.0.0.1:8000). In PowerShell, setting `$env:KNK_NEXT_DIST_DIR='logs/terminal-dev'` gives development its own output directory and avoids sharing production build files.
+Private terminal: http://127.0.0.1:3001/overview
+Root http://127.0.0.1:3001/ redirects to /overview, then /login if unauthenticated.
+First-use local administrator creation is on the sign-in screen. Hosted account
+registration is disabled; provision the first administrator from the backend
+console with `python services/api/scripts/create_admin.py`.
 
-For the verified production build on Windows, keep the API running, then use
-`OPEN-KNK-TERMINAL.cmd`. It starts the main terminal on port 3001; keep its
-window open. To rebuild that launcher's output:
+## Production Build
 
 ```powershell
-$env:KNK_NEXT_DIST_DIR='.next'
 $env:NEXT_PUBLIC_APP_ENV='local'
+$env:KNK_API_URL='http://127.0.0.1:8000'
 corepack pnpm --filter @knk/terminal-web build
 ```
 
-The latest agent session could not start the user's web process under its
-execution policy. A localhost link works only while the launcher/dev server
-is running; this repository push is not a public hosting deployment.
+`OPEN-KNK-TERMINAL.cmd` runs the resulting build on port 3001. Keep its window
+open. The agent's previous local launch was policy-blocked; see STATUS.md for
+current observed availability rather than assuming a localhost URL is running.
 
-Account setup/sign-in is under SECURITY. Local demo access is intentionally allowed without an account; outside local-demo, private API routes require a session. Keep the local server bound to loopback. Credentials, databases, uploads, logs and generated workbooks are ignored by Git.
-
-Public web:
-
-```bash
-corepack pnpm --filter @knk/public-web dev --hostname 127.0.0.1 --port 3000
-```
-
-## Docker
-
-```bash
-cp .env.example .env
-```
-
-Set `POSTGRES_PASSWORD`, `DATABASE_URL`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`
-in that ignored file before starting Compose. The PostgreSQL URL must use host
-`postgres`, database `knk_terminal`, user `knk` and the matching URL-encoded password.
-Keep the existing credentials when reconnecting existing persistent volumes;
-changing an environment value does not reset a database user's password.
-Do not commit the populated file. Then run:
-
-```bash
-docker compose up --build
-```
-
-The Linux API image, container migration/seed and API readiness/NAV checks passed
-against an isolated PostgreSQL/Redis stack in C:\Dev. Full Compose startup,
-MinIO, distributed workers and web-container health have not been verified.
-See [Portfolio Acceptance](docs/PORTFOLIO_ACCEPTANCE.md) for current evidence;
-`docs/BUILD_EVIDENCE.md` is the archived V1 record.
+Vercel uses one project, `knk-capital-terminal`, root `apps/terminal-web`.
+Hosted builds require a reachable HTTPS API origin in server-only `KNK_API_URL`.
+No credentials belong in `NEXT_PUBLIC_*`. See
+[Hosting](docs/PRODUCTION_HOSTING_STATUS.md) and [Architecture](docs/TERMINAL_ARCHITECTURE.md).
 
 ## Verification
 
-The backend tests also exercise the local agent. Install its optional test
-dependencies with `python -m pip install -r services/local-agent/requirements.txt`.
-
-```bash
-python -m compileall -q services/api/app services/api/scripts services/worker-data/app services/worker-quant/app services/report-engine/app services/broker-agent
-python -m pytest services/api/tests --cov=services/api/app --cov-report=term-missing
-corepack pnpm typecheck
-corepack pnpm lint
-corepack pnpm test
-corepack pnpm --filter @knk/public-web build
-corepack pnpm --filter @knk/terminal-web build
-docker compose config --quiet
-```
-
-See `STATUS.md`, `TASKS.md`, `docs/CORE_ACCEPTANCE.md`, and `docs/BUILD_EVIDENCE.md` for exact results.
-
-Terminal V2 browser validation uses isolated ports 8001/3002 and its own database/object store. Build the test artifact and run (PowerShell):
-
 ```powershell
-$env:KNK_NEXT_DIST_DIR='logs/terminal-v2-build'
-$env:NEXT_PUBLIC_APP_ENV='test'
-corepack pnpm --filter @knk/terminal-web build
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test
+python -m pytest services/api/tests tests/sprint
 corepack pnpm test-e2e
+python scripts/scan_release_secrets.py
 ```
 
-Set `PLAYWRIGHT_DIST_DIR` when the built terminal uses another output directory, for example `logs/terminal-v2-verified`. The test harness uses explicit child-process teardown and writes `logs/terminal-e2e-results.json`. Transient traces and failure screenshots use the OS temp directory's `knk-terminal-e2e` folder to avoid OneDrive cleanup locks; `PLAYWRIGHT_OUTPUT_DIR` overrides it.
+Playwright uses isolated ports 8001/3002, an isolated database and an authenticated
+test session. Logs, screenshots and session state remain ignored. The test runner
+does not disable application authentication. `PLAYWRIGHT_PYTHON` may select the
+Python interpreter; `PLAYWRIGHT_DIST_DIR` selects an alternate test build.
 
-Screenshots and geometry checks cover Overview, Macro, Portfolio, Performance, Risk, Stress, Hedge and Backtests at four desktop sizes plus mobile monitoring. See [Visual Acceptance](docs/VISUAL_ACCEPTANCE.md). Generated images are local-only. Normal tests assert layout, theme, content and workflows; optional golden comparisons require `KNK_COMPARE_SCREENSHOTS=1` and separately supplied Windows/Chromium baselines. `--update-snapshots` regenerates those local baselines.
+See [Acceptance](docs/TERMINAL_ACCEPTANCE.md), [Scope](docs/PRD_TERMINAL_ONLY.md)
+and [Removal Record](docs/PUBLIC_SITE_REMOVAL.md). Features and provider gaps are
+reported individually, never presented as live data merely because one provider connects.

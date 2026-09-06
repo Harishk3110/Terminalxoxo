@@ -2,6 +2,9 @@
 
 ## Current Wrap-up
 
+Superseded by the terminal-only scope correction. See STATUS.md and
+docs/PRD_TERMINAL_ONLY.md; the following wrap-up is retained as historical evidence.
+
 New product expansion is paused at the user's urgent wrap-up request, 2026-09-06.
 The 25K sprint remains incomplete. Do not resume feature expansion without direction.
 Current branch main; current predecessor a008de5f711b198d0056c1d10e49b32c397f283e.

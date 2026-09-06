@@ -125,7 +125,23 @@ def ledger_session() -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(ledger_session: Session) -> Iterator[TestClient]:
+def session_token(ledger_session: Session) -> str:
+    import secrets
+    from datetime import UTC, datetime, timedelta
+    from app import models
+    from app.auth_sessions import token_digest
+
+    token = secrets.token_urlsafe(32)
+    user = models.User(email="ledger-tests@example.test", password_hash="test-session-only", role="ADMIN")
+    ledger_session.add(user)
+    ledger_session.flush()
+    ledger_session.add(models.UserSession(user_id=user.id, session_hash=token_digest(token), expires_at=datetime.now(UTC) + timedelta(hours=1)))
+    ledger_session.commit()
+    return token
+
+
+@pytest.fixture
+def client(ledger_session: Session, session_token: str) -> Iterator[TestClient]:
     from app.database import get_session
     from app.portfolio_resource_api import router
     from fastapi import FastAPI
@@ -138,4 +154,5 @@ def client(ledger_session: Session) -> Iterator[TestClient]:
 
     app.dependency_overrides[get_session] = session_override
     with TestClient(app) as test_client:
+        test_client.cookies.set("knk_session", session_token)
         yield test_client

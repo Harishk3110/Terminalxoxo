@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import secrets
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .config import get_settings
+from .auth_sessions import token_digest
 from .database import SessionLocal, engine, get_session
 from .providers.fred import FredProvider
 from .repositories import InstrumentRepository, JobRepository, ProviderRepository, StrategyRepository, SystemRepository
@@ -59,7 +61,7 @@ app.include_router(broker_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002"],
+    allow_origins=["http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Correlation-ID"],
@@ -116,12 +118,12 @@ def startup() -> None:
 async def request_middleware(request: Request, call_next):
     ensure_database_ready()
     path = request.url.path
-    public_paths = {"/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/session", "/api/v1/auth/logout", "/api/v1/public/content", "/api/v1/environment"}
-    if settings.knk_env != "local-demo" and path.startswith("/api/v1/") and path not in public_paths and request.method != "OPTIONS":
+    session_paths = {"/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/session", "/api/v1/auth/logout"}
+    if path.startswith("/api/") and path not in session_paths and request.method != "OPTIONS":
         from .terminal_api import auth_session
         with SessionLocal() as session:
             if not auth_session(request, session)["authenticated"]:
-                return JSONResponse({"detail": "Authentication required"}, status_code=401)
+                return JSONResponse({"detail": "Authentication required"}, status_code=401, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
     start = datetime.now(timezone.utc)
     cid = correlation_id(request)
     response = await call_next(request)
@@ -133,6 +135,9 @@ async def request_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    if path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
     if settings.knk_env == "production-paper":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
@@ -228,6 +233,8 @@ def environment():
 
 @app.post("/api/v1/auth/setup")
 def setup_admin(payload: AdminSetupRequest, response: Response, request: Request, session: Session = Depends(get_session)):
+    if settings.knk_env != "local-demo":
+        raise HTTPException(403, "Administrator provisioning is local-only")
     existing = session.execute(select(models.User).limit(1)).scalars().first()
     if existing:
         raise HTTPException(status_code=409, detail="Administrator already configured")
@@ -236,18 +243,19 @@ def setup_admin(payload: AdminSetupRequest, response: Response, request: Request
     session.flush()
     secret = pyotp.random_base32()
     session.add(models.TotpSetting(user_id=user.id, secret_encrypted=f"local-demo:{secret}", enabled=False))
-    for code in ["KNK-DEMO-1001", "KNK-DEMO-1002", "KNK-DEMO-1003"]:
+    recovery_codes = [secrets.token_urlsafe(18) for _ in range(8)]
+    for code in recovery_codes:
         session.add(models.RecoveryCode(user_id=user.id, code_hash=hasher.hash(code)))
     session.add(models.AuditLog(actor_user_id=user.id, action="auth.setup", resource_type="user", resource_id=user.id, correlation_id=correlation_id(request), metadata_json={"email": payload.email}))
     session.commit()
     response.set_cookie("knk_setup", "complete", httponly=True, samesite="strict", secure=settings.knk_env == "production-paper")
-    return {"status": "configured", "totp_secret": secret, "recovery_codes": ["KNK-DEMO-1001", "KNK-DEMO-1002", "KNK-DEMO-1003"]}
+    return {"status": "configured", "totp_secret": secret, "recovery_codes": recovery_codes}
 
 
 @app.post("/api/v1/auth/login")
 def login(payload: LoginRequest, response: Response, request: Request, session: Session = Depends(get_session)):
     user = session.execute(select(models.User).where(models.User.email == payload.email)).scalars().first()
-    if not user:
+    if not user or not user.is_active:
         AUTH_FAILURES.inc()
         session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="unknown_user", ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
         session.commit()
@@ -267,18 +275,12 @@ def login(payload: LoginRequest, response: Response, request: Request, session: 
         if not pyotp.TOTP(secret).verify(payload.totp_code):
             AUTH_FAILURES.inc()
             raise HTTPException(status_code=401, detail="Invalid TOTP code")
-    session_id = str(uuid.uuid4())
-    session.add(models.UserSession(user_id=user.id, session_hash=hasher.hash(session_id), expires_at=datetime.now(timezone.utc) + timedelta(hours=8)))
+    session_id = secrets.token_urlsafe(32)
+    session.add(models.UserSession(user_id=user.id, session_hash=token_digest(session_id), expires_at=datetime.now(timezone.utc) + timedelta(hours=8)))
     session.add(models.LoginAttempt(email=payload.email, success=True, ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
     session.commit()
-    response.set_cookie("knk_session", session_id, httponly=True, samesite="strict", secure=settings.knk_env == "production-paper")
+    response.set_cookie("knk_session", session_id, httponly=True, samesite="strict", secure=settings.knk_env != "local-demo", max_age=28800)
     return {"status": "authenticated", "expires_in_seconds": 28800}
-
-
-@app.get("/api/v1/public/content")
-def public_content(session: Session = Depends(get_session)):
-    rows = session.execute(select(models.ResearchNote).where(models.ResearchNote.visibility == "PUBLIC")).scalars().all()
-    return {"items": [{"id": row.id, "title": row.title, "summary": row.body[:240], "visibility": row.visibility} for row in rows], "allowed_models": ["public_content", "public_products", "public_disclosures", "public_assets"]}
 
 
 @app.get("/api/v1/functions")

@@ -1031,7 +1031,6 @@ export function ResearchPage() {
           quality="PRIVATE"
         >
           {query.data?.items
-            .filter((n) => n.visibility !== "PUBLIC")
             .map((note) => (
               <button
                 key={String(note.id)}

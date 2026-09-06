@@ -244,6 +244,7 @@ export function AuthPage() {
       });
       setPassword("");
       client.invalidateQueries();
+      window.location.assign("/overview");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -275,7 +276,7 @@ export function AuthPage() {
                 onClick={() =>
                   knkApi
                     .post("/api/v1/auth/logout")
-                    .then(() => session.refetch())
+                    .then(() => { client.clear(); window.location.assign("/login"); })
                 }
               >
                 Sign out
@@ -343,8 +344,8 @@ export function AuthPage() {
             <dd>HTTP-only cookie / 8 hours</dd>
             <dt>Broker</dt>
             <dd>Manual execution only</dd>
-            <dt>Public content</dt>
-            <dd>Separate public records</dd>
+            <dt>Access</dt>
+            <dd>Private terminal / sign-in required</dd>
           </dl>
         </Panel>
       </div>

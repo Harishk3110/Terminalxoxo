@@ -1,3 +1,3 @@
 # Deck Builder
 
-Deck Builder creates internal investment committee decks and sanitized public research decks. Public decks must use approved public content models only.
+Deck Builder is for internal investment committee and research decks only. Artifacts remain authenticated private data; no publishing workflow is in scope.
