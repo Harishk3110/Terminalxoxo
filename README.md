@@ -16,6 +16,11 @@ The build remains deliberately safe:
 
 ## Run Locally
 
+For the current Vercel project settings, startup status and verified limitations,
+see [Production Hosting Status](docs/PRODUCTION_HOSTING_STATUS.md). Use Node.js 22
+and pnpm 9.15.4. Hosted terminal builds require a public HTTPS `KNK_API_URL`;
+local production builds require `NEXT_PUBLIC_APP_ENV=local` explicitly.
+
 ```bash
 corepack prepare pnpm@9.15.4 --activate
 corepack pnpm install
@@ -43,7 +48,8 @@ For the verified production build on Windows, keep the API running, then use
 window open. To rebuild that launcher's output:
 
 ```powershell
-$env:KNK_NEXT_DIST_DIR='logs/dev-portfolio-release'
+$env:KNK_NEXT_DIST_DIR='.next'
+$env:NEXT_PUBLIC_APP_ENV='local'
 corepack pnpm --filter @knk/terminal-web build
 ```
 
@@ -63,6 +69,16 @@ corepack pnpm --filter @knk/public-web dev --hostname 127.0.0.1 --port 3000
 
 ```bash
 cp .env.example .env
+```
+
+Set `POSTGRES_PASSWORD`, `DATABASE_URL`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`
+in that ignored file before starting Compose. The PostgreSQL URL must use host
+`postgres`, database `knk_terminal`, user `knk` and the matching URL-encoded password.
+Keep the existing credentials when reconnecting existing persistent volumes;
+changing an environment value does not reset a database user's password.
+Do not commit the populated file. Then run:
+
+```bash
 docker compose up --build
 ```
 
@@ -94,10 +110,11 @@ Terminal V2 browser validation uses isolated ports 8001/3002 and its own databas
 
 ```powershell
 $env:KNK_NEXT_DIST_DIR='logs/terminal-v2-build'
+$env:NEXT_PUBLIC_APP_ENV='test'
 corepack pnpm --filter @knk/terminal-web build
 corepack pnpm test-e2e
 ```
 
 Set `PLAYWRIGHT_DIST_DIR` when the built terminal uses another output directory, for example `logs/terminal-v2-verified`. The test harness uses explicit child-process teardown and writes `logs/terminal-e2e-results.json`. Transient traces and failure screenshots use the OS temp directory's `knk-terminal-e2e` folder to avoid OneDrive cleanup locks; `PLAYWRIGHT_OUTPUT_DIR` overrides it.
 
-Screenshots and geometry checks cover Overview, Macro, Portfolio, Performance, Risk, Stress, Hedge and Backtests at four desktop sizes plus mobile monitoring. See [Visual Acceptance](docs/VISUAL_ACCEPTANCE.md). Baselines are Windows/Chromium specific. Generating new baselines requires `--update-snapshots`; normal test runs compare against committed images.
+Screenshots and geometry checks cover Overview, Macro, Portfolio, Performance, Risk, Stress, Hedge and Backtests at four desktop sizes plus mobile monitoring. See [Visual Acceptance](docs/VISUAL_ACCEPTANCE.md). Generated images are local-only. Normal tests assert layout, theme, content and workflows; optional golden comparisons require `KNK_COMPARE_SCREENSHOTS=1` and separately supplied Windows/Chromium baselines. `--update-snapshots` regenerates those local baselines.

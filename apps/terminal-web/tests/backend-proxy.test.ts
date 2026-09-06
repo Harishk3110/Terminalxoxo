@@ -48,9 +48,9 @@ describe("backend proxy mutation contract", () => {
         },
       );
       const response = await handler(request, {
-        params: {
+        params: Promise.resolve({
           path: ["api", "v1", "portfolios", "book", "transactions", "txn"],
-        },
+        }),
       });
       expect(fetch).toHaveBeenCalledOnce();
       const [url, options] = fetch.mock.calls[0] as [URL, RequestInit];
@@ -81,7 +81,7 @@ describe("backend proxy mutation contract", () => {
     const fetch = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetch);
     await GET(new NextRequest("http://localhost/backend/api/v1/portfolios"), {
-      params: { path: ["api", "v1", "portfolios"] },
+      params: Promise.resolve({ path: ["api", "v1", "portfolios"] }),
     });
     expect(fetch.mock.calls[0][1].method).toBe("GET");
     expect(fetch.mock.calls[0][1].body).toBeUndefined();
@@ -105,9 +105,9 @@ describe("backend proxy mutation contract", () => {
         { method: "PUT", body: "{}" },
       ),
       {
-        params: {
+        params: Promise.resolve({
           path: ["api", "v1", "portfolios", "book", "transactions", "txn"],
-        },
+        }),
       },
     );
     expect(response.status).toBe(409);
@@ -121,7 +121,7 @@ describe("backend proxy mutation contract", () => {
     );
     const response = await GET(
       new NextRequest("http://localhost/backend/api/v1/portfolios"),
-      { params: { path: ["api", "v1", "portfolios"] } },
+      { params: Promise.resolve({ path: ["api", "v1", "portfolios"] }) },
     );
     expect(response.status).toBe(503);
     expect((await response.json()).detail).toContain("API is unavailable");
@@ -137,7 +137,7 @@ describe("backend proxy mutation contract", () => {
           "x-forwarded-host": "external.example",
         },
       }),
-      { params: { path: ["api", "v1", "portfolios"] } },
+      { params: Promise.resolve({ path: ["api", "v1", "portfolios"] }) },
     );
     const headers = new Headers(fetch.mock.calls[0][1].headers);
     expect(headers.has("x-untrusted-routing")).toBe(false);

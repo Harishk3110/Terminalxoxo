@@ -394,3 +394,77 @@ Qualifying delta: 9,357, all category floors unmet. Next financial work is the
 NAV balance-sheet presentation of short liabilities/overdrafts, remaining derived
 storage and metric contracts, then M2 performance/attribution. M1-M20 certification
 and all final acceptance gates remain incomplete.
+
+## Urgent Wrap-up, 2026-09-07 SGT
+
+Source predecessor: a008de5f711b198d0056c1d10e49b32c397f283e. Existing main/origin
+retained. Product expansion is paused by the user; the 25K sprint is NOT complete.
+The containing commit preserves the saved NAV statement, exact Decimal display,
+balance-sheet decomposition and the partial performance service. Performance is
+explicitly IN DEVELOPMENT, not a certified M2 implementation. No broker execution
+method was introduced. No source, database or user data was reset.
+
+Deployment preparation:
+- Next.js and eslint-config-next upgraded to 15.5.24, React 18 retained. Both apps
+  target Node 22, pnpm 9.15.4 and the existing workspace lockfile. App-root builds,
+  shared-package transpilation and repository-root output tracing are configured.
+- Missing/loopback production API origins fail configuration. Local builds need
+  explicit local/test mode. Browser API calls remain same-origin `/backend`;
+  provider credentials are never injected into public environment variables.
+- Public Tailwind now uses an explicit config path and app-relative content globs.
+  Visual review caught stale, unstyled CSS despite an HTTP 200 and successful build.
+  A fresh diagnostic build and final default `.next` rebuild include the utilities.
+- Docker uses Node 22 and frozen-lockfile installation. Compose reads ignored
+  credentials instead of source constants. It requires configuration before use;
+  existing persistent-volume credentials must be retained.
+- Generated test PNGs were untracked, not deleted from disk. SQLite files, runtime
+  directories, secrets and local Vercel metadata remain ignored.
+
+Verification during this wrap-up:
+- `corepack pnpm install --offline --frozen-lockfile`: exit 0.
+- Workspace frontend lint and typecheck: exit 0. Frontend Vitest: 228 passed in
+  14 files. Shared package test commands also passed; echo-only scripts are not tests.
+- Node 22 app-directory `next build`: both exit 0. Terminal route 117 kB / first
+  load 224 kB; public route 3.46 kB / first load 106 kB. No local API access is
+  required to produce either frontend build; the terminal validates configuration.
+- Full Python suite: 643 passed, three existing deprecation warnings, 166.42s.
+  Final performance API follow-up: seven passed after the IN DEVELOPMENT label.
+- Targeted strict mypy: 36 files passed. Targeted Ruff passed. Whole-backend Ruff
+  still has 227 findings; whole-backend mypy has 630 errors in 23 of 62 checked
+  files. These legacy-wide failures were not suppressed or represented as passing.
+- FastAPI import passed with 142 routes. Alembic has one head,
+  0005_accounting_subledgers. No-broker-execution and secret/artifact scans passed.
+- Final post-Next-update Playwright: 23 passed, zero skipped/flaky/unexpected,
+  210.62s, run wrapup-next15-final. Evidence is local logs/terminal-e2e-results.json.
+  The first post-update run failed because the isolated server lacked explicit test
+  mode; the supported harness now supplies it. No forbidden user-server launch
+  was attempted via the harness.
+- Public standalone browser checks: HTTP 200 and seven asset HTTP 200 responses
+  at 1440px and 390px, expected computed styles, no horizontal overflow, no fatal
+  runtime errors or HTTP failures. Screenshots reviewed locally. An initial check
+  counted prefetch cancellations on page navigation; separate-page verification
+  avoids treating intentional navigation cancellation as an application failure.
+- Compose configuration validation passed using temporary process-only values and
+  `--no-env-resolution`; Docker Linux daemon unavailable, so no container health
+  or new image runtime certification is claimed.
+
+Local API /health/live returns 200 in local-demo. The real database was backed up,
+then migrated from 0003 to 0005. All original record hashes were retained: 16
+transactions, nine details, two datasets, two versions, one analysis run and 22
+original valuation runs. A new real NAV run is knk-nav-4.6, SGD 70,597.57, ledger
+and balance sheet BALANCED; original opening SGD 70,000 retained.
+
+Private port 3001 remains unreachable: the agent's supported server launch was
+blocked by execution policy, and no alternative launch was used to bypass it.
+Firefox was not opened onto an unverified terminal URL. The user must run the
+updated OPEN-KNK-TERMINAL.cmd. Public port 3000 and API 8000 remain running.
+In-app browser bootstrap was unavailable; existing Playwright and standalone
+Chromium verification were used after that failure was reported.
+
+Vercel CLI 59.11.7 reports Logged out; no project links or public production API
+were found. No deployment URL is fabricated. Exact two-project import settings
+and backend hosting requirements are in PRODUCTION_HOSTING_STATUS.md.
+
+Final LOC report: 10,639, all category/total gates unmet; `--check` exits 1 as
+expected. This is an honest runnable-source checkpoint, not production or full
+milestone certification. Final handoff records commit/push and endpoint rechecks.

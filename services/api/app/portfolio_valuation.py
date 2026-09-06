@@ -28,7 +28,7 @@ from .portfolio_engine import Entry, LedgerState, ONE, ZERO, daily_performance, 
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 
-VERSION = "knk-nav-4.5"
+VERSION = "knk-nav-4.6"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -276,6 +276,7 @@ class PortfolioValuationService:
             flows = state.external_flows - flow_before
             position_values, position_rows, cash_rows, missing = {}, [], [], []
             total_cash = ZERO
+            settled_cash_components = []
             settled_cash = available_cash = settlement_receivables = settlement_payables = ZERO
             sources = []
             for currency, cash_balance in state.cash_service.balances(day).items():
@@ -291,6 +292,7 @@ class PortfolioValuationService:
                 else:
                     total_cash += value
                     settled_cash += cash_balance.settled * rate
+                    settled_cash_components.append(cash_balance.settled * rate)
                     available_cash += cash_balance.available * rate
                     settlement_receivables += cash_balance.receivable * rate
                     settlement_payables += cash_balance.payable * rate
@@ -339,7 +341,7 @@ class PortfolioValuationService:
                     balances[bucket] += value
             balances["receivables"] += settlement_receivables
             balances["payables"] += settlement_payables
-            totals = nav_total(settled_cash, list(position_values.values()), dict(balances))
+            totals = nav_total(settled_cash, list(position_values.values()), dict(balances), cash_components=settled_cash_components)
             nav = None if missing else totals["nav"]
             daily_pnl, daily_return = (None, None) if nav is None or previous_nav is None else daily_performance(previous_nav, nav, flows)
             if daily_return is not None:
@@ -455,10 +457,13 @@ class PortfolioValuationService:
             daily_value = last_daily_contributions.get(key, ZERO)
             attribution.append({"symbol": item.symbol, "sector": item.sector, "currency": item.currency, "realised": money(lot.realised), "unrealised": money(unrealised) if unrealised is not None else None, "income": money(lot.income), "fees": money(lot.charges), "daily_pnl": money(daily_value) if nav is not None and daily_value is not None else None, "daily_pnl_details": daily_details[key].payload() if key in daily_details else None, "total_pnl": money(contribution) if contribution is not None else None, "contribution": number(contribution / portfolio.reference_capital) if contribution is not None else None})
         metric_metadata = {key: {"value": value, "portfolio": profile.code, "base_currency": portfolio.base_currency, "start": start.isoformat(), "end": end.isoformat(), "benchmark": profile.configuration.get("benchmark", "SPY"), "methodology": METHOD, "source": source_name, "calculated_at": now.isoformat(), "quality": quality} for key, value in {**performance, **risk}.items()}
+        balance_sheet_difference = money(final_totals["gross_asset_value"] - final_totals["liabilities"] - nav, 8) if nav is not None else None
+        if balance_sheet_difference:
+            warnings.append("NAV BALANCE SHEET BREAK: assets less liabilities do not equal NAV")
         p = {
             "id": portfolio.id, "code": profile.code, "name": portfolio.name, "base_currency": portfolio.base_currency,
             "reference_capital": portfolio.reference_capital, "opening_capital": portfolio.reference_capital,
-            **{k: money(v) if isinstance(v, Decimal) else v for k, v in final_totals.items()},
+            **({k: money(v) if isinstance(v, Decimal) else v for k, v in final_totals.items()} if nav is not None else dict.fromkeys(final_totals)),
             "nav": money(nav) if nav is not None else None, "total_pnl": money(total_pnl) if total_pnl is not None else None,
             "cash": money(total_cash) if all(c["base_value"] is not None for c in last_cash) else None,
             "market_value": money(final_totals["market_value"]) if all(p["market_value"] is not None for p in last_positions) else None,
@@ -499,6 +504,14 @@ class PortfolioValuationService:
             warnings.append("ACCOUNTING SUBLEDGER BREAK: transaction components differ from replay totals")
         return jsonable({
             "portfolio": p, "positions": last_positions, "cash": last_cash, "transactions": transactions,
+            "balance_sheet": {
+                "items": final_totals if nav is not None else dict.fromkeys(final_totals),
+                "state": "AVAILABLE" if nav is not None else "INCOMPLETE",
+                "difference": balance_sheet_difference,
+                "reconciliation_state": "INCOMPLETE" if balance_sheet_difference is None else "BREAK" if balance_sheet_difference else "BALANCED",
+                "methodology": "Gross assets = positive settled cash by currency + long positions + accrued income + receivables; total liabilities = cash overdrafts + short positions + payables + accrued fees + other liabilities; NAV = gross assets - total liabilities. Settlement balances are included once; book values are not broker-reported.",
+                "warnings": list(dict.fromkeys(missing)),
+            },
             "cost_basis": {"method": state.policy.method.value, "capitalized_charges": state.capitalized_charges, "expensed_fees": state.expensed_fees},
             "lots": [asdict(lot) for lots in state.cost_basis.open_lots.values() for lot in lots],
             "lot_matches": [asdict(match) for match in state.cost_basis.matches],

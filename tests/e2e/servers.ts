@@ -41,7 +41,7 @@ export default async function setup() {
       OBJECT_STORAGE_LOCAL_DIR:path.join(root,`logs/e2e-objects-${id}`),KNK_ENV:'local-demo',
     },'api');
     start(process.execPath,[path.join(root,'apps/terminal-web/node_modules/next/dist/bin/next'),'start','--hostname','127.0.0.1','--port','3002'],path.join(root,'apps/terminal-web'),{
-      KNK_NEXT_DIST_DIR:process.env.PLAYWRIGHT_DIST_DIR || 'logs/terminal-v2-build',KNK_API_URL:'http://127.0.0.1:8001',
+      KNK_NEXT_DIST_DIR:process.env.PLAYWRIGHT_DIST_DIR || '.next',KNK_API_URL:'http://127.0.0.1:8001',NEXT_PUBLIC_APP_ENV:'test',
     },'web');
     for(const url of ['http://127.0.0.1:8001/health/live','http://127.0.0.1:3002/overview']) {
       const deadline=Date.now()+240000;

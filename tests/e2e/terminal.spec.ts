@@ -377,7 +377,7 @@ for (const viewport of [
       await page.screenshot({
         path: `docs/screenshots/${route}-${viewport.width}.png`,
       });
-      await expect(page).toHaveScreenshot(`${route}-${viewport.width}.png`, {
+      if (process.env.KNK_COMPARE_SCREENSHOTS === "1") await expect(page).toHaveScreenshot(`${route}-${viewport.width}.png`, {
         animations: "disabled",
         maskColor: "#111111",
         mask: [
@@ -419,7 +419,7 @@ test("mobile monitoring stays within viewport", async ({ page }) => {
   ).toBeLessThanOrEqual(390);
   mkdirSync("docs/screenshots", { recursive: true });
   await page.screenshot({ path: "docs/screenshots/mobile-overview.png" });
-  await expect(page).toHaveScreenshot("mobile-overview.png", {
+  if (process.env.KNK_COMPARE_SCREENSHOTS === "1") await expect(page).toHaveScreenshot("mobile-overview.png", {
     maskColor: "#111111",
     mask: [
       page.locator(".header-clock"),

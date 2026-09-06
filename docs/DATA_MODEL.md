@@ -30,6 +30,7 @@ Primary model file: `services/api/app/models.py`
 
 ## Local Storage
 
-Local development uses SQLite by default. Docker Compose config uses PostgreSQL through:
-
-`postgresql+psycopg://knk:knk_local_demo@postgres:5432/knk_terminal`
+Local development uses SQLite by default. Docker Compose requires a PostgreSQL
+`DATABASE_URL` in the ignored `.env` file, using the `postgres` service hostname,
+database `knk_terminal` and user `knk`. Its password must match `POSTGRES_PASSWORD`;
+URL-encode credentials in the URL. No database credential is committed.

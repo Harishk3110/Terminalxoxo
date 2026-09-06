@@ -10,8 +10,9 @@ if errorlevel 1 (
   goto failed
 )
 
-set "KNK_NEXT_DIST_DIR=logs/dev-portfolio-release"
+set "KNK_NEXT_DIST_DIR=.next"
 set "KNK_API_URL=http://127.0.0.1:8000"
+set "NEXT_PUBLIC_APP_ENV=local"
 if not exist "%KNK_NEXT_DIST_DIR%\BUILD_ID" (
   echo The verified terminal build is missing.
   echo Run the build instructions in README.md first.

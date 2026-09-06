@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@9.15.4",
+  "engines": { "node": ">=20 <25" },
   "description": "KnK Capital Terminal monorepo: public website, private investment terminal, API, workers, reports, and read-only broker agent.",
   "scripts": {
     "bootstrap": "corepack prepare pnpm@9.15.4 --activate && corepack pnpm install",

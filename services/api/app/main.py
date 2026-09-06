@@ -609,3 +609,7 @@ def old_risk(session: Session = Depends(get_session)):
 from .portfolio_resource_api import router as portfolio_resource_router
 
 app.include_router(portfolio_resource_router)
+
+from .performance_api import router as performance_router
+
+app.include_router(performance_router)

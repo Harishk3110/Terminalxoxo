@@ -442,7 +442,7 @@ execution, tests and recorded evidence. Source references refer to the supplied
 - [ ] [L580] Closing NAV.
 - [ ] [L581] Latest NAV.
 - [ ] [L582] Gross asset value.
-- [ ] [L583] Cash.
+- [x] [L583] Cash. (Saved NAV statement separates positive currency cash and overdrafts; exact JSON, API and inspector verified.)
 - [ ] [L584] Invested value.
 - [ ] [L585] Accrued income.
 - [ ] [L586] Liabilities.

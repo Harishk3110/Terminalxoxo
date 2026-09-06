@@ -40,6 +40,17 @@ reports/generated/
 logs/
 .knk-object-store/
 *.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+.vercel/
+build/
+docs/screenshots/
+docs/25k/*.png
+tests/e2e/*-snapshots/
+*.log
 
 # Editors and OS
 .DS_Store

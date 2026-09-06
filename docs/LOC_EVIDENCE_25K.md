@@ -25,6 +25,9 @@ credit. These conservative totals can be lower than ordinary added-line counts.
 | M1 portfolio creation and scoped directory / 2026-09-06 13:05 UTC | 2206 | 1820 | 263 | 3938 | 8227 | NOT MET |
 | M1 correction storage and audit follow-up / 2026-09-06 13:11 UTC | 2238 | 1820 | 263 | 4010 | 8331 | NOT MET |
 | M1 grouped exposures, broker boundary and historical cache / 2026-09-06 13:45 UTC | 2436 | 2004 | 263 | 4654 | 9357 | NOT MET |
+| M1 exact display and saved NAV balance sheet / 2026-09-06 14:09 UTC | 2474 | 2144 | 263 | 4977 | 9858 | NOT MET |
+| Urgent wrap-up worktree, product expansion paused / 2026-09-06 15:55 UTC | 3056 | 2160 | 296 | 5125 | 10637 | NOT MET |
+| Final wrap-up worktree / 2026-09-06 16:06 UTC | 3056 | 2161 | 296 | 5126 | 10639 | NOT MET |
 
 Interim command: `.venv-sprint/Scripts/python.exe scripts/count_25k_delta.py --output docs/25k/current-delta.json`.
 Exit 0 means the report was produced; it does not mean the gates passed. The report

@@ -178,13 +178,21 @@ def cash(portfolio_id: str, session: Database, end: date | None = None) -> dict[
 
 
 @router.get("/{portfolio_id}/nav")
-def nav(portfolio_id: str, session: Database, end: date | None = None) -> dict[str, Any]:
-    data = PortfolioResourceService(session).summary(portfolio_id, end)
+def nav(
+    portfolio_id: str, session: Database, end: date | None = None, run_id: str | None = None
+) -> dict[str, Any]:
+    data = PortfolioResourceService(session).valuation_snapshot(portfolio_id, run_id, end)
     return {
         "portfolio": data["portfolio"],
         "curve": data["curve"],
         "reconciliation": data["reconciliation"],
-        "valuation_run_id": data["valuation_run_id"],
+        "balance_sheet": data.get("balance_sheet"),
+        "state": data["balance_sheet"]["state"] if "balance_sheet" in data else "LEGACY_SNAPSHOT",
+        "valuation_run_id": data.get("valuation_run_id", run_id),
+        "valuation_date": data["curve"][-1]["date"],
+        "calculation_version": data["calculation_version"],
+        "quality": data["quality"],
+        "calculated_at": data["calculated_at"],
     }
 
 

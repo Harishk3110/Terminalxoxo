@@ -36,7 +36,7 @@ test("saved exposure groups and cash freshness are inspectable at five terminal 
       .getByRole("button", { name: "Exposures", exact: true })
       .click();
     const payload = await (await pending).json();
-    expect(payload.calculation_version).toBe("knk-nav-4.5");
+    expect(payload.calculation_version).toBe("knk-nav-4.6");
     const controls = dialog.getByRole("group", {
       name: "Accounting view",
       exact: true,

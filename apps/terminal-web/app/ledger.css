@@ -78,6 +78,20 @@
   display: block;
   padding: 0;
 }
+.ledger-nav-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 10px 0 20px;
+}
+.ledger-nav-columns tfoot {
+  color: #f2c56d;
+}
+@media (max-width: 600px) {
+  .ledger-nav-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .ledger-totals dd {
   color: #f2c56d;
   margin: 5px 0 0;

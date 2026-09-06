@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { knkApi } from "@knk/api-client";
 import {
   BookOpen,
+  Calculator,
   Crosshair,
   Layers,
   PieChart,
@@ -19,6 +20,7 @@ import { AccountingActivity } from "./accounting-activity";
 import { BalanceEditor } from "./balance-editor";
 import { PositionInspector } from "./position-inspector";
 import { ExposureInspector } from "./exposure-inspector";
+import { NavInspector } from "./nav-inspector";
 import {
   portfolioPath,
   type AccountingPolicy,
@@ -33,7 +35,8 @@ type View =
   | "activity"
   | "balances"
   | "positions"
-  | "exposures";
+  | "exposures"
+  | "nav";
 
 export function AccountingDialog({
   portfolioKey = "KNK_MAIN",
@@ -111,6 +114,9 @@ export function AccountingDialog({
           >
             <Wallet size={13} /> Cash
           </button>
+          <button aria-pressed={view === "nav"} onClick={() => setView("nav")}>
+            <Calculator size={13} /> NAV
+          </button>
           <button
             aria-pressed={view === "positions"}
             onClick={() => setView("positions")}
@@ -158,6 +164,9 @@ export function AccountingDialog({
             });
             client.invalidateQueries({
               queryKey: ["ledger-position", portfolioKey],
+            });
+            client.invalidateQueries({
+              queryKey: ["ledger-nav", portfolioKey],
             });
           }}
         >
@@ -345,6 +354,12 @@ export function AccountingDialog({
         />
       )}
       {view === "balances" && <BalanceEditor portfolioKey={portfolioKey} />}
+      {view === "nav" && summary.data && (
+        <NavInspector
+          portfolioKey={portfolioKey}
+          runId={summary.data.valuation_run_id}
+        />
+      )}
       {view === "exposures" && summary.data && (
         <ExposureInspector
           portfolioKey={portfolioKey}

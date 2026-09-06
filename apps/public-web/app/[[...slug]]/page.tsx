@@ -6,12 +6,12 @@ import { notFound } from "next/navigation";
 import { products, publicRoutes } from "../../lib/content";
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug?: string[];
-  };
+  }>;
 };
 
-function routeFromParams(params: PageProps["params"]) {
+function routeFromParams(params: Awaited<PageProps["params"]>) {
   return `/${params.slug?.join("/") ?? ""}`.replace(/\/$/, "") || "/";
 }
 
@@ -188,8 +188,8 @@ function ResearchPage({ slug }: { slug?: string }) {
   );
 }
 
-export default function PublicPage({ params }: PageProps) {
-  const route = routeFromParams(params);
+export default async function PublicPage({ params }: PageProps) {
+  const route = routeFromParams(await params);
   if (!publicRoutes.includes(route)) notFound();
 
   if (route === "/") return <HomePage />;

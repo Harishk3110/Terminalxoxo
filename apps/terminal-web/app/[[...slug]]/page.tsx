@@ -1,5 +1,6 @@
 import TerminalShell from "../../components/shell";
 
-export default function TerminalPage({ params }: { params: { slug?: string[] } }) {
-  return <TerminalShell route={`/${params.slug?.join("/") || "overview"}`} />;
+export default async function TerminalPage({ params }: { params: Promise<{ slug?: string[] }> }) {
+  const { slug } = await params;
+  return <TerminalShell route={`/${slug?.join("/") || "overview"}`} />;
 }

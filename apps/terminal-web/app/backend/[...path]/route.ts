@@ -1,14 +1,19 @@
 import { NextRequest } from "next/server";
+import { apiOrigin } from "../../../config/api-environment.mjs";
 
 export const dynamic = "force-dynamic";
 
 async function proxy(
   request: NextRequest,
-  { params }: { params: { path: string[] } },
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
-  const base = process.env.KNK_API_URL || "http://127.0.0.1:8000";
+  const { path } = await params;
+  let base: string;
+  try { base = apiOrigin(); } catch {
+    return Response.json({ detail: "API configuration is unavailable. Configure the server API origin." }, { status: 503 });
+  }
   const url = new URL(
-    `/${params.path.map(encodeURIComponent).join("/")}`,
+    `/${path.map(encodeURIComponent).join("/")}`,
     base,
   );
   url.search = request.nextUrl.search;
@@ -45,7 +50,7 @@ async function proxy(
     });
   } catch {
     return Response.json(
-      { detail: "API is unavailable. Check the local API service." },
+      { detail: "API is unavailable. Check the configured API service." },
       { status: 503 },
     );
   }

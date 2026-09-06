@@ -29,6 +29,8 @@ import {
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
 import type { Row } from "./types";
+import { number, pct, money, tone } from "./financial-format";
+export { number, pct, money, tone } from "./financial-format";
 
 export const COLORS = {
   bg: "#000000",
@@ -51,18 +53,6 @@ const EChart = dynamic(() => import("echarts-for-react"), {
     </div>
   ),
 });
-export const number = (v: unknown, places = 2) =>
-  v === null || v === undefined || v === "" || !Number.isFinite(Number(v))
-    ? "--"
-    : Number(v).toLocaleString("en-SG", {
-        minimumFractionDigits: places,
-        maximumFractionDigits: places,
-      });
-export const pct = (v: unknown) =>
-  v === null || v === undefined
-    ? "--"
-    : `${Number(v) > 0 ? "+" : ""}${number(Number(v) * 100)}%`;
-export const money = (v: unknown) => `S$${number(v)}`;
 export const utcDate = (v: string) =>
   new Date(v.includes("T") && !/(Z|[+-]\d\d:\d\d)$/.test(v) ? `${v}Z` : v);
 export const timestamp = (v?: string | null) =>
@@ -77,8 +67,6 @@ export const timestamp = (v?: string | null) =>
         hour12: false,
       })
     : "Not observed";
-export const tone = (v: unknown) =>
-  Number(v) > 0 ? "positive" : Number(v) < 0 ? "negative" : "";
 
 export function download(name: string, content: string, type = "text/plain") {
   const url = URL.createObjectURL(new Blob([content], { type }));
