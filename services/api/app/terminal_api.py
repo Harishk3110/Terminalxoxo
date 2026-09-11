@@ -287,11 +287,17 @@ def start_run(payload: RunRequest, request: Request, session: Session = SESSION_
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
     if payload.kind == "stress":
-        from .portfolio_valuation import PortfolioValuationService
+        from .portfolio_resources import PortfolioResourceService
+        from .valuation_selection import ValuationSelection
 
         try:
-            params["_portfolio"] = PortfolioValuationService(session).latest(
-                params.get("portfolio", "KNK_MAIN")
+            selection = ValuationSelection.model_validate(
+                {name: params[name] for name in ValuationSelection.model_fields if name in params}
+            )
+            params["_portfolio"] = PortfolioResourceService(session).valuation_snapshot(
+                params.get("portfolio", "KNK_MAIN"),
+                selection.valuation_run_id,
+                selection.valuation_date,
             )
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc

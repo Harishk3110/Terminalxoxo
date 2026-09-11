@@ -31,6 +31,7 @@ import {
   type Column,
 } from "./ui";
 import { PageTitle, useApi } from "./core-pages";
+import { initialBacktestSource } from "./backtest-source";
 import type { Row, Run, UploadPreview, MacroDashboardPayload } from "./types";
 
 export function BacktestPage() {
@@ -38,7 +39,7 @@ export function BacktestPage() {
   const portfolio = usePortfolio();
   const client = useQueryClient();
   const [form, setForm] = useTabState("backtest-config", {
-    symbol: "SPY",
+    ...initialBacktestSource(activeTab),
     additional_symbols: "",
     source_mode: "SOURCE_AWARE",
     base_currency: "SGD",
@@ -58,12 +59,6 @@ export function BacktestPage() {
     capital: 0,
     fee_bps: 5,
     slippage_bps: 5,
-    dataset_id: activeTab.route.startsWith("/backtests/dataset/")
-      ? activeTab.route.split("/")[3]
-      : "",
-    dataset_version_id: activeTab.route.includes("/version/")
-      ? activeTab.route.split("/")[5]
-      : "",
     start: "2020-01-01",
     end: "",
   });
@@ -87,8 +82,9 @@ export function BacktestPage() {
       ["RUNNING", "QUEUED"].includes(q.state.data?.status ?? "") ? 600 : false,
   });
   useEffect(() => {
-    if (!runId && recent.data?.items[0]) setRunId(recent.data.items[0].id);
-  }, [recent.data, runId, setRunId]);
+    if (!runId && !form.dataset_id && recent.data?.items[0])
+      setRunId(recent.data.items[0].id);
+  }, [recent.data, runId, setRunId, form.dataset_id]);
   useEffect(() => {
     if (runId && config.inspectRunId !== runId)
       setConfig((c) => ({ ...c, inspectRunId: runId }));
@@ -139,7 +135,9 @@ export function BacktestPage() {
         <Badge>{current.data?.status ?? "TEMPLATE READY"}</Badge>
         <button
           className="primary-button"
-          disabled={active || mutation.isPending || !portfolio.data}
+          disabled={
+            active || mutation.isPending || !portfolio.data || !form.symbol
+          }
           onClick={() => mutation.mutate()}
         >
           <Play size={12} />
@@ -177,6 +175,7 @@ export function BacktestPage() {
               value={form.symbol}
               onChange={(e) => setForm({ ...form, symbol: e.target.value })}
             >
+              <option value="">Select security</option>
               {bootstrap.quotes
                 .filter(
                   (q) => q.asset_class === "Equity" || q.asset_class === "ETF",

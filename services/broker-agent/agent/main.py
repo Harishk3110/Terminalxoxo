@@ -1,59 +1,47 @@
-from __future__ import annotations
+"""Retired inbound demo bridge; the supported paper reader is outbound-only."""
 
-import os
-from datetime import UTC, datetime
+from fastapi import FastAPI, HTTPException, Response
 
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-app = FastAPI(title="KnK Read-Only Broker Agent", version="0.1.0")
-
-
-class PairingRequest(BaseModel):
-    device_name: str
-    one_time_code: str
+app = FastAPI(title="KnK Retired Broker Bridge", version="0.2.0", docs_url=None, redoc_url=None)
 
 
 @app.get("/health/live")
-def live():
-    return {"status": "live", "service": "broker-agent", "read_only": True}
+def live() -> dict[str, str | bool]:
+    return {"status": "live", "service": "retired-broker-bridge", "read_only": True}
+
+
+@app.get("/health/ready")
+def ready() -> None:
+    raise HTTPException(503, "Retired demo bridge; no broker connection or synchronization")
 
 
 @app.get("/metrics")
-def metrics():
-    return "knk_broker_agent_heartbeat_total 1\n"
+def metrics() -> Response:
+    return Response(
+        "# HELP knk_broker_legacy_disabled Retired bridge is disabled.\n"
+        "# TYPE knk_broker_legacy_disabled gauge\nknk_broker_legacy_disabled 1\n",
+        media_type="text/plain; version=0.0.4",
+    )
 
 
 @app.get("/status")
-def status():
+def status() -> dict[str, str | bool]:
     return {
-        "mode": "PAPER",
+        "state": "DISABLED",
         "read_only": True,
-        "gateway_host": os.getenv("IBKR_GATEWAY_HOST", "127.0.0.1"),
-        "gateway_port": os.getenv("IBKR_GATEWAY_PORT", "7497"),
         "paired": False,
-        "heartbeat": datetime.now(UTC).isoformat(),
-        "credential_storage": "Windows Credential Manager integration point",
+        "source": "UNAVAILABLE",
     }
 
 
 @app.post("/pair")
-def pair(payload: PairingRequest):
-    return {
-        "status": "pairing-request-recorded",
-        "device_name": payload.device_name,
-        "read_only": True,
-        "revocable_device_token": "demo-device-token-redacted",
-    }
+def pair() -> None:
+    raise HTTPException(
+        410,
+        "Demo pairing retired; use authenticated terminal agent pairing and the outbound reader",
+    )
 
 
 @app.get("/snapshots/account")
-def account_snapshot():
-    return {
-        "mode": "PAPER",
-        "quality": "DEMO DATA",
-        "net_liquidation_value": "71482.35",
-        "base_currency": "SGD",
-        "cash_balances": [{"currency": "SGD", "amount": "18420.50"}],
-        "positions": [],
-    }
+def account_snapshot() -> None:
+    raise HTTPException(503, "No broker snapshot available from the retired bridge")

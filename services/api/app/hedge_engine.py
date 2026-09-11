@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Literal
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 from sqlalchemy import select
 
 from . import models
@@ -16,11 +16,12 @@ from .portfolio_operations import audit
 from .portfolio_valuation import PortfolioValuationService
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .risk_statistics import RiskSettings, calculate_risk
+from .valuation_selection import ValuationSelection
 
 WARNING = "MANUAL REVIEW REQUIRED - NO ORDER WILL BE SUBMITTED"
 
 
-class HedgeRequest(BaseModel):
+class HedgeRequest(ValuationSelection):
     model_config = ConfigDict(extra="forbid")
     mode: Literal["BETA", "NET", "SECTOR", "CURRENCY"] = "BETA"
     instrument_type: Literal["ETF", "FUTURE_ESTIMATE", "FX_CONVERSION"] = "ETF"
@@ -162,7 +163,11 @@ class HedgeService:
         self.session = session
 
     def create(self, portfolio: str, request: HedgeRequest, actor: str) -> dict:
-        data = PortfolioValuationService(self.session).latest(portfolio, commit=False)
+        from .portfolio_resources import PortfolioResourceService
+
+        data = PortfolioResourceService(self.session).valuation_snapshot(
+            portfolio, request.valuation_run_id, request.valuation_date
+        )
         now = datetime.now(UTC)
         end = (
             close_of_day(datetime.fromisoformat(data["curve"][-1]["date"]).date())
@@ -290,6 +295,7 @@ class HedgeService:
                 "as_of": data["as_of"],
                 "calculated_at": now.isoformat(),
                 "valuation_run_id": data["valuation_run_id"],
+                "valuation_date": data["curve"][-1]["date"],
                 "portfolio_id": data["portfolio"]["id"],
                 "calculation_version": "knk-hedge-1.0",
                 "hedge_inputs": hedge,
@@ -300,7 +306,7 @@ class HedgeService:
             name=f"{request.mode} / {request.symbol}",
             status="SUCCEEDED",
             parameters={
-                **request.model_dump(),
+                **request.model_dump(mode="json"),
                 "_portfolio": data,
                 "portfolio_id": data["portfolio"]["id"],
             },
@@ -316,7 +322,10 @@ class HedgeService:
             "HEDGE_ANALYSIS_CREATED",
             "analysis_run",
             run.id,
-            {"valuation_run_id": data["valuation_run_id"], "parameters": request.model_dump()},
+            {
+                "valuation_run_id": data["valuation_run_id"],
+                "parameters": request.model_dump(mode="json"),
+            },
             actor,
         )
         return {"id": run.id, **result}

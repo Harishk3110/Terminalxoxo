@@ -12,7 +12,7 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | --- | --- | --- |
 | Private terminal and local Docker | DEMO_FUNCTIONAL | Full release checks and report service |
 | Ledger/NAV/performance | DEMO_FUNCTIONAL | Fresh full certification and attribution extensions |
-| Risk/stress/hedge | PARTIAL | Dated browser success, nonlinear/covariance/rebalance scope |
+| Risk/stress/hedge | PARTIAL | Dated workflows pass; complete browser gate and nonlinear/covariance/rebalance scope remain |
 | Data Drop/agent | PARTIAL | Complete profile/consumer/Windows acceptance |
 | Providers/IBKR | PROVIDER_READY_UNVERIFIED | Adapter gaps remain separately PARTIAL; real connectivity unverified |
 | Quant | PARTIAL | Corporate actions, PIT fundamentals, general walk-forward |
@@ -21,8 +21,13 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Reports | PARTIAL | Owned queued exports verified; full financial-model content and rendered artifacts pending |
 | MFA/auth | PARTIAL | Trusted devices, provisioning and concurrency closure |
 | Monitoring/backup | PARTIAL | Ten dashboards and PostgreSQL/remote object restore |
-| Python quality | PARTIAL | Ruff/format pass; full API mypy still 1,119 errors in 37 files |
-| Browser release | BROKEN | Prior full run 28/35; six unresolved after targeted backtest fix |
+| Python quality | PARTIAL | Ruff/format pass; whole first-party strict runner now executes, but engine/API/test errors remain |
+| Browser release | PARTIAL | Populated full run: 36/37; upload handoff corrected and focused pass; full rerun underway |
 | Release command / hosted deployment | MISSING | Script implementation / external account access |
 
 No report formatting, service health or test count certifies financial accuracy.
+
+The unused inbound broker demo bridge is now disabled: it cannot issue a dummy
+pairing token, claim a broker heartbeat or return hard-coded account balances.
+The supported outbound paper reader and authenticated snapshot ingestion remain
+unchanged. This closes a misleading legacy surface, not the entire IBKR milestone.

@@ -920,6 +920,21 @@ export function StressPage() {
             quality="ASSUMPTIONS"
           >
             <div className="scenario-config">
+              <Field label="Valuation date">
+                <input
+                  aria-label="Stress valuation date"
+                  type="date"
+                  max={new Date().toISOString().slice(0, 10)}
+                  value={String(scenario.valuation_date ?? "")}
+                  onChange={(e) =>
+                    setScenario({
+                      ...scenario,
+                      valuation_date: e.target.value || null,
+                      valuation_run_id: null,
+                    })
+                  }
+                />
+              </Field>
               <Field label="Model">
                 <select
                   aria-label="Stress model"

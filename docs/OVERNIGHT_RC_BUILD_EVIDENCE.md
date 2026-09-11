@@ -158,3 +158,80 @@ the full 1,029-test run started and are separately verified, not included in it.
 No template was imported into KNK_MAIN or the active local database.
 Post-template whole Ruff/format and secret scans passed: 255 formatted Python/stub
 files and 545 eligible text files with zero secret findings. Diff check also passed.
+
+## Dated Valuation And Broader Gate Diagnostics
+
+Based on df8dab6 plus worktree. Historical valuation used to replace current
+positions/cash/NAV projections. The regression failed before correction; historical
+runs now keep their own immutable records and only today's run materializes the
+current view. Version knk-nav-4.9 invalidates the prior cache. Stress and hedge
+accept an explicit date or saved valuation, reject future/conflicting selections,
+and retain the original observation timestamps and beta sufficiency requirements.
+
+| Check | Result |
+| --- | --- |
+| Dated valuation focused regression | 28 passed; overnight-dated-valuation-tests-02.log |
+| Full backend first attempt | 1,044 passed, four old-version assertion failures; overnight-backend-07.log |
+| Full backend after exact expected-version update | 1,048 passed, 13 warnings, 340.00s; overnight-backend-08.log |
+| Statement coverage | 10,313/11,784 = 87.51697216564834%; 1,471 missing, 23 existing exclusions |
+| Frontend units | 240 terminal + 5 shared passed; overnight-dated-frontend-tests.log |
+| TypeScript / lint / Node 22 build | Exit 0; overnight-dated-typecheck-02.log, overnight-dated-frontend-lint.log, overnight-dated-frontend-build.log |
+| Five Docker image builds | Exit 0; overnight-dated-docker-build.log; runtime refresh pending |
+| Original full browser | 30 passed, six failures; overnight-browser-full-01.log |
+| Dated targeted browser second attempt | Six passed, 3.1m; overnight-dated-browser-02.log |
+| Expanded 37-test full browser | In progress; three old-version expectations found, no full-pass claim |
+| Whole Ruff / format | Exit 0 each; format reports 259 files; overnight-dated-ruff.log / overnight-dated-format.log |
+| Distribution-aware strict runner | Completes nine distributions/237 inventoried files; 2,003 distinct diagnostic lines in 135 files, still FAIL |
+| Runner unit tests / strict mypy | Eight passed; overnight-type-gate-tests-02.log; mypy exit 0 in overnight-type-gate-mypy-03.log |
+
+The first flat whole-repository mypy command and its explicit-package-bases variant
+both stopped on duplicate independent service modules. The new runner separates
+deployment namespaces, covers every Git-visible first-party Python/stub file and
+does not treat an inventory-only run as a pass. Its first grouped attempt exposed
+two remaining tools/test namespace collisions; explicit bases in those groups
+resolved them. Imported diagnostic repetitions were de-duplicated by complete
+diagnostic line for the whole-run count, not summed across distributions.
+The later runner test module is separately verified and not included in that
+237-file inventory or the 1,048-test full backend run.
+
+## Legacy Surface And Uploaded Backtest Closure
+
+The unused inbound broker bridge no longer returns fake pairing, heartbeat or
+account balances. It reports DISABLED, fails readiness, and refuses pairing and
+snapshots. The actual outbound paper reader is unchanged. Retired report handler
+annotations preserve the existing disabled behavior. The first three tests failed
+during FastAPI registration because NoReturn is not a response-model type; normal
+None-returning handlers that raise HTTPException fixed registration. The combined
+retired-service and type-runner selection then passed all 11 tests.
+
+The full backend rerun includes these additions: 1,059 passed, 13 warnings,
+337.36s in overnight-backend-09.log. Statement coverage is 10,309/11,784 =
+87.48302783435166%, with 1,475 missing and 23 existing exclusions. The latest
+whole type run covers 239 files across nine groups and fails with 1,995 distinct
+diagnostic lines in 133 files. Both retired modules and their tests pass scoped
+strict mypy; no type ignores were introduced.
+
+The second full browser run finished 34/37 with only old-version expectations.
+The third finished 36/37, including populated alpha/GEX/hedge at every requested
+size. Changing the uploaded CSV fixture from benchmark SPY to non-held QQQ exposed
+two issues: the launch ignored normalized security context, and the test observed
+an older successful run when submission failed. The UI now carries the validated
+preview symbol, leaves unresolved dataset launches unselected, and does not load
+an unrelated prior result into a new dataset tab. The test requires the actual
+202 response and polls that exact ID in native USD without synthetic FX fallback.
+
+| Check | Result |
+| --- | --- |
+| Backtest source unit tests | 11 passed, included in 251 terminal + 5 shared full unit tests |
+| Frontend types / lint | Exit 0; overnight-backtest-handoff-typecheck.log / overnight-backtest-handoff-lint.log |
+| Node 22 production build | Exit 0; overnight-backtest-handoff-build.log |
+| Exact uploaded-run browser workflow | One passed, 1.2m; overnight-backtest-handoff-browser.log |
+| Full browser with handoff correction | Running in overnight-browser-full-04.log; no full-pass claim yet |
+| Docker frontend build | Running in overnight-backtest-handoff-docker-build.log |
+| Whole Ruff / format | Exit 0; overnight-handoff-ruff.log / overnight-handoff-format.log |
+
+The current screenshot matrix covers 19 routes (16 required workspaces plus
+separate options/GEX, macro and risk), at five sizes. Direct review has confirmed
+populated alpha/GEX on desktop and the overview, portfolio, performance, alpha,
+equity, quant, GEX, risk/trade and hedge mobile layouts. Remaining screenshot
+review and the complete release gates stay open.

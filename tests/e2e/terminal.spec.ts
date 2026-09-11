@@ -1,5 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import {
+  completedRun,
+  DEMO_VALUATION_DATE,
+  populateVisualAnalysis,
+} from "./analytical-fixtures";
 
 async function command(page: Page, text: string, newTab = false) {
   await page
@@ -51,8 +56,12 @@ test("editable stress inputs produce persisted reconciled results and exports", 
   page,
   request,
 }) => {
+  test.setTimeout(90000);
   await page.goto("/stress-tests");
   await expect(page.getByTestId("terminal-shell")).toBeVisible();
+  await page
+    .getByLabel("Stress valuation date", { exact: true })
+    .fill(DEMO_VALUATION_DATE);
   await page.getByRole("button", { name: "Run Scenario", exact: true }).click();
   await expect(page.getByTestId("context-inspector")).toContainText(
     "SUCCEEDED",
@@ -93,6 +102,7 @@ test("editable stress inputs produce persisted reconciled results and exports", 
     ).json()
   ).items[0];
   expect(after.result.loss).not.toBe(before.result.loss);
+  expect(after.result.valuation_date).toBe(DEMO_VALUATION_DATE);
   expect(after.result.post_nav).toBeCloseTo(
     after.result.pre_nav + after.result.loss,
     2,
@@ -133,7 +143,7 @@ test("manual ledger, upload validation and backtest lifecycle", async ({
         `${new Date(Date.UTC(2024, 0, i + 1)).toISOString().slice(0, 10)},${100 + 0.1 * i + 10 * Math.sin(i / 8)},${101 + 0.1 * i + 10 * Math.sin(i / 8)},${99 + 0.1 * i + 10 * Math.sin(i / 8)},${100 + 0.1 * i + 10 * Math.sin(i / 8)},10000`,
     ).join("\n");
   await page.locator("input[type=file]").setInputFiles({
-    name: "SPY_2024-08-27_prices.csv",
+    name: "QQQ_2024-08-27_prices.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
   });
@@ -164,21 +174,46 @@ test("manual ledger, upload validation and backtest lifecycle", async ({
   await expect(
     page.getByRole("heading", { name: "Backtest Lab" }),
   ).toBeVisible();
+  await expect(
+    page.getByLabel("Backtest security", { exact: true }),
+  ).toHaveValue("QQQ");
+  await expect(page.getByTestId("context-inspector")).not.toContainText(
+    "SUCCEEDED",
+  );
+  await page
+    .getByLabel("Backtest currency", { exact: true })
+    .selectOption("USD");
+  const submission = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/terminal/runs") &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Run backtest", exact: true }).click();
+  const accepted = await submission;
+  expect(accepted.status(), await accepted.text()).toBe(202);
+  const queued = await accepted.json();
+  expect(queued.parameters.symbol).toBe("QQQ");
+  expect(queued.parameters.base_currency).toBe("USD");
+  expect(queued.parameters.dataset_version_id).toBeTruthy();
   await expect
     .poll(
       async () =>
         (
           await (
-            await request.get("/backend/api/v1/terminal/runs?kind=backtest")
+            await request.get(`/backend/api/v1/terminal/runs/${queued.id}`)
           ).json()
-        ).items[0]?.status,
+        ).status,
       { timeout: 60000 },
     )
     .toBe("SUCCEEDED");
   await expect(page.getByTestId("context-inspector")).toContainText(
     "SUCCEEDED",
   );
+  const completed = await (
+    await request.get(`/backend/api/v1/terminal/runs/${queued.id}`)
+  ).json();
+  expect(completed.parameters.symbol).toBe("QQQ");
+  expect(completed.id).toBe(queued.id);
 });
 
 test("table controls, security context menu and resized inspector", async ({
@@ -271,26 +306,19 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
+  { width: 390, height: 844 },
 ]) {
   test(`visual workspace ${viewport.width}x${viewport.height}`, async ({
     page,
     request,
   }) => {
-    test.setTimeout(180000);
+    test.setTimeout(300000);
     await page.setViewportSize(viewport);
     const bootstrap = await (
       await request.get("/backend/api/v1/terminal/bootstrap")
     ).json();
-    const stress = (
-      await (
-        await request.get("/backend/api/v1/terminal/runs?kind=stress")
-      ).json()
-    ).items[0];
-    const backtest = (
-      await (
-        await request.get("/backend/api/v1/terminal/runs?kind=backtest")
-      ).json()
-    ).items[0];
+    const stress = await completedRun(request, "stress");
+    const backtest = await completedRun(request, "backtest");
     await page.addInitScript(
       ({ workspaceId, stress, backtest }) => {
         localStorage.setItem(
@@ -317,7 +345,7 @@ for (const viewport of [
               tabStates: {
                 stress: {
                   "stress-run": stress?.id,
-                  scenario: stress?.parameters,
+                  scenario: { ...stress.parameters, name: stress.name },
                 },
                 backtest: {
                   "backtest-run": backtest?.id,
@@ -335,18 +363,44 @@ for (const viewport of [
       "macro",
       "portfolio",
       "performance",
+      "alpha",
+      "equity",
+      "quant-dashboard",
+      "options/AAPL",
+      "functions/gex",
+      "risk-trade-monitor",
       "risk",
       "stress-tests",
       "hedge",
       "backtests",
+      "data-drop",
+      "data-catalogue",
+      "excel-studio",
+      "deck-builder",
+      "system-health",
     ]) {
       const errors: string[] = [];
-      page.on("pageerror", (error) => errors.push(error.message));
+      const recordError = (error: Error) => errors.push(error.message);
+      page.on("pageerror", recordError);
       await page.goto(`/${route}`);
       await expect(page.getByTestId("terminal-shell")).toBeVisible();
       await expect(page.locator(".loading-state")).toHaveCount(0);
       await expect(page.locator(".error-state")).toHaveCount(0);
-      if (!["portfolio", "hedge"].includes(route))
+      await populateVisualAnalysis(page, route, backtest.id);
+      await expect(page.locator(".error-state")).toHaveCount(0);
+      await expect(page.locator(".page-toolbar h1")).toBeVisible();
+      await expect(page.getByTestId("security-context")).toBeVisible();
+      await expect(page.locator(".status-bar")).toBeVisible();
+      if (
+        [
+          "overview",
+          "macro",
+          "performance",
+          "risk",
+          "stress-tests",
+          "backtests",
+        ].includes(route)
+      )
         await expect(page.locator(".chart canvas")).not.toHaveCount(0);
       if (route === "hedge") {
         await expect(page.getByLabel("hedge-history table")).toBeVisible();
@@ -366,6 +420,8 @@ for (const viewport of [
       expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.width);
       expect(bounds.scrollHeight).toBeLessThanOrEqual(bounds.height);
       expect(bounds.header).toBe(40);
+      if (viewport.width === 390)
+        await expect(page.getByTestId("context-inspector")).toBeHidden();
       expect(errors).toEqual([]);
       const canvases = await page
         .locator(".chart canvas")
@@ -392,22 +448,26 @@ for (const viewport of [
       }
       mkdirSync("docs/screenshots", { recursive: true });
       await page.screenshot({
-        path: `docs/screenshots/${route}-${viewport.width}.png`,
+        path: `docs/screenshots/${route.replaceAll("/", "-")}-${viewport.width}.png`,
       });
       if (process.env.KNK_COMPARE_SCREENSHOTS === "1")
-        await expect(page).toHaveScreenshot(`${route}-${viewport.width}.png`, {
-          animations: "disabled",
-          maskColor: "#111111",
-          mask: [
-            page.locator(".header-clock"),
-            page.locator(".valuation-timestamp"),
-            page.locator(".quote-meta time"),
-            page.locator(".status-bar"),
-            page.locator(".inspector-body"),
-            page.locator(".panel-footer time"),
-            page.locator(".run-history"),
-          ],
-        });
+        await expect(page).toHaveScreenshot(
+          `${route.replaceAll("/", "-")}-${viewport.width}.png`,
+          {
+            animations: "disabled",
+            maskColor: "#111111",
+            mask: [
+              page.locator(".header-clock"),
+              page.locator(".valuation-timestamp"),
+              page.locator(".quote-meta time"),
+              page.locator(".status-bar"),
+              page.locator(".inspector-body"),
+              page.locator(".panel-footer time"),
+              page.locator(".run-history"),
+            ],
+          },
+        );
+      page.off("pageerror", recordError);
     }
   });
 }

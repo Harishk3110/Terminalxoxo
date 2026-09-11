@@ -42,6 +42,10 @@ export function HedgeWorkspace() {
   const [price, setPrice] = useTabState("hedge-futures-price", "");
   const [beta, setBeta] = useTabState("hedge-futures-beta", "");
   const [multiplier, setMultiplier] = useTabState("hedge-multiplier", "");
+  const [valuationDate, setValuationDate] = useTabState(
+    "hedge-valuation-date",
+    "",
+  );
   const [result, setResult] = useTabState<HedgeResult | null>(
     "hedge-result-v2",
     null,
@@ -63,6 +67,7 @@ export function HedgeWorkspace() {
         instrument_type: mode === "CURRENCY" ? "FX_CONVERSION" : instrumentType,
         fee_bps: Number(fees),
         slippage_bps: Number(slippage),
+        valuation_date: valuationDate || null,
         ...(instrumentType === "FUTURE_ESTIMATE" && mode !== "CURRENCY"
           ? {
               assumed_price: Number(price),
@@ -139,6 +144,15 @@ export function HedgeWorkspace() {
           quality="ASSUMPTIONS"
         >
           <div className="compact-form">
+            <Field label="Valuation date">
+              <input
+                aria-label="Hedge valuation date"
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                value={valuationDate}
+                onChange={(e) => setValuationDate(e.target.value)}
+              />
+            </Field>
             <Field label="Target mode">
               <select
                 aria-label="Hedge target mode"
@@ -381,6 +395,13 @@ export function HedgeWorkspace() {
                 setPrice(String(run.parameters.assumed_price ?? ""));
                 setBeta(String(run.parameters.assumed_beta ?? ""));
                 setMultiplier(String(run.parameters.contract_multiplier ?? ""));
+                setValuationDate(
+                  String(
+                    run.parameters.valuation_date ??
+                      run.result.valuation_date ??
+                      "",
+                  ),
+                );
               }
             }}
           />

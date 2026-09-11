@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { records, usePortfolio, useTerminal } from "./context";
 import { PageTitle, useApi } from "./core-pages";
+import { normalizedPreviewSecurity } from "./backtest-source";
 import {
   Badge,
   COLORS,
@@ -1046,6 +1047,9 @@ export function DataDropOperationsPage() {
                       `/backtests/dataset/${selected.metadata.dataset_id}/version/${selected.dataset_version_id}`,
                       "FILE BACKTEST",
                       true,
+                      normalizedPreviewSecurity(
+                        selected.metadata.normalized_preview,
+                      ),
                     )
                   }
                 >

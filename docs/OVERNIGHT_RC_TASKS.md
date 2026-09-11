@@ -18,6 +18,10 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
+- [x] M4: dated stress/hedge snapshots, future-date rejection and historical/current projection isolation.
+- [x] M5: imported security/version handoff to backtesting; newly queued run identity asserted.
+- [x] M8: retired inbound dummy broker pairing/snapshot/heartbeat responses disabled and tested.
 - [ ] M3: full single-run browser suite, zero retries masking failures.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.

@@ -2,7 +2,7 @@
 
 ## Inputs and Scope
 
-`knk-nav-4.8` pins a valuation snapshot and source-aware base-currency security
+`knk-nav-4.9` pins a valuation snapshot and source-aware base-currency security
 history. Current signed marked security weights use complete positive internal
 NAV. Broker-reported snapshots are not substituted into this model. Source, oldest
 contributing timestamp, data state and version remain attached. Stale inputs remain

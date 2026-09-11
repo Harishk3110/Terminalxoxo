@@ -70,6 +70,7 @@ def calculate_stress(data: dict, parameters: dict) -> dict:
         "quality": data["quality"],
         "calculation_version": VERSION,
         "valuation_run_id": data.get("valuation_run_id"),
+        "valuation_date": data["curve"][-1]["date"] if data.get("curve") else None,
     }
     if scope == "Volatility" or model == "VOLATILITY":
         return {

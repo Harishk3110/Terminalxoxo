@@ -70,6 +70,9 @@ test("risk limits, model settings and manual hedge reviews persist", async ({
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/hedge");
+  await page
+    .getByLabel("Hedge valuation date", { exact: true })
+    .fill("2026-09-03");
   await page.getByLabel("Hedge target", { exact: true }).fill("0.2");
   await page.getByLabel("Hedge fees").fill("2");
   await page
@@ -89,6 +92,7 @@ test("risk limits, model settings and manual hedge reviews persist", async ({
     await request.get("/backend/api/v1/terminal/runs?kind=hedge")
   ).json();
   expect(runs.items[0].result.valuation_run_id).toBeTruthy();
+  expect(runs.items[0].result.valuation_date).toBe("2026-09-03");
   expect(runs.items[0].result.var_state).toBe("AVAILABLE");
   expect(runs.items[0].result.beta_after).not.toBeNull();
   await page.reload();
@@ -104,6 +108,9 @@ test("risk limits, model settings and manual hedge reviews persist", async ({
     "0.2",
   );
   await expect(page.getByLabel("Hedge fees")).toHaveValue("2");
+  await expect(page.getByLabel("Hedge valuation date")).toHaveValue(
+    "2026-09-03",
+  );
   await expect(page.getByLabel("hedge-history table")).toContainText(
     "REVIEWED",
   );

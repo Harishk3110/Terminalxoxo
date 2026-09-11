@@ -38,7 +38,7 @@ from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .transaction_context import context_payload
 
-VERSION = "knk-nav-4.8"
+VERSION = "knk-nav-4.9"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
 
 
@@ -264,6 +264,8 @@ class PortfolioValuationService:
     ) -> dict[str, Any]:
         portfolio, _ = self.portfolio(key)
         day = end or datetime.now(UTC).date()
+        if day > datetime.now(UTC).date():
+            raise ValueError("Valuation date cannot be in the future")
         fingerprint = self.fingerprint(portfolio.id, day)
         if not force:
             cached = self.session.scalar(
@@ -312,7 +314,8 @@ class PortfolioValuationService:
                     provenance={"price": row["price_provenance"], "fx": row["fx_provenance"]},
                 )
             )
-        if run.nav is not None:
+        # Historical runs retain their own records, never the current projection.
+        if run.nav is not None and day == datetime.now(UTC).date():
             p = payload["portfolio"]
             self.session.add(
                 models.NavSnapshot(
