@@ -728,3 +728,40 @@ explicit local-test API origin; a prior invocation correctly failed for missing
 deployment configuration. The rebuilt targeted run has passed the saved-quant
 journey; its remaining test and the new overlap regression are not yet certified.
 Full backend 22 is active; backend 21 is not evidence for these later changes.
+
+## Factor Request Overlap and Price Projection
+
+Baseline 483171e plus working tree. Factor Lab coalesces controls after 300ms,
+cancels obsolete queries when their key changes, and hides results belonging to
+previous inputs. Explicit zero costs are retained. The market-price resolver
+selects scalar legacy-history columns instead of hydrating an ORM identity for
+every bar. It retains the existing date/source filters, precision, provenance,
+ordering and missing-volume behavior. No database journal mode or timeout changed.
+
+The projection regression failed before the change and passes after it. The
+affected market/FX/factor selection passes 42 tests, native exit 0, 10.43s in
+overnight-price-projection-focused.log. A comparison against a7c9368's implementation
+has exact equality for 54,241 observations and all 18 factor-result cases across
+six factors and three lookbacks (overnight-price-projection-parity.log).
+Three concurrent read-only calls now take 5.09s, 6.51s and 8.34s versus the earlier
+8.52s, 11.26s and 12.16s; timings are measurements, not relaxed acceptance limits.
+
+Four new UI unit tests cover coalescing, zero cost, stale-result hiding, immediate
+abort and unmount cleanup. All 270 terminal unit tests pass on Node 22 in 68.90s.
+TypeScript, ESLint, the Node 22 production build, Ruff and formatting pass.
+Receipts: overnight-factor-ui-full.log / overnight-factor-ui-types.log /
+overnight-factor-ui-lint.log / overnight-factor-next-build-02.log.
+Initial UI test attempts lacked a mock for a second chart and did not provide a
+valid negative control; final tests mock both charts and exercise real query state.
+
+The rebuilt operating/quant selection passes four browser tests, zero retries,
+2.5m, native exit 0. The added deliberate overlap/reload test passes independently,
+zero retries, 39.0s total (17.6s test time). Both API logs have no database-lock or
+HTTP 500 entries. Receipts: overnight-factor-projection-browser-results.json /
+overnight-factor-overlap-results.json. Desktop 1440px and mobile 390px factor
+screenshots were inspected; no overlapping controls or document-width overflow
+was observed. This does not certify the entire terminal screenshot set.
+
+Full browser 11, now 40 tests, and backend 22 remain active. No complete current
+browser pass or 27-gate release pass is claimed. The persistent Docker image has
+not yet been refreshed with this batch.

@@ -493,6 +493,13 @@ export function FactorPage() {
   const [factor, setFactor] = useTabState("factor-name", "MOMENTUM");
   const [horizon, setHorizon] = useTabState("factor-forward", 5);
   const [cost, setCost] = useTabState("factor-cost", 10);
+  const path = `/api/v1/factors?lookback=${lookback}&factor=${factor}&horizon=${horizon}&cost_bps=${cost}`;
+  const [settledPath, setSettledPath] = useState<string | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledPath(path), 300);
+    return () => clearTimeout(timer);
+  }, [path]);
+  const pending = settledPath !== path;
   const query = useApi<{
     items: Row[];
     source: string;
@@ -506,11 +513,8 @@ export function FactorPage() {
       ic?: Row[];
       quantile_returns?: Row[];
     };
-  }>(
-    "factor",
-    `/api/v1/factors?lookback=${lookback}&factor=${factor}&horizon=${horizon}&cost_bps=${cost}`,
-  );
-  const d = query.data;
+  }>("factor", path, !pending);
+  const d = pending ? undefined : query.data;
   return (
     <div className="research-page">
       <PageTitle code="FACTOR" title="Factor Lab">
@@ -575,7 +579,7 @@ export function FactorPage() {
           source={d?.source}
           asOf={d?.as_of}
           quality={d?.quality}
-          loading={query.isLoading}
+          loading={pending || query.isLoading}
           error={query.error}
         >
           <Chart

@@ -155,7 +155,20 @@ class MarketPriceResolver:
         # Legacy history remains eligible even after a newer observation is imported.
         # Dated selection and source preferences are applied across both stores.
         if instrument_ids:
-            query = select(models.PriceBar).where(
+            query = select(
+                models.PriceBar.instrument_id,
+                models.PriceBar.close,
+                models.PriceBar.timestamp,
+                models.PriceBar.created_at,
+                models.PriceBar.provider,
+                models.PriceBar.quality,
+                models.PriceBar.currency,
+                models.PriceBar.id,
+                models.PriceBar.open,
+                models.PriceBar.high,
+                models.PriceBar.low,
+                models.PriceBar.volume,
+            ).where(
                 models.PriceBar.instrument_id.in_(instrument_ids), models.PriceBar.interval == "1d"
             )
             if start:
@@ -163,24 +176,38 @@ class MarketPriceResolver:
                     models.PriceBar.timestamp
                     >= datetime.combine(start - timedelta(days=400), time.min)
                 )
-            for bar in session.scalars(query).all():
-                category = "DEMO" if bar.quality == "DEMO DATA" else "PROVIDER"
-                self.series[bar.instrument_id].append(
+            # Scalar projections avoid constructing tens of thousands of unused ORM identities.
+            for (
+                instrument_id,
+                close,
+                timestamp,
+                created_at,
+                provider,
+                quality,
+                currency,
+                identifier,
+                open_price,
+                high,
+                low,
+                volume,
+            ) in session.execute(query).tuples().all():
+                category = "DEMO" if quality == "DEMO DATA" else "PROVIDER"
+                self.series[instrument_id].append(
                     Observation(
-                        bar.close,
-                        utc(bar.timestamp),
-                        utc(bar.created_at),
-                        bar.provider,
+                        close,
+                        utc(timestamp),
+                        utc(created_at),
+                        provider,
                         category,
                         "DEMO" if category == "DEMO" else "EOD",
-                        bar.currency,
-                        bar.id,
+                        currency,
+                        identifier,
                         fields={
-                            "open": str(bar.open),
-                            "high": str(bar.high),
-                            "low": str(bar.low),
-                            "close": str(bar.close),
-                            "volume": str(bar.volume) if bar.volume is not None else None,
+                            "open": str(open_price),
+                            "high": str(high),
+                            "low": str(low),
+                            "close": str(close),
+                            "volume": str(volume) if volume is not None else None,
                         },
                     )
                 )

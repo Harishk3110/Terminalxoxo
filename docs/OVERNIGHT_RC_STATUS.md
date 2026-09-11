@@ -3,10 +3,10 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: a7c9368, pushed. Dated-source/options/risk, ledger/factor, local
+Current HEAD: 483171e, pushed. Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
-Local backup manifest validation is also committed. Recovery probe/migration
-contracts and factor request/loading improvements are in verification. Full release remains open.
+Local backup manifest and recovery probe/migration contracts are also committed.
+Factor request/loading improvements pass focused verification. Full release remains open.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -28,6 +28,12 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Factor projection has exact old/new equality for 54,241 observations and 18
+  complete factor results. Affected backend selection: 42 passed. Terminal unit
+  suite: 270 passed. Node 22 build, TypeScript and ESLint pass. Rebuilt operating/
+  quant browser selection: four passed; deliberate overlap/reload test: one passed,
+  both with zero retries and no recorded database-lock or HTTP 500 failures.
+  Full browser 11 (40 tests) and backend 22 are active.
 - Recovery/backup focused selection: 45 passed. Migration selection: 19 passed,
   including real isolated PostgreSQL lifecycle and three URL configuration tests.
   Whole strict checkpoint 16: 1,564 diagnostics / 104 files / 267 sources. No
@@ -161,10 +167,10 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-factor-projection-browser.log -Tail 8`.
-Complete the factor rerun and the new in-flight-request journey, then run the full
-browser suite. The saved-quant journey passes in the targeted rebuilt run so far;
-full browser closure is not yet claimed. Continue remaining engine/API contracts.
+Exact next command: `Get-Content logs/overnight-backend-22.log -Tail 8`.
+Complete backend 22 and full browser 11, then refresh the persistent Docker stack
+with the tested changes. Full browser closure is not yet claimed. Continue remaining
+engine/API contracts, beginning with the pinned regression-library boundary.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and
