@@ -44,6 +44,7 @@ milestone remain open unless explicitly verified below.
 - [ ] M3/M13: keep blocking database checks off the ASGI loop; two concurrency negative controls reproduce the blocked-loop behavior, browser lock closure pending.
 - [x] M6: bounded identity lookup for pending files older than the latest 500; ownership/revocation/hash/missing-record tests and full backend 21 pass; pushed as 667c0a6.
 - [x] M15: typed local archive manifests, duplicate/malformed-field rejection before restore, and CLI operation from unrelated working directories; 23 focused tests pass.
+- [x] M2/M15: read-only recovery inventories, source-output collision rejection, optimized-Python preservation checks, malformed health JSON handling, and typed migration configuration; 45 recovery/backup and 19 migration tests pass.
 - [ ] M7: full FRED/SEC/OpenFIGI/vendor/FX/options adapters and source conflicts.
 - [ ] M8: complete paper read-only broker contract/reconnect/dedup tests.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.

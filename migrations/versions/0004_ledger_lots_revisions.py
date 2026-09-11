@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.schema import SchemaItem
 
 revision = "0004_ledger_lots_revisions"
 down_revision = "0003_portfolio_operations"
@@ -11,7 +12,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-def identity_columns() -> list[sa.Column]:
+def identity_columns() -> list[SchemaItem]:
     return [
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -19,7 +20,7 @@ def identity_columns() -> list[sa.Column]:
     ]
 
 
-def lot_columns() -> list[sa.Column]:
+def lot_columns() -> list[SchemaItem]:
     return [
         *identity_columns(),
         sa.Column(

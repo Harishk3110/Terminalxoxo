@@ -31,13 +31,13 @@ NAMES = {
 }
 
 
-def upgrade():
+def upgrade() -> None:
     for table in models.Base.metadata.sorted_tables:
         if table.name in NAMES:
             table.create(op.get_bind(), checkfirst=True)
 
 
-def downgrade():
+def downgrade() -> None:
     for table in reversed(models.Base.metadata.sorted_tables):
         if table.name in NAMES:
             table.drop(op.get_bind(), checkfirst=True)

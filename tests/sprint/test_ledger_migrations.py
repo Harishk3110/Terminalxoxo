@@ -34,6 +34,34 @@ def configuration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Conf
     return config, url
 
 
+def test_explicit_config_url_is_used_when_environment_is_unset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config, url = configuration(tmp_path, monkeypatch)
+    monkeypatch.delenv("DATABASE_URL")
+    command.upgrade(config, "head")
+    engine = create_engine(url)
+    try:
+        assert "portfolio_transactions" in inspect(engine).get_table_names()
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("environment", [None, ""])
+def test_missing_migration_url_fails_before_database_creation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, environment: str | None
+) -> None:
+    config, _ = configuration(tmp_path, monkeypatch)
+    config.set_main_option("sqlalchemy.url", "")
+    if environment is None:
+        monkeypatch.delenv("DATABASE_URL")
+    else:
+        monkeypatch.setenv("DATABASE_URL", environment)
+    with pytest.raises(ValueError, match="database URL is required"):
+        command.upgrade(config, "head")
+    assert not (tmp_path / "migration.sqlite").exists()
+
+
 def test_baseline_revision_does_not_create_future_tables(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

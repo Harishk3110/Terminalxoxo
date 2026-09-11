@@ -4,10 +4,16 @@ import json
 import time
 import urllib.error
 import urllib.request
+from typing import Literal, TypedDict
+
+
+class ServiceProbe(TypedDict):
+    state: Literal["RESPONDING", "NOT_READY", "OFFLINE"]
+    latency_ms: float | None
 
 
 def main() -> None:
-    results = {}
+    results: dict[str, ServiceProbe] = {}
     for service, url in {
         "api": "http://127.0.0.1:8000/health/ready",
         "terminal": "http://127.0.0.1:3001/login",
@@ -16,11 +22,15 @@ def main() -> None:
         try:
             with urllib.request.urlopen(url, timeout=5) as response:
                 body = response.read(1000000)
-                ready = response.status == 200 and (
-                    json.loads(body).get("status") == "ready"
-                    if service == "api"
-                    else b"KnK" in body
-                )
+                if service == "api":
+                    payload: object = json.loads(body)
+                    ready = (
+                        response.status == 200
+                        and isinstance(payload, dict)
+                        and payload.get("status") == "ready"
+                    )
+                else:
+                    ready = response.status == 200 and b"KnK" in body
                 results[service] = {
                     "state": "RESPONDING" if ready else "NOT_READY",
                     "latency_ms": round((time.perf_counter() - started) * 1000, 1),

@@ -6,6 +6,7 @@ import json
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from typing import NotRequired, TypedDict
 
 TABLES = (
     "portfolio_transactions",
@@ -21,14 +22,25 @@ TABLES = (
 )
 
 
-def snapshot(path):
+class TableSnapshot(TypedDict):
+    rows: int
+    sha256: str
+
+
+class RecoverySnapshot(TypedDict):
+    tables: dict[str, TableSnapshot]
+    active_jobs: dict[str, int | None]
+    preserved: NotRequired[bool]
+
+
+def snapshot(path: Path) -> RecoverySnapshot:
     with closing(
         sqlite3.connect(path.resolve(strict=True).as_uri() + "?mode=ro", uri=True)
     ) as database:
         available = {
             row[0] for row in database.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
-        result = {}
+        result: dict[str, TableSnapshot] = {}
         for table in TABLES:
             if table not in available:
                 continue
@@ -39,10 +51,16 @@ def snapshot(path):
                     json.dumps(rows, sort_keys=True, default=str).encode()
                 ).hexdigest(),
             }
-        active = {
-            table: database.execute(
-                f"SELECT COUNT(*) FROM {table} WHERE status IN ('QUEUED','RUNNING')"
-            ).fetchone()[0]
+        if not result:
+            raise ValueError("No business tables found in recovery database")
+        active: dict[str, int | None] = {
+            table: (
+                database.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE status IN ('QUEUED','RUNNING')"
+                ).fetchone()[0]
+                if table in available
+                else None
+            )
             for table in ("analysis_runs", "ingestion_jobs")
         }
         return {"tables": result, "active_jobs": active}

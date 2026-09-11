@@ -685,3 +685,46 @@ browser 09's retained database takes 4.50s, with 3.19s in price-resolver loading
 0.19s in factor statistics. Three concurrent read-only calls take 8.52s, 11.26s and
 12.16s (overnight-factor-profile-03.log / overnight-factor-concurrent-01.log).
 No journal mode, timeout, financial tolerance or browser assertion was changed.
+
+## Recovery Probes and Migration Contracts
+
+Baseline a7c9368 plus working tree. Missing database paths can no longer create
+an empty SQLite file during inventory. Recovery inventories reject databases
+without business tables, close connections, and represent absent job tables as
+unavailable rather than zero. Malformed API readiness JSON produces NOT_READY
+instead of crashing. Receipt output cannot overwrite the source database,
+including an existing same-file alias. Reference inventories are validated and
+preservation checks use explicit exceptions, so Python -O cannot remove them.
+
+Initial recovery negative controls: eight failed / four passed. An additional
+source-output collision test failed against the intermediate code and now passes.
+Final recovery/backup selection: 45 passed, one warning, 3.66s, native exit 0 in
+overnight-recovery-probes-expanded-after.log. Five selected source/test files pass
+strict types in overnight-recovery-probes-types-02.log. These tests modify only
+temporary fixture databases; no user database was used as an output target.
+
+Migration helpers expose SQLAlchemy schema-item contracts, and revision 0002
+retrieves the same registered Table instances through typed metadata. Migration
+ordering, column definitions, keys and constraints are unchanged. Missing URLs
+fail explicitly; a configured URL is still used when the environment is unset.
+All eight migration modules pass strict types. Final migration selection:
+19 passed, one warning, 37.65s, native exit 0, including the real isolated
+PostgreSQL upgrade/downgrade preservation test. Receipts:
+overnight-migration-typed-02.log / overnight-migration-typed-02.xml.
+
+Whole strict checkpoint 15: 1,576 distinct diagnostics in 109 files, 267 sources.
+Checkpoint 16 after migration cleanup: 1,564 diagnostics in 104 files, 267 sources.
+No remaining diagnostic originates in repository-tools; that invocation remains
+red because strict checking also reports its imported API dependencies. API has
+901 diagnostics in 33 files. No ignores, missing-import suppression or broad Any
+annotations were added. Whole Ruff/format, secrets and no-execution checks pass.
+
+Browser 10 completed with 37 passed / two failed / zero retries in 23.0m. The
+saved-quant factor failure was followed by a backtest page timeout; all five
+viewport sweeps passed. Both failure traces/screenshots are retained under
+logs/overnight-full-10-failures. This run used the pre-projection API process and
+pre-debounce frontend build. A fresh Node 22 frontend build now passes with the
+explicit local-test API origin; a prior invocation correctly failed for missing
+deployment configuration. The rebuilt targeted run has passed the saved-quant
+journey; its remaining test and the new overlap regression are not yet certified.
+Full backend 22 is active; backend 21 is not evidence for these later changes.

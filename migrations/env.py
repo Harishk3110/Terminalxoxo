@@ -24,7 +24,12 @@ target_metadata = Base.metadata
 
 
 def database_url() -> str:
-    return os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    configured = os.getenv("DATABASE_URL")
+    if configured is None:
+        configured = config.get_main_option("sqlalchemy.url")
+    if not configured:
+        raise ValueError("A database URL is required for migrations")
+    return configured
 
 
 def run_migrations_offline() -> None:

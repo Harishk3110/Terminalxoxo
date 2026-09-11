@@ -3,9 +3,10 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: 667c0a6, pushed. Dated-source/options/risk, ledger/factor, local
+Current HEAD: a7c9368, pushed. Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
-Local backup manifest validation is verified separately. Full release remains open.
+Local backup manifest validation is also committed. Recovery probe/migration
+contracts and factor request/loading improvements are in verification. Full release remains open.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -27,9 +28,16 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Recovery/backup focused selection: 45 passed. Migration selection: 19 passed,
+  including real isolated PostgreSQL lifecycle and three URL configuration tests.
+  Whole strict checkpoint 16: 1,564 diagnostics / 104 files / 267 sources. No
+  diagnostics originate in repository-tools, though imported API errors keep that
+  distribution's invocation red. API still has 901 diagnostics in 33 files.
 - Current focused selection: 71 passed, three warnings, 32.65s. Full backend 21:
   1,263 passed, 13 warnings, 447.63s; 10,901/12,366 statements covered (88.1530%).
-  Browser 10 remains active and has reproduced the quant SQLite lock failure.
+  Browser 10 finished: 37 passed / two failed / zero retries, 23.0m. All five
+  viewport sweeps passed. Both failures are in quant; traces are preserved under
+  logs/overnight-full-10-failures. Backend 22 is now active.
 - Local backup manifest selection: 23 passed, native exit 0; six affected source
   and test files pass strict types. Malformed and duplicate manifest fields are
   rejected before creating the restore target. This is separate from backend 21.
@@ -153,9 +161,10 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-browser-full-10.log -Tail 8`.
-Finish browser 10 and trace concurrent factor-history reads and workspace writes;
-the ASGI/status batch is already pushed. Continue remaining engine/API contracts.
+Exact next command: `Get-Content logs/overnight-factor-projection-browser.log -Tail 8`.
+Complete the factor rerun and the new in-flight-request journey, then run the full
+browser suite. The saved-quant journey passes in the targeted rebuilt run so far;
+full browser closure is not yet claimed. Continue remaining engine/API contracts.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and
