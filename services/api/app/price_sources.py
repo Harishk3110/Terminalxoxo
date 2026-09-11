@@ -4,13 +4,18 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from collections import defaultdict
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
+from typing import NotRequired, TypedDict
 
+from pydantic import JsonValue
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
+from .portfolio_domain.money import decimal
 
 PRIORITY = ["BROKER", "PROVIDER", "FILE", "DEMO"]
 
@@ -19,8 +24,47 @@ def utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
-def close_of_day(day: date):
+def close_of_day(day: date) -> datetime:
     return datetime.combine(day, time.max, UTC)
+
+
+class PriceProvenance(TypedDict):
+    source: str
+    data_state: str
+    stale: bool
+    as_of: str | None
+    source_category: NotRequired[str]
+    source_file_id: NotRequired[str | None]
+    dataset_version_id: NotRequired[str | None]
+    observation_id: NotRequired[str]
+    ingested_at: NotRequired[str]
+    currency: NotRequired[str]
+    adjustment_state: NotRequired[str]
+    original_data_state: NotRequired[str]
+    age_hours: NotRequired[float]
+    value: NotRequired[str]
+    source_file: NotRequired[str | None]
+    alternatives: NotRequired[list[PriceAlternative]]
+    conflict: NotRequired[bool]
+    inverse: NotRequired[bool]
+    pair: NotRequired[str]
+
+
+class PriceAlternative(PriceProvenance):
+    difference_pct: float | None
+
+
+class HistoricalPrice(PriceProvenance):
+    date: str
+    close: float
+    open: float | None
+    high: float | None
+    low: float | None
+    volume: float | None
+
+
+def _numeric_field(value: JsonValue) -> float | None:
+    return float(decimal(value, "OHLCV field")) if value not in (None, "") else None
 
 
 @dataclass
@@ -36,11 +80,12 @@ class Observation:
     file_id: str | None = None
     version_id: str | None = None
     adjustment: str = "UNADJUSTED"
-    fields: dict | None = None
+    fields: dict[str, JsonValue] | None = None
 
-    def provenance(self, at: datetime, tolerance=72):
+    def provenance(self, at: datetime, tolerance: float = 72) -> PriceProvenance:
         age = max(0, (utc(at) - utc(self.timestamp)).total_seconds() / 3600)
         stale = age > tolerance
+        filename = (self.fields or {}).get("filename")
         return {
             "source": self.source,
             "source_category": self.category,
@@ -60,12 +105,17 @@ class Observation:
             "age_hours": round(age, 2),
             "stale": stale,
             "value": str(self.value),
-            "source_file": (self.fields or {}).get("filename"),
+            "source_file": filename if isinstance(filename, str) else None,
         }
 
 
+type ObservationGroups = dict[tuple[str, str], tuple[list[datetime], list[Observation]]]
+
+
 class MarketPriceResolver:
-    def __init__(self, session, instrument_ids, start: date | None = None):
+    def __init__(
+        self, session: Session, instrument_ids: Collection[str], start: date | None = None
+    ) -> None:
         self.instruments = {
             r.id: r
             for r in session.scalars(
@@ -75,7 +125,7 @@ class MarketPriceResolver:
         self.rules = {
             r.instrument_id: r for r in session.scalars(select(models.SourcePrecedenceRule)).all()
         }
-        self.series = defaultdict(list)
+        self.series: dict[str, list[Observation]] = defaultdict(list)
         rows = session.scalars(
             select(models.MarketObservation).where(
                 models.MarketObservation.instrument_id.in_(instrument_ids)
@@ -108,30 +158,30 @@ class MarketPriceResolver:
                     models.PriceBar.timestamp
                     >= datetime.combine(start - timedelta(days=400), time.min)
                 )
-            for row in session.scalars(query).all():
-                category = "DEMO" if row.quality == "DEMO DATA" else "PROVIDER"
-                self.series[row.instrument_id].append(
+            for bar in session.scalars(query).all():
+                category = "DEMO" if bar.quality == "DEMO DATA" else "PROVIDER"
+                self.series[bar.instrument_id].append(
                     Observation(
-                        row.close,
-                        utc(row.timestamp),
-                        utc(row.created_at),
-                        row.provider,
+                        bar.close,
+                        utc(bar.timestamp),
+                        utc(bar.created_at),
+                        bar.provider,
                         category,
                         "DEMO" if category == "DEMO" else "EOD",
-                        row.currency,
-                        row.id,
+                        bar.currency,
+                        bar.id,
                         fields={
-                            "open": str(row.open),
-                            "high": str(row.high),
-                            "low": str(row.low),
-                            "close": str(row.close),
-                            "volume": str(row.volume or 0),
+                            "open": str(bar.open),
+                            "high": str(bar.high),
+                            "low": str(bar.low),
+                            "close": str(bar.close),
+                            "volume": str(bar.volume) if bar.volume is not None else None,
                         },
                     )
                 )
-        self.grouped = {}
+        self.grouped: dict[str, ObservationGroups] = {}
         for key, values in self.series.items():
-            groups = defaultdict(list)
+            groups: dict[tuple[str, str], list[Observation]] = defaultdict(list)
             for value in values:
                 groups[(value.category, value.source)].append(value)
             self.grouped[key] = {}
@@ -139,7 +189,7 @@ class MarketPriceResolver:
                 observations.sort(key=lambda x: (x.timestamp, x.ingested_at, x.id))
                 self.grouped[key][group] = ([x.timestamp for x in observations], observations)
 
-    def candidates(self, instrument_id, at):
+    def candidates(self, instrument_id: str, at: datetime) -> list[Observation]:
         result = []
         for _, (dates, rows) in self.grouped.get(instrument_id, {}).items():
             index = bisect_right(dates, utc(at)) - 1
@@ -147,7 +197,7 @@ class MarketPriceResolver:
                 result.append(rows[index])
         return result
 
-    def resolve(self, instrument_id, at):
+    def resolve(self, instrument_id: str, at: datetime) -> Observation | None:
         candidates = self.candidates(instrument_id, at)
         rule = self.rules.get(instrument_id)
         if rule and rule.preferred_source:
@@ -159,7 +209,7 @@ class MarketPriceResolver:
                 return max(matches, key=lambda r: (r.timestamp, r.ingested_at, r.id))
         return None
 
-    def describe(self, instrument_id, at):
+    def describe(self, instrument_id: str, at: datetime) -> PriceProvenance:
         chosen = self.resolve(instrument_id, at)
         rule = self.rules.get(instrument_id)
         if chosen is None:
@@ -170,7 +220,7 @@ class MarketPriceResolver:
                 "as_of": None,
             }
         result = chosen.provenance(at, rule.stale_after_hours if rule else 72)
-        alternatives = []
+        alternatives: list[PriceAlternative] = []
         for item in self.candidates(instrument_id, at):
             if item.id != chosen.id and item.timestamp.date() == chosen.timestamp.date():
                 difference = abs(item.value / chosen.value - 1) if chosen.value else None
@@ -184,7 +234,7 @@ class MarketPriceResolver:
         result["conflict"] = any((r["difference_pct"] or 0) > 0.01 for r in alternatives)
         return result
 
-    def history(self, instrument_id, start, end):
+    def history(self, instrument_id: str, start: date, end: date) -> list[HistoricalPrice]:
         days = sorted(
             {
                 o.timestamp.date()
@@ -192,7 +242,7 @@ class MarketPriceResolver:
                 if start <= o.timestamp.date() <= end
             }
         )
-        rows = []
+        rows: list[HistoricalPrice] = []
         for day in days:
             observation = self.resolve(instrument_id, close_of_day(day))
             if observation:
@@ -201,10 +251,10 @@ class MarketPriceResolver:
                     {
                         "date": day.isoformat(),
                         "close": float(observation.value),
-                        **{
-                            k: float(fields[k]) if fields.get(k) not in (None, "") else None
-                            for k in ("open", "high", "low", "volume")
-                        },
+                        "open": _numeric_field(fields.get("open")),
+                        "high": _numeric_field(fields.get("high")),
+                        "low": _numeric_field(fields.get("low")),
+                        "volume": _numeric_field(fields.get("volume")),
                         **observation.provenance(close_of_day(day)),
                     }
                 )
@@ -212,8 +262,8 @@ class MarketPriceResolver:
 
 
 class FxRateResolver:
-    def __init__(self, session):
-        self.series = defaultdict(list)
+    def __init__(self, session: Session) -> None:
+        self.series: dict[tuple[str, str], list[Observation]] = defaultdict(list)
         for row in session.scalars(select(models.FxObservation)).all():
             self.series[(row.base_currency, row.quote_currency)].append(
                 Observation(
@@ -229,33 +279,35 @@ class FxRateResolver:
                 )
             )
         existing = set(self.series)
-        for row in session.scalars(select(models.FxRate).order_by(models.FxRate.date)).all():
-            key = (row.base_currency, row.quote_currency)
+        for rate in session.scalars(select(models.FxRate).order_by(models.FxRate.date)).all():
+            key = (rate.base_currency, rate.quote_currency)
             if key not in existing:
-                category = "DEMO" if row.quality == "DEMO DATA" else "PROVIDER"
+                category = "DEMO" if rate.quality == "DEMO DATA" else "PROVIDER"
                 self.series[key].append(
                     Observation(
-                        row.rate,
-                        datetime.combine(row.date, time.min, UTC),
-                        utc(row.created_at),
-                        row.provider,
+                        rate.rate,
+                        datetime.combine(rate.date, time.min, UTC),
+                        utc(rate.created_at),
+                        rate.provider,
                         category,
                         "DEMO" if category == "DEMO" else "EOD",
-                        row.quote_currency,
-                        row.id,
+                        rate.quote_currency,
+                        rate.id,
                     )
                 )
-        self.groups = {}
+        self.groups: dict[tuple[str, str], ObservationGroups] = {}
         for key, rows in self.series.items():
-            groups = defaultdict(list)
-            for row in rows:
-                groups[(row.category, row.source)].append(row)
+            groups: dict[tuple[str, str], list[Observation]] = defaultdict(list)
+            for observation in rows:
+                groups[(observation.category, observation.source)].append(observation)
             self.groups[key] = {}
             for group, values in groups.items():
                 values.sort(key=lambda r: (r.timestamp, r.ingested_at))
                 self.groups[key][group] = ([r.timestamp for r in values], values)
 
-    def resolve(self, currency, base, at):
+    def resolve(
+        self, currency: str, base: str, at: datetime
+    ) -> tuple[Decimal | None, PriceProvenance]:
         if currency == base:
             return Decimal("1"), {
                 "source": "IDENTITY",

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import datetime as dt
 from datetime import datetime
 from decimal import Decimal
 
+from pydantic import JsonValue
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -109,8 +111,8 @@ class Instrument(IdMixin, Base):
     sector: Mapped[str | None] = mapped_column(String(120))
     industry: Mapped[str | None] = mapped_column(String(160))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    listing_date: Mapped[datetime | None] = mapped_column(Date)
-    delisting_date: Mapped[datetime | None] = mapped_column(Date)
+    listing_date: Mapped[dt.date | None] = mapped_column(Date)
+    delisting_date: Mapped[dt.date | None] = mapped_column(Date)
     figi: Mapped[str | None] = mapped_column(String(32))
     isin: Mapped[str | None] = mapped_column(String(32))
     ibkr_contract_id: Mapped[str | None] = mapped_column(String(80))
@@ -141,7 +143,7 @@ class ProviderInstrumentMapping(IdMixin, Base):
     )
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     provider_symbol: Mapped[str] = mapped_column(String(160), nullable=False)
-    provider_metadata: Mapped[dict | None] = mapped_column(JSON)
+    provider_metadata: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
     __table_args__ = (UniqueConstraint("provider", "provider_symbol", name="uq_provider_symbol"),)
 
 
@@ -154,7 +156,7 @@ class ProviderConnection(IdMixin, Base):
     connection_state: Mapped[str] = mapped_column(
         String(40), default="NOT_CONFIGURED", nullable=False
     )
-    capabilities: Mapped[list | None] = mapped_column(JSON)
+    capabilities: Mapped[list[str] | None] = mapped_column(JSON)
     masked_identifier: Mapped[str | None] = mapped_column(String(120))
     last_success: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_failure: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -210,8 +212,8 @@ class MacroSeries(IdMixin, Base):
     frequency: Mapped[str] = mapped_column(String(80), nullable=False)
     frequency_short: Mapped[str | None] = mapped_column(String(20))
     seasonal_adjustment: Mapped[str | None] = mapped_column(String(120))
-    observation_start: Mapped[datetime | None] = mapped_column(Date)
-    observation_end: Mapped[datetime | None] = mapped_column(Date)
+    observation_start: Mapped[dt.date | None] = mapped_column(Date)
+    observation_end: Mapped[dt.date | None] = mapped_column(Date)
     last_updated: Mapped[str | None] = mapped_column(String(80))
     popularity: Mapped[int | None] = mapped_column(Integer)
     notes: Mapped[str | None] = mapped_column(Text)
@@ -225,13 +227,13 @@ class MacroObservation(IdMixin, Base):
     series_id: Mapped[str] = mapped_column(
         ForeignKey("macro_series.series_id"), nullable=False, index=True
     )
-    observation_date: Mapped[datetime] = mapped_column(Date, nullable=False, index=True)
+    observation_date: Mapped[dt.date] = mapped_column(Date, nullable=False, index=True)
     value: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
     units: Mapped[str | None] = mapped_column(String(160))
-    realtime_start: Mapped[datetime | None] = mapped_column(Date)
-    realtime_end: Mapped[datetime | None] = mapped_column(Date)
-    vintage_date: Mapped[datetime | None] = mapped_column(Date)
-    release_date: Mapped[datetime | None] = mapped_column(Date)
+    realtime_start: Mapped[dt.date | None] = mapped_column(Date)
+    realtime_end: Mapped[dt.date | None] = mapped_column(Date)
+    vintage_date: Mapped[dt.date | None] = mapped_column(Date)
+    release_date: Mapped[dt.date | None] = mapped_column(Date)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
     ingestion_timestamp: Mapped[datetime] = mapped_column(
@@ -256,7 +258,7 @@ class MacroRelease(IdMixin, Base):
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     release_id: Mapped[str] = mapped_column(String(80), nullable=False)
     name: Mapped[str] = mapped_column(String(240), nullable=False)
-    release_date: Mapped[datetime | None] = mapped_column(Date)
+    release_date: Mapped[dt.date | None] = mapped_column(Date)
     raw_object_id: Mapped[str | None] = mapped_column(ForeignKey("raw_objects.id"))
     __table_args__ = (
         UniqueConstraint("provider", "release_id", "release_date", name="uq_macro_release"),
@@ -268,7 +270,7 @@ class MacroVintage(IdMixin, Base):
     series_id: Mapped[str] = mapped_column(
         ForeignKey("macro_series.series_id"), nullable=False, index=True
     )
-    vintage_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    vintage_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     raw_object_id: Mapped[str | None] = mapped_column(ForeignKey("raw_objects.id"))
     __table_args__ = (
@@ -313,7 +315,7 @@ class FxRate(IdMixin, Base):
     __tablename__ = "fx_rates"
     base_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     quote_currency: Mapped[str] = mapped_column(String(3), nullable=False)
-    date: Mapped[datetime] = mapped_column(Date, nullable=False, index=True)
+    date: Mapped[dt.date] = mapped_column(Date, nullable=False, index=True)
     rate: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -328,7 +330,7 @@ class CorporateAction(IdMixin, Base):
         ForeignKey("instruments.id"), nullable=False, index=True
     )
     action_type: Mapped[str] = mapped_column(String(60), nullable=False)
-    effective_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    effective_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
     ratio: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -350,7 +352,7 @@ class DatasetVersion(IdMixin, Base):
     raw_object_id: Mapped[str] = mapped_column(ForeignKey("raw_objects.id"), nullable=False)
     row_count: Mapped[int] = mapped_column(Integer, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(128), nullable=False)
-    schema_json: Mapped[dict | None] = mapped_column(JSON)
+    schema_json: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
     __table_args__ = (UniqueConstraint("dataset_id", "version", name="uq_dataset_version"),)
 
 
@@ -388,7 +390,7 @@ class IngestionJob(IdMixin, Base):
     __tablename__ = "ingestion_jobs"
     job_type: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     provider: Mapped[str | None] = mapped_column(String(120), index=True)
-    parameters: Mapped[dict | None] = mapped_column(JSON)
+    parameters: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(40), default="PENDING", nullable=False, index=True)
     progress: Mapped[Decimal] = mapped_column(Numeric(8, 4), default=0, nullable=False)
     records_received: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -409,7 +411,7 @@ class IngestionJobRun(IdMixin, Base):
     job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
     state: Mapped[str] = mapped_column(String(40), nullable=False)
     message: Mapped[str | None] = mapped_column(Text)
-    log_payload: Mapped[dict | None] = mapped_column(JSON)
+    log_payload: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
 
 
 class DataQualityIssue(IdMixin, Base):
@@ -428,7 +430,7 @@ class QuarantineRecord(IdMixin, Base):
         ForeignKey("dataset_versions.id"), index=True
     )
     row_number: Mapped[int | None] = mapped_column(Integer)
-    payload: Mapped[dict | None] = mapped_column(JSON)
+    payload: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
     error_message: Mapped[str] = mapped_column(Text, nullable=False)
 
 
@@ -458,8 +460,8 @@ class PortfolioTransaction(IdMixin, Base):
     account_id: Mapped[str | None] = mapped_column(ForeignKey("portfolio_accounts.id"), index=True)
     instrument_id: Mapped[str | None] = mapped_column(ForeignKey("instruments.id"), index=True)
     transaction_type: Mapped[str] = mapped_column(String(40), nullable=False)
-    trade_date: Mapped[datetime] = mapped_column(Date, nullable=False, index=True)
-    settle_date: Mapped[datetime | None] = mapped_column(Date)
+    trade_date: Mapped[dt.date] = mapped_column(Date, nullable=False, index=True)
+    settle_date: Mapped[dt.date | None] = mapped_column(Date)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), default=0, nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(24, 8), default=0, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -512,7 +514,7 @@ class CashFlow(IdMixin, Base):
     portfolio_id: Mapped[str] = mapped_column(
         ForeignKey("portfolios.id"), nullable=False, index=True
     )
-    flow_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    flow_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     flow_type: Mapped[str] = mapped_column(String(60), nullable=False)
@@ -536,7 +538,7 @@ class DailyReturn(IdMixin, Base):
     portfolio_id: Mapped[str] = mapped_column(
         ForeignKey("portfolios.id"), nullable=False, index=True
     )
-    date: Mapped[datetime] = mapped_column(Date, nullable=False, index=True)
+    date: Mapped[dt.date] = mapped_column(Date, nullable=False, index=True)
     return_value: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
     __table_args__ = (UniqueConstraint("portfolio_id", "date", name="uq_daily_return"),)
 
@@ -546,7 +548,7 @@ class BenchmarkReturn(IdMixin, Base):
     benchmark_id: Mapped[str] = mapped_column(
         ForeignKey("benchmarks.id"), nullable=False, index=True
     )
-    date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     return_value: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
     __table_args__ = (UniqueConstraint("benchmark_id", "date", name="uq_benchmark_return"),)
 
@@ -627,7 +629,7 @@ class StressScenario(IdMixin, Base):
     __tablename__ = "stress_scenarios"
     name: Mapped[str] = mapped_column(String(160), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    shocks: Mapped[dict] = mapped_column(JSON, nullable=False)
+    shocks: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class StressResult(IdMixin, Base):
@@ -641,7 +643,7 @@ class StressResult(IdMixin, Base):
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     pnl_impact: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     nav_after: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
-    contributions: Mapped[list | None] = mapped_column(JSON)
+    contributions: Mapped[list[dict[str, JsonValue]] | None] = mapped_column(JSON)
 
 
 class HedgeInstrument(IdMixin, Base):
@@ -695,7 +697,7 @@ class StrategyVersion(IdMixin, Base):
         ForeignKey("strategy_definitions.id"), nullable=False, index=True
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-    rules: Mapped[dict] = mapped_column(JSON, nullable=False)
+    rules: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
     __table_args__ = (UniqueConstraint("strategy_id", "version", name="uq_strategy_version"),)
 
 
@@ -705,7 +707,7 @@ class StrategyParameter(IdMixin, Base):
         ForeignKey("strategy_versions.id"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    value_json: Mapped[dict | str | int | float | None] = mapped_column(JSON)
+    value_json: Mapped[dict[str, JsonValue] | str | int | float | None] = mapped_column(JSON)
 
 
 class BacktestRun(IdMixin, Base):
@@ -721,7 +723,7 @@ class BacktestRun(IdMixin, Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     initial_capital: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     final_equity: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
-    parameters: Mapped[dict | None] = mapped_column(JSON)
+    parameters: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
 
 
@@ -739,7 +741,7 @@ class BacktestEquityCurve(IdMixin, Base):
     backtest_run_id: Mapped[str] = mapped_column(
         ForeignKey("backtest_runs.id"), nullable=False, index=True
     )
-    date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     equity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     drawdown: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
     __table_args__ = (UniqueConstraint("backtest_run_id", "date", name="uq_backtest_equity_date"),)
@@ -750,7 +752,7 @@ class BacktestPosition(IdMixin, Base):
     backtest_run_id: Mapped[str] = mapped_column(
         ForeignKey("backtest_runs.id"), nullable=False, index=True
     )
-    date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     market_value: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
 
@@ -760,7 +762,7 @@ class BacktestTrade(IdMixin, Base):
     backtest_run_id: Mapped[str] = mapped_column(
         ForeignKey("backtest_runs.id"), nullable=False, index=True
     )
-    trade_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    trade_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     side: Mapped[str] = mapped_column(String(20), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -776,7 +778,7 @@ class Signal(IdMixin, Base):
     instrument_id: Mapped[str] = mapped_column(
         ForeignKey("instruments.id"), nullable=False, index=True
     )
-    signal_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    signal_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     signal_value: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
 
@@ -806,7 +808,7 @@ class FactorValue(IdMixin, Base):
     instrument_id: Mapped[str] = mapped_column(
         ForeignKey("instruments.id"), nullable=False, index=True
     )
-    date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     value: Mapped[Decimal] = mapped_column(Numeric(24, 10), nullable=False)
 
 
@@ -891,14 +893,14 @@ class AuditLog(IdMixin, Base):
     resource_type: Mapped[str] = mapped_column(String(120), nullable=False)
     resource_id: Mapped[str | None] = mapped_column(String(120))
     correlation_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
-    metadata_json: Mapped[dict | None] = mapped_column(JSON)
+    metadata_json: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
 
 
 class SystemHealthSnapshot(IdMixin, Base):
     __tablename__ = "system_health_snapshots"
     component: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     state: Mapped[str] = mapped_column(String(40), nullable=False)
-    details: Mapped[dict | None] = mapped_column(JSON)
+    details: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
     checked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
@@ -937,7 +939,7 @@ class WorkspaceState(IdMixin, Base):
     workspace_id: Mapped[str] = mapped_column(
         ForeignKey("workspaces.id"), unique=True, nullable=False
     )
-    configuration: Mapped[dict] = mapped_column(JSON, nullable=False)
+    configuration: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class AnalysisRun(IdMixin, Base):
@@ -945,9 +947,9 @@ class AnalysisRun(IdMixin, Base):
     kind: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(String(40), default="QUEUED", nullable=False)
-    parameters: Mapped[dict] = mapped_column(JSON, nullable=False)
-    result: Mapped[dict | None] = mapped_column(JSON)
-    history: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    parameters: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
+    result: Mapped[dict[str, JsonValue] | None] = mapped_column(JSON)
+    history: Mapped[list[dict[str, JsonValue]]] = mapped_column(JSON, default=list, nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -961,7 +963,7 @@ class FundamentalSnapshot(IdMixin, Base):
     source: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    statements: Mapped[dict] = mapped_column(JSON, nullable=False)
+    statements: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class PortfolioProfile(IdMixin, Base):
@@ -971,7 +973,7 @@ class PortfolioProfile(IdMixin, Base):
     )
     code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    configuration: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    configuration: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
 
 
 class TransactionDetail(IdMixin, Base):
@@ -989,7 +991,7 @@ class TransactionDetail(IdMixin, Base):
     reconciliation_state: Mapped[str] = mapped_column(
         String(40), default="INTERNAL_ONLY", nullable=False
     )
-    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    metadata_json: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
 
 
 class PortfolioBalanceAdjustment(IdMixin, Base):
@@ -997,7 +999,7 @@ class PortfolioBalanceAdjustment(IdMixin, Base):
     portfolio_id: Mapped[str] = mapped_column(
         ForeignKey("portfolios.id"), nullable=False, index=True
     )
-    effective_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    effective_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     bucket: Mapped[str] = mapped_column(String(40), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -1020,7 +1022,7 @@ class MarketObservation(IdMixin, Base):
         ForeignKey("dataset_versions.id"), index=True
     )
     source_file_id: Mapped[str | None] = mapped_column(ForeignKey("external_files.id"), index=True)
-    fields: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    fields: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
     __table_args__ = (
         UniqueConstraint(
             "instrument_id",
@@ -1049,7 +1051,7 @@ class SourcePrecedenceRule(IdMixin, Base):
     instrument_id: Mapped[str] = mapped_column(
         ForeignKey("instruments.id"), unique=True, nullable=False
     )
-    priority: Mapped[list] = mapped_column(JSON, nullable=False)
+    priority: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     preferred_source: Mapped[str | None] = mapped_column(String(120))
     stale_after_hours: Mapped[int] = mapped_column(Integer, default=72, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
@@ -1061,10 +1063,10 @@ class PortfolioValuationRun(IdMixin, Base):
         ForeignKey("portfolios.id"), nullable=False, index=True
     )
     fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    valuation_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    valuation_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     nav: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    payload: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class PositionValuation(IdMixin, Base):
@@ -1077,7 +1079,7 @@ class PositionValuation(IdMixin, Base):
     price: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
     fx_rate: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
     market_value: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
-    provenance: Mapped[dict] = mapped_column(JSON, nullable=False)
+    provenance: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class TradeEvent(IdMixin, Base):
@@ -1091,7 +1093,7 @@ class TradeEvent(IdMixin, Base):
     event_type: Mapped[str] = mapped_column(String(40), nullable=False)
     source: Mapped[str] = mapped_column(String(120), nullable=False)
     review_state: Mapped[str] = mapped_column(String(40), default="REQUIRES_REVIEW", nullable=False)
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    payload: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class TradeReview(IdMixin, Base):
@@ -1107,9 +1109,9 @@ class TradeRiskSnapshot(IdMixin, Base):
     trade_id: Mapped[str] = mapped_column(
         ForeignKey("trade_events.id"), unique=True, nullable=False
     )
-    before: Mapped[dict] = mapped_column(JSON, nullable=False)
-    after: Mapped[dict] = mapped_column(JSON, nullable=False)
-    breaches: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    before: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
+    after: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
+    breaches: Mapped[list[dict[str, JsonValue]]] = mapped_column(JSON, default=list, nullable=False)
 
 
 class BrokerAccountSnapshot(IdMixin, Base):
@@ -1123,7 +1125,7 @@ class BrokerAccountSnapshot(IdMixin, Base):
     connected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     nav: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    payload: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
 
 
 class PortfolioReconciliationBreak(IdMixin, Base):
@@ -1137,7 +1139,7 @@ class PortfolioReconciliationBreak(IdMixin, Base):
     break_type: Mapped[str] = mapped_column(String(60), nullable=False)
     state: Mapped[str] = mapped_column(String(40), default="OPEN", nullable=False)
     severity: Mapped[str] = mapped_column(String(30), nullable=False)
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    payload: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
     resolution: Mapped[str | None] = mapped_column(Text)
 
 
@@ -1148,7 +1150,7 @@ class MappingProfile(IdMixin, Base):
     source: Mapped[str] = mapped_column(String(120), nullable=False)
     dataset_type: Mapped[str] = mapped_column(String(80), nullable=False)
     approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    rules: Mapped[dict] = mapped_column(JSON, nullable=False)
+    rules: Mapped[dict[str, JsonValue]] = mapped_column(JSON, nullable=False)
     __table_args__ = (UniqueConstraint("code", "version", name="uq_mapping_profile_version"),)
 
 
@@ -1156,10 +1158,10 @@ class LocalAgent(IdMixin, Base):
     __tablename__ = "local_agents"
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    scopes: Mapped[list] = mapped_column(JSON, nullable=False)
+    scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    status: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
 
 
 class AgentPairing(IdMixin, Base):
@@ -1167,7 +1169,7 @@ class AgentPairing(IdMixin, Base):
     code_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    scopes: Mapped[list] = mapped_column(JSON, nullable=False)
+    scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
 
 
 class ExternalFile(IdMixin, Base):
@@ -1184,10 +1186,10 @@ class ExternalFile(IdMixin, Base):
         ForeignKey("dataset_versions.id"), index=True
     )
     duplicate_of: Mapped[str | None] = mapped_column(ForeignKey("external_files.id"))
-    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
-    mapping: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
-    validation: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
-    history: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    metadata_json: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
+    mapping: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, nullable=False)
+    validation: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
+    history: Mapped[list[dict[str, JsonValue]]] = mapped_column(JSON, default=list, nullable=False)
 
 
 class FileHash(IdMixin, Base):
@@ -1205,5 +1207,5 @@ class ResearchCandidate(IdMixin, Base):
     dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"))
     state: Mapped[str] = mapped_column(String(40), default="RESEARCH", nullable=False)
     hypothesis: Mapped[str] = mapped_column(Text, nullable=False)
-    configuration: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
-    review: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    configuration: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)
+    review: Mapped[dict[str, JsonValue]] = mapped_column(JSON, default=dict, nullable=False)

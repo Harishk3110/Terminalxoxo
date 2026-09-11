@@ -3,12 +3,25 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Unpack
 
+from pydantic import JsonValue
 from sqlalchemy import Select, and_, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from . import models
+from .repository_contracts import (
+    DatasetSchema,
+    InstrumentValues,
+    JobUpdate,
+    MacroObservationValues,
+    MacroSeriesValues,
+    PerformanceValues,
+    PriceBarValues,
+    RiskValues,
+    TransactionValues,
+    UploadValues,
+)
 
 
 class RepositoryError(RuntimeError):
@@ -30,7 +43,7 @@ class AuditRepository:
         resource_type: str,
         correlation_id: str,
         resource_id: str | None = None,
-        metadata: dict | None = None,
+        metadata: dict[str, JsonValue] | None = None,
     ) -> models.AuditLog:
         item = models.AuditLog(
             action=action,
@@ -165,7 +178,7 @@ class InstrumentRepository:
             self.session.add(item)
         return item
 
-    def upsert_instrument(self, **kwargs: Any) -> models.Instrument:
+    def upsert_instrument(self, **kwargs: Unpack[InstrumentValues]) -> models.Instrument:
         stmt = select(models.Instrument).where(
             and_(
                 models.Instrument.symbol == kwargs["symbol"],
@@ -254,7 +267,7 @@ class MarketRepository:
             select(models.LatestQuote).where(models.LatestQuote.instrument_id == instrument_id),
         )
 
-    def insert_price_bar(self, **kwargs: Any) -> models.PriceBar | None:
+    def insert_price_bar(self, **kwargs: Unpack[PriceBarValues]) -> models.PriceBar | None:
         exists = first_or_none(
             self.session,
             select(models.PriceBar).where(
@@ -339,12 +352,14 @@ class MarketRepository:
         row = first_or_none(self.session, stmt)
         if row:
             return Decimal(row.rate)
-        inverse = first_or_none(
-            self.session,
+        inverse_stmt = (
             select(models.FxRate)
             .where(and_(models.FxRate.base_currency == quote, models.FxRate.quote_currency == base))
-            .order_by(models.FxRate.date.desc()),
+            .order_by(models.FxRate.date.desc())
         )
+        if on_date:
+            inverse_stmt = inverse_stmt.where(models.FxRate.date <= on_date)
+        inverse = first_or_none(self.session, inverse_stmt)
         if inverse:
             return Decimal("1") / Decimal(inverse.rate)
         raise RepositoryError(f"Missing FX rate {base}/{quote}")
@@ -354,7 +369,7 @@ class MacroRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def upsert_series(self, **kwargs: Any) -> models.MacroSeries:
+    def upsert_series(self, **kwargs: Unpack[MacroSeriesValues]) -> models.MacroSeries:
         item = first_or_none(
             self.session,
             select(models.MacroSeries).where(models.MacroSeries.series_id == kwargs["series_id"]),
@@ -368,7 +383,9 @@ class MacroRepository:
                 setattr(item, key, value)
         return item
 
-    def insert_observation(self, **kwargs: Any) -> models.MacroObservation | None:
+    def insert_observation(
+        self, **kwargs: Unpack[MacroObservationValues]
+    ) -> models.MacroObservation | None:
         stmt = select(models.MacroObservation).where(
             and_(
                 models.MacroObservation.series_id == kwargs["series_id"],
@@ -466,7 +483,7 @@ class PortfolioRepository:
             ).scalars()
         )
 
-    def add_transaction(self, **kwargs: Any) -> models.PortfolioTransaction:
+    def add_transaction(self, **kwargs: Unpack[TransactionValues]) -> models.PortfolioTransaction:
         item = models.PortfolioTransaction(**kwargs)
         self.session.add(item)
         self.session.flush()
@@ -491,8 +508,8 @@ class PortfolioRepository:
         )
         for item in positions:
             self.session.add(item)
-        for item in cash:
-            self.session.add(item)
+        for balance in cash:
+            self.session.add(balance)
         existing_nav = first_or_none(
             self.session,
             select(models.NavSnapshot).where(
@@ -523,7 +540,9 @@ class AnalyticsRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def upsert_performance(self, portfolio_id: str, **kwargs: Any) -> models.PerformanceSnapshot:
+    def upsert_performance(
+        self, portfolio_id: str, **kwargs: Unpack[PerformanceValues]
+    ) -> models.PerformanceSnapshot:
         item = first_or_none(
             self.session,
             select(models.PerformanceSnapshot)
@@ -546,7 +565,7 @@ class AnalyticsRepository:
             .order_by(models.PerformanceSnapshot.as_of.desc()),
         )
 
-    def upsert_risk(self, portfolio_id: str, **kwargs: Any) -> models.RiskSnapshot:
+    def upsert_risk(self, portfolio_id: str, **kwargs: Unpack[RiskValues]) -> models.RiskSnapshot:
         item = first_or_none(
             self.session,
             select(models.RiskSnapshot)
@@ -592,7 +611,12 @@ class JobRepository:
         self.session = session
 
     def create(
-        self, *, job_type: str, provider: str | None, parameters: dict | None, correlation_id: str
+        self,
+        *,
+        job_type: str,
+        provider: str | None,
+        parameters: dict[str, JsonValue] | None,
+        correlation_id: str,
     ) -> models.IngestionJob:
         item = models.IngestionJob(
             job_type=job_type,
@@ -621,7 +645,7 @@ class JobRepository:
             )
         return list(self.session.execute(stmt).scalars())
 
-    def update(self, job: models.IngestionJob, **kwargs: Any) -> models.IngestionJob:
+    def update(self, job: models.IngestionJob, **kwargs: Unpack[JobUpdate]) -> models.IngestionJob:
         for key, value in kwargs.items():
             setattr(job, key, value)
         return job
@@ -631,7 +655,7 @@ class DatasetRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def create_upload(self, **kwargs: Any) -> models.UploadedFile:
+    def create_upload(self, **kwargs: Unpack[UploadValues]) -> models.UploadedFile:
         item = models.UploadedFile(**kwargs)
         self.session.add(item)
         self.session.flush()
@@ -647,8 +671,9 @@ class DatasetRepository:
         raw_object_id: str,
         row_count: int,
         content_hash: str,
-        schema_json: dict,
+        schema_json: dict[str, JsonValue],
     ) -> tuple[models.Dataset, models.DatasetVersion]:
+        schema = DatasetSchema.model_validate(schema_json)
         dataset = models.Dataset(
             name=dataset_name, dataset_type=dataset_type, source=source, quality=quality
         )
@@ -664,13 +689,13 @@ class DatasetRepository:
         )
         self.session.add(version)
         self.session.flush()
-        for column in schema_json.get("columns", []):
+        for column in schema.columns:
             self.session.add(
                 models.DatasetColumn(
                     dataset_version_id=version.id,
-                    name=column["name"],
-                    inferred_type=column["type"],
-                    mapped_role=column.get("role"),
+                    name=column.name,
+                    inferred_type=column.type,
+                    mapped_role=column.role,
                 )
             )
         return dataset, version

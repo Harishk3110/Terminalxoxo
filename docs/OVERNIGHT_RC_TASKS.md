@@ -15,7 +15,8 @@ milestone remain open unless explicitly verified below.
 - [ ] M2: whole first-party formatting/Ruff/mypy, TypeScript, ESLint, OpenAPI.
 - [x] M2: first-party Ruff and formatting, OpenAPI generation (170 paths).
 - [x] M2: typed provider transport, JSON validation, SEC filing shapes, option-pricing and storage boundaries.
-- [ ] M2: persisted model/repository contracts and remaining engine/API types.
+- [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
+- [ ] M2: seed, worker, provider consumers and remaining engine/API types.
 - [ ] M3: full single-run browser suite, zero retries masking failures.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.

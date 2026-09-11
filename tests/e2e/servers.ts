@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { request } from "@playwright/test";
 import http from "node:http";
 import path from "node:path";
+import { portOccupied } from "./ports";
 
 function reachable(url: string) {
   return new Promise<boolean>(resolve => {
@@ -35,8 +36,8 @@ export default async function setup() {
     children.push(child);
   };
   try {
-    for(const url of ['http://127.0.0.1:8001/health/live','http://127.0.0.1:3002/login']) {
-      if(await reachable(url)) throw new Error(`Test port is already occupied: ${url}`);
+    for(const port of [8001, 3002, 8011]) {
+      if(await portOccupied(port)) throw new Error(`Test port is already occupied: 127.0.0.1:${port}`);
     }
     start(process.env.PLAYWRIGHT_PYTHON || (process.platform==='win32'?'python':'python3'),['-m','uvicorn','app.main:app','--app-dir','services/api','--host','127.0.0.1','--port','8001'],root,{
       DATABASE_URL:`sqlite:///${path.join(root,`logs/e2e-${id}.db`).replaceAll('\\','/')}`,

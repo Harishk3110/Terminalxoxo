@@ -77,7 +77,7 @@ fixture discovery. Explicit fixture re-exports restored that registration withou
 disabling any lint rule. The affected selection then passed all 17 tests in 39.33s.
 The corrected full rerun passed: 973 tests, zero failures, 13 warnings, 265.59s,
 in overnight-backend-04.log. Coverage: 9,950/11,456 statements, 1,506 missing,
-25 existing exclusions; statement coverage, not branch coverage.
+23 existing exclusions; statement coverage, not branch coverage (86.85405027932961%).
 The four API/data/quant/report Docker images rebuilt successfully using the
 production dependency set (overnight-m2-docker-build.log).
 The post-fixture-fix Ruff and format checks passed. The secret scanner examined
@@ -86,3 +86,32 @@ The post-fixture-fix Ruff and format checks passed. The secret scanner examined
 Bounded watchdog started hidden with launcher PID 10020; persistent JSONL receipts
 show all ten daemons healthy and successful MinIO init. Runtime images still carry
 the preceding report checkpoint while this source batch is verified.
+
+## M2 Model And Source Contracts, Second Batch
+
+Based on 0769543 + worktree. SQL Date annotations now match their existing SQL
+types; persisted JSON and repository write contracts are explicit. No schema or
+data migration was introduced. Historical inverse FX is bounded by the requested
+date, malformed dataset schemas fail before writes, and absent volume stays null.
+
+| Check | Result |
+| --- | --- |
+| First M2 runtime refresh | Exit 0; overnight-m2-docker-up.log; ten daemons healthy |
+| Strict mypy on model/repository/price-source contracts | Exit 0; five modules |
+| Date invariant, first attempt | Failed: adjacent Date columns escaped mechanical replacement; fixed every Date field |
+| Contract/migration regression | 27 passed, 15.54s; overnight-model-contracts-tests-03.log |
+| Provider/repository/portfolio selection | 58 passed, 7.89s; overnight-source-contracts-tests.log |
+| Full API mypy | Still fails: 1,248 errors / 44 files; overnight-mypy-m2c.log |
+| Full backend with isolated SQLite/objects | 985 passed, 13 warnings, 298.52s; overnight-backend-05.log |
+| Statement coverage | 10,126/11,625 = 87.10537634408603%; 1,499 missing, 23 existing exclusions; no branch claim |
+| Frontend typecheck / lint | Exit 0 each; overnight-m2c-typecheck.log / overnight-m2c-frontend-lint.log |
+| Frontend units | 240 terminal + 5 shared passed; overnight-frontend-unit-03.log |
+| Report browser workflow, no retries | 1 passed, 17.4s; overnight-m2c-reports-browser.log |
+| Report screenshots | reports-1440.png and reports-390.png inspected; mobile inspector hidden without overlap |
+| Four production backend images | Exit 0; overnight-m2c-docker-build.log; refresh pending |
+| Whole first-party Ruff / format | Exit 0 each; 239 Python/stub files formatted |
+
+The browser harness now detects any TCP listener on all three isolated service
+ports, including HTTP error responses, without terminating foreign listeners.
+Two focused tests cover this guard. Stronger persisted model types expose more
+unchecked callers; the global mypy gate remains open, not silently excluded.

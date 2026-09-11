@@ -12,15 +12,16 @@ and rendered artifact review remain PARTIAL; these are source-pinned review expo
 
 Next milestone: M2 static cleanup, then full browser closure. First unchecked report
 subtask: complete financial model/deck content and actual rendered-artifact review.
-Next code batch: type the persisted model and repository contracts, followed by
-engine and API consumers. Full regression for the first M2 batch passed.
+Next code batch: type seed, worker and provider consumers, followed by engine and
+API contracts. Persisted models, repository writes and price sources now pass
+strict scoped checks; the complete regression for this second M2 batch passed.
 Next diagnostic: `.venv-sprint/Scripts/python.exe -m mypy services/api/app`.
 
 Current evidence:
-- Full backend rerun: 973 passed / 13 warnings / 265.59s; 9,950/11,456 statements covered.
+- Full backend rerun: 985 passed / 13 warnings / 298.52s; 10,126/11,625 statements covered.
 - Subsequent native-chart report selection: 34 passed. Eight new report/watchdog
   modules passed scoped strict mypy; changed modules passed Ruff.
-- Full frontend rerun: 238 terminal + 5 shared tests passed (243 total).
+- Full frontend rerun: 240 terminal + 5 shared tests passed (245 total).
 - Workspace TypeScript/lint and Node 22 local/Docker production builds passed.
 - Report browser workflow passed twice, including the mobile resize fix and
   persisted date/format; screenshots at 1440px/390px were inspected.
@@ -30,9 +31,11 @@ Current evidence:
 - Watchdog: three tests and live observe-only pass; hidden background launcher
   PID 10020 started, with minute-by-minute observations in the local logs.
 
-First-party Ruff now passes and all 230 Python/stub files pass formatting.
-Mypy is NOT green: the latest full API invocation has 1,140 errors in 46 files,
-down from 1,260 in 56 files. Eleven boundary modules pass strict checks; local
+First-party Ruff now passes and all 239 Python/stub files pass formatting.
+Mypy is NOT green: the latest full API invocation has 1,248 errors in 44 files.
+Stricter date/JSON model contracts exposed additional unchecked callers; no error
+count reduction is claimed for the model batch. Eleven boundary modules plus five
+model/repository/price-source modules pass scoped strict checks; local
 vollib signatures pass runtime stub verification. No global ignores were added.
 Provider/storage/option/report follow-up: 82 focused tests passed. OpenAPI generated
 170 paths and 69 component schemas after the dependency-default cleanup.
@@ -44,7 +47,8 @@ The first full backend attempt used incompatible test/HTTPS-cookie configuration
 security checks were weakened. Full browser zero-failure gate is still open.
 
 Ten long-running Docker services, including reports, are healthy; MinIO init exited
-0. Images have been rebuilt with the report/UI changes and await final refresh.
+0. The first M2 runtime refresh passed. Images for the verified second M2 batch
+are built and await refresh; the watchdog remains active.
 Local URL: http://127.0.0.1:3001/overview (private login, not hosted).
 Existing SQLite, local objects, `.env`, Compose credentials and volumes are preserved.
 PostgreSQL backup/restore, all dashboards, release runner and later domain gates
