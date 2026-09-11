@@ -1,18 +1,25 @@
+from collections.abc import Iterator
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import NoReturn
 
 import httpx
 import pytest
 from app import models, provider_api
 from app.config import Settings, get_settings
 from app.database import get_session
-from app.provider_data import adapters
+from app.provider_data import NAMES, ProviderAdapters, adapters
 from app.providers.http import ProviderError, fetch
 from app.providers.market import JsonMarketProvider, PriceObservation
 from app.providers.reference import OpenFigiProvider, SecProvider, cik_value, filing_rows
 from app.quant_data import dataset_rows
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import JsonValue
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+ProviderClient = tuple[TestClient, ProviderAdapters]
 
 
 @pytest.mark.parametrize(
@@ -28,13 +35,18 @@ from sqlalchemy import func, select
         {"facts": {"us-gaap": {"Revenue": {"label": [], "units": {"USD": []}}}}},
     ],
 )
-def test_sec_facts_reject_malformed_nested_shapes(payload):
+def test_sec_facts_reject_malformed_nested_shapes(payload: JsonValue) -> None:
     with pytest.raises(ProviderError, match="SEC company facts"):
         provider_api.fact_rows(payload)
 
 
 def test_sec_fact_cannot_override_its_taxonomy_concept_or_unit() -> None:
-    observation = {"val": 100, "taxonomy": "other", "concept": "other", "unit": "other"}
+    observation: dict[str, JsonValue] = {
+        "val": 100,
+        "taxonomy": "other",
+        "concept": "other",
+        "unit": "other",
+    }
     rows = provider_api.fact_rows(
         {"facts": {"us-gaap": {"Revenue": {"label": "Revenue", "units": {"USD": [observation]}}}}}
     )
@@ -45,16 +57,18 @@ def test_sec_fact_cannot_override_its_taxonomy_concept_or_unit() -> None:
 
 @pytest.mark.parametrize("latency", [None, "12", True, -1, 1.5, 0, 12])
 @pytest.mark.anyio
-async def test_fred_probe_requires_observed_latency(ledger_session, monkeypatch, latency):
+async def test_fred_probe_requires_observed_latency(
+    ledger_session: Session, monkeypatch: pytest.MonkeyPatch, latency: JsonValue
+) -> None:
     from app.provider_data import connection
     from app.provider_probe import probe
     from app.providers.fred import FredProvider
 
-    settings = Settings(fred_enabled=True, fred_api_key="mock-fred-key")
+    settings = Settings(FRED_ENABLED=True, FRED_API_KEY="mock-fred-key")
     adapter = FredProvider(settings)
     row = connection(ledger_session, "fred", settings)
 
-    async def metadata(*args):
+    async def metadata(*args: object) -> dict[str, JsonValue]:
         return {"_knk_latency_ms": latency, "seriess": []}
 
     monkeypatch.setattr(adapter, "series_metadata", metadata)
@@ -66,11 +80,13 @@ async def test_fred_probe_requires_observed_latency(ledger_session, monkeypatch,
 
 
 @pytest.mark.parametrize("both", [False, True])
-def test_provider_result_requires_exactly_one_observation(ledger_session, both):
+def test_provider_result_requires_exactly_one_observation(
+    ledger_session: Session, both: bool
+) -> None:
     from app.provider_data import connection, record_result
     from app.providers.http import Response
 
-    row = connection(ledger_session, "sec", Settings(sec_user_agent="KnK test@example.test"))
+    row = connection(ledger_session, "sec", Settings(SEC_USER_AGENT="KnK test@example.test"))
     ledger_session.commit()
     with pytest.raises(ValueError, match="exactly one"):
         record_result(
@@ -84,19 +100,19 @@ def test_provider_result_requires_exactly_one_observation(ledger_session, both):
 
 
 @pytest.fixture
-def anyio_backend():
+def anyio_backend() -> str:
     return "asyncio"
 
 
 @pytest.fixture(autouse=True)
-def no_test_pacing(monkeypatch):
-    async def immediate(*args):
+def no_test_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def immediate(*args: object) -> None:
         pass
 
     monkeypatch.setattr("app.providers.http.pace", immediate)
 
 
-def submissions():
+def submissions() -> dict[str, JsonValue]:
     return {
         "cik": "320193",
         "name": "Apple",
@@ -112,7 +128,7 @@ def submissions():
     }
 
 
-def price(**updates):
+def price(**updates: JsonValue) -> dict[str, JsonValue]:
     return {
         "symbol": "AAA",
         "currency": "SGD",
@@ -125,8 +141,8 @@ def price(**updates):
 
 
 @pytest.mark.anyio
-async def test_sec_contact_header_identity_and_document_validation():
-    def handler(request):
+async def test_sec_contact_header_identity_and_document_validation() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["User-Agent"] == "KnK test@example.test"
         assert request.url == "https://data.sec.gov/submissions/CIK0000320193.json"
         return httpx.Response(200, json=submissions())
@@ -141,7 +157,11 @@ async def test_sec_contact_header_identity_and_document_validation():
     )
     assert cik_value("320193") == "0000320193"
     bad = submissions()
-    bad["filings"]["recent"]["primaryDocument"] = ["../../secrets"]
+    filings = bad["filings"]
+    assert isinstance(filings, dict)
+    recent = filings["recent"]
+    assert isinstance(recent, dict)
+    recent["primaryDocument"] = ["../../secrets"]
     with pytest.raises(ProviderError):
         filing_rows(bad)
     with pytest.raises(ValueError):
@@ -151,8 +171,8 @@ async def test_sec_contact_header_identity_and_document_validation():
 
 
 @pytest.mark.anyio
-async def test_rate_limit_and_redacted_failure():
-    def handler(request):
+async def test_rate_limit_and_redacted_failure() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["X-OPENFIGI-APIKEY"] == "secret-not-logged"
         return httpx.Response(429, text="secret-not-logged", headers={"retry-after": "30"})
 
@@ -169,8 +189,8 @@ async def test_rate_limit_and_redacted_failure():
 
 
 @pytest.mark.anyio
-async def test_json_contract_auth_and_no_redirects():
-    def handler(request):
+async def test_json_contract_auth_and_no_redirects() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["Authorization"] == "Bearer server-secret"
         assert request.url.path == "/api/prices"
         assert request.url.params["symbol"] == "AAA"
@@ -179,7 +199,7 @@ async def test_json_contract_auth_and_no_redirects():
     provider = JsonMarketProvider(
         Settings(
             MARKET_DATA_BASE_URL="https://quotes.example.test/api",
-            market_api_key="server-secret",
+            MARKET_DATA_API_KEY="server-secret",
         ),
         transport=httpx.MockTransport(handler),
     )
@@ -208,13 +228,15 @@ async def test_json_contract_auth_and_no_redirects():
         {"volume": "-1"},
     ],
 )
-def test_market_rows_reject_invalid_or_undisclosed_data(updates):
+def test_market_rows_reject_invalid_or_undisclosed_data(updates: dict[str, JsonValue]) -> None:
     with pytest.raises(ValueError):
         PriceObservation.model_validate(price(**updates))
 
 
 @pytest.fixture
-def provider_client(ledger_session, session_token, tmp_path, monkeypatch):
+def provider_client(
+    ledger_session: Session, session_token: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[ProviderClient]:
     settings = get_settings()
     for key, value in {
         "object_storage_local_dir": str(tmp_path),
@@ -228,7 +250,7 @@ def provider_client(ledger_session, session_token, tmp_path, monkeypatch):
     }.items():
         monkeypatch.setattr(settings, key, value)
 
-    def handler(request):
+    def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "data.sec.gov":
             return httpx.Response(200, json=submissions())
         if request.url.host == "api.openfigi.com":
@@ -252,8 +274,8 @@ def provider_client(ledger_session, session_token, tmp_path, monkeypatch):
         return httpx.Response(200, json={"rows": [price()]})
 
     instances = adapters(settings)
-    for item in instances.values():
-        item.transport = httpx.MockTransport(handler)
+    for key in NAMES:
+        instances[key].transport = httpx.MockTransport(handler)
     monkeypatch.setattr(provider_api, "adapters", lambda settings: instances)
     app = FastAPI()
     app.include_router(provider_api.router)
@@ -263,7 +285,9 @@ def provider_client(ledger_session, session_token, tmp_path, monkeypatch):
         yield client, instances
 
 
-def test_provider_configuration_controls_and_no_secret_exposure(provider_client, ledger_session):
+def test_provider_configuration_controls_and_no_secret_exposure(
+    provider_client: ProviderClient, ledger_session: Session
+) -> None:
     client, _ = provider_client
     response = client.get("/api/v1/connections")
     assert response.status_code == 200
@@ -298,7 +322,9 @@ def test_provider_configuration_controls_and_no_secret_exposure(provider_client,
     assert client.get("/api/v1/connections").status_code == 403
 
 
-def test_sec_immutable_version_dedup_and_hash(provider_client, ledger_session):
+def test_sec_immutable_version_dedup_and_hash(
+    provider_client: ProviderClient, ledger_session: Session
+) -> None:
     client, _ = provider_client
     one = client.post("/api/v1/connections/sec/import", json={"cik": "320193"}).json()
     assert one["state"] == "IMPORTED", one
@@ -312,16 +338,18 @@ def test_sec_immutable_version_dedup_and_hash(provider_client, ledger_session):
 
 
 def test_figi_candidates_require_explicit_review_and_reject_conflict(
-    provider_client, ledger_session
-):
+    provider_client: ProviderClient, ledger_session: Session
+) -> None:
     client, _ = provider_client
     looked = client.post(
         "/api/v1/connections/openfigi/mapping",
         json={"jobs": [{"idType": "TICKER", "idValue": "AAA"}]},
     ).json()
     assert looked["state"] == "REVIEW_REQUIRED"
-    assert ledger_session.get(models.Instrument, "AAA").figi is None
-    approval = {
+    instrument = ledger_session.get(models.Instrument, "AAA")
+    assert instrument is not None
+    assert instrument.figi is None
+    approval: dict[str, JsonValue] = {
         "dataset_version_id": looked["dataset_version_id"],
         "job_index": 0,
         "figi": "BBG000B9XRY4",
@@ -339,10 +367,12 @@ def test_figi_candidates_require_explicit_review_and_reject_conflict(
         ).status_code
         == 422
     )
-    assert ledger_session.get(models.Instrument, "AAA").figi == approval["figi"]
+    assert instrument.figi == approval["figi"]
 
 
-def test_market_source_precedence_and_retry_does_not_duplicate(provider_client, ledger_session):
+def test_market_source_precedence_and_retry_does_not_duplicate(
+    provider_client: ProviderClient, ledger_session: Session
+) -> None:
     from app.price_sources import MarketPriceResolver
 
     client, _ = provider_client
@@ -359,8 +389,8 @@ def test_market_source_precedence_and_retry_does_not_duplicate(provider_client, 
 
 
 def test_provider_failure_records_safe_health_and_no_partial_dataset(
-    provider_client, ledger_session, monkeypatch
-):
+    provider_client: ProviderClient, ledger_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     client, providers = provider_client
     providers["market"].transport = httpx.MockTransport(
         lambda request: httpx.Response(429, text="server-only-secret")
@@ -373,7 +403,9 @@ def test_provider_failure_records_safe_health_and_no_partial_dataset(
     assert next(row for row in states if row["key"] == "market")["rate_limit"] == "RATE_LIMITED"
 
 
-def test_fred_disable_applies_to_legacy_ingestion(provider_client, ledger_session):
+def test_fred_disable_applies_to_legacy_ingestion(
+    provider_client: ProviderClient, ledger_session: Session
+) -> None:
     import asyncio
 
     from app.providers.fred import FredProvider
@@ -392,13 +424,13 @@ def test_fred_disable_applies_to_legacy_ingestion(provider_client, ledger_sessio
 
 
 def test_storage_failure_rolls_back_import_but_records_failure(
-    provider_client, ledger_session, monkeypatch
-):
+    provider_client: ProviderClient, ledger_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from app.object_storage import ObjectStorage
 
     client, _ = provider_client
 
-    def fail_write(*args, **kwargs):
+    def fail_write(*args: object, **kwargs: object) -> NoReturn:
         raise OSError("unavailable")
 
     monkeypatch.setattr(ObjectStorage, "put_bytes", fail_write)
@@ -406,14 +438,13 @@ def test_storage_failure_rolls_back_import_but_records_failure(
     assert result["state"] == "FAILED"
     assert ledger_session.scalar(select(func.count()).select_from(models.DatasetVersion)) == 0
     assert ledger_session.scalar(select(func.count()).select_from(models.Dataset)) == 0
-    assert (
-        ledger_session.scalar(
-            select(models.ProviderHealthSnapshot).where(
-                models.ProviderHealthSnapshot.provider_name == "SEC EDGAR"
-            )
-        ).state
-        == "FAILED"
+    health = ledger_session.scalar(
+        select(models.ProviderHealthSnapshot).where(
+            models.ProviderHealthSnapshot.provider_name == "SEC EDGAR"
+        )
     )
+    assert health is not None
+    assert health.state == "FAILED"
 
 
 @pytest.mark.anyio
@@ -427,7 +458,7 @@ def test_storage_failure_rolls_back_import_but_records_failure(
         b'{"rows": [',
     ],
 )
-async def test_transport_rejects_malformed_or_nonfinite_json(body):
+async def test_transport_rejects_malformed_or_nonfinite_json(body: bytes) -> None:
     with pytest.raises(ProviderError, match="invalid JSON"):
         await fetch(
             "fixture",
@@ -437,14 +468,18 @@ async def test_transport_rejects_malformed_or_nonfinite_json(body):
 
 
 @pytest.mark.parametrize("payload", [None, [], {"filings": []}, {"filings": {"recent": None}}])
-def test_sec_rejects_malformed_containers(payload):
+def test_sec_rejects_malformed_containers(payload: JsonValue) -> None:
     with pytest.raises(ProviderError):
         filing_rows(payload)
 
 
 @pytest.mark.parametrize("key", ["accessionNumber", "filingDate", "form", "primaryDocument"])
-def test_sec_rejects_nonstring_column_cells(key):
+def test_sec_rejects_nonstring_column_cells(key: str) -> None:
     payload = submissions()
-    payload["filings"]["recent"][key] = [123]
+    filings = payload["filings"]
+    assert isinstance(filings, dict)
+    recent = filings["recent"]
+    assert isinstance(recent, dict)
+    recent[key] = [123]
     with pytest.raises(ProviderError, match="must contain strings"):
         filing_rows(payload)

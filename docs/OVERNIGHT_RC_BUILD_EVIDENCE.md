@@ -1115,3 +1115,31 @@ The remaining whole strict check is still red. Macro vintage-selection semantics
 are unchanged by this batch; revision preservation/current-vintage presentation
 still requires separate certification. No live-provider or release-completion
 claim is made. Docker is still cbb2cf1 until the forthcoming completed refresh.
+
+## Typed Test Fixtures And Macro Deployment
+
+2026-09-12 07:22-07:28 SGT, 0699ab0 plus test-only worktree. Numerical reference
+values, seeds, financial tolerances, expected unavailable states and execution
+guards are unchanged. Required results are explicitly checked before arithmetic;
+persisted JSON/model rows are narrowed before field access. Settings use their
+declared aliases with identical values, and provider transport fixtures retain
+the same five adapters.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Option/risk/valuation tests | 0 | overnight-test-contracts-01.log: 35 passed, one warning, 7.35s |
+| Initial focused strict for those tests | 1 | overnight-test-contracts-types-01.log: one remaining untyped HedgeService constructor; not suppressed |
+| Initial provider test strict | 1 | overnight-test-contracts-types-02.log: five diagnostics, fixed with explicit JSON fixture type and declared Settings aliases |
+| Final four-module affected tests | 0 | overnight-test-contracts-02.log: 83 passed, one warning, 9.44s |
+| Final provider/options/risk focused strict | 0 | overnight-test-contracts-types-03.log: three modules; dependencies not certified by imports-silent check |
+| Whole strict checkpoint 28 | 1 | overnight-whole-types-28/: 1,134 distinct diagnostics, 91 files, 276 sources; API 622 in 27 files |
+| Affected Ruff | 0 | four test modules pass |
+| Docker application image build | 0 | overnight-macro-docker-build.log: all five images built before up began |
+| Detached health-gated Docker refresh | 0 | overnight-macro-docker-up.log: existing services refreshed, no volume/data resets |
+| Observe-only watchdog | 0 | overnight-macro-deployed-watchdog.log, 2026-09-11T23:26:42Z: ten healthy services, init succeeded, no restart actions |
+| HTTP main route | 0 | /overview returns 200 at sign-in, Keep-Alive timeout=70 |
+| Container source hashes | 1 then 0 | initial incorrect /app/services/api/app path rejected; Dockerfile-confirmed /app/app hashes equal source: macro 49072777bbbd8421a847363cc1c3392928f808cf8876a8d5e2bdd64a18661672; simulation 64068e18a949d726f611133c38014278850537ddb3db986efcd36cc1f2d6dbb9 |
+
+Browser 14 is active with 47 tests and zero retries. Runtime source is held at
+0699ab0 during this invocation; frontend files equal the macro/options build.
+No new complete browser/backend or final release pass is claimed at this point.

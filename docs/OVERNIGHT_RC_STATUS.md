@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the macro API commit: 804ec29, pushed.
-Docker remains on cbb2cf1. Full backend 25 and browser 13 have finished successfully.
+Current HEAD before the test-contract commit: 0699ab0, pushed and deployed locally.
+Full backend 25 and browser 13 have finished successfully; browser 14 is active.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,17 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Provider/options/risk/valuation fixture contracts: 83 tests pass, one warning,
+  9.44s. Three test modules pass focused strict types. The valuation test retains
+  one diagnostic in the untyped HedgeService constructor; no ignore was added.
+  Whole strict 28: 1,134 diagnostics / 91 files / 276 sources. API remains 622 / 27.
+- Docker application build and health-gated refresh to 0699ab0 pass. All ten
+  long-running services are healthy and MinIO init succeeded. /overview returns
+  HTTP 200 at private sign-in with Keep-Alive timeout=70. Deployed macro and
+  simulation hashes match source. All persistent data and the watchdog remain.
+- Browser 14 is active: 47 tests, one worker, zero retries; runtime source is
+  0699ab0 with the unchanged frontend built for the macro/options batch. Subsequent
+  changes are tests/docs only. A full pass is not yet claimed.
 - Macro API contracts: 110 affected backend tests pass, followed by 18 final
   consumer tests. Seventy-three complete populated responses match 804ec29;
   mixed-provider source and invalid-limit corrections have explicit regressions.
@@ -253,13 +264,13 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `docker compose --env-file .env.compose.local -p knk-final-local build api worker-data worker-quant report-engine terminal-web` with KNK_COMPOSE_ENV_FILE set to .env.compose.local.
-Refresh Docker only after the image build exits successfully. Run the full
-47-test browser suite against this source checkpoint, then continue strict types.
+Exact next command: `Get-Content logs/overnight-browser-full-14.log -Tail 12`.
+Keep runtime source unchanged during browser 14; continue typed test fixtures,
+then run the complete backend checkpoint and remaining strict API/domain work.
 The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 27 remains red at 1,252 errors.
+in the clean environment. Whole strict checkpoint 28 remains red at 1,134 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

@@ -6,6 +6,7 @@ from app.hedge_engine import HedgeRequest, HedgeService
 from app.portfolio_operations import PortfolioLedgerService
 from app.portfolio_valuation import PortfolioValuationService
 from app.valuation_selection import ValuationSelection
+from pydantic import JsonValue
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -52,7 +53,7 @@ def test_historical_valuation_does_not_replace_current_projection(ledger_session
         {"valuation_run_id": ""},
     ],
 )
-def test_invalid_valuation_selection_fails_closed(values):
+def test_invalid_valuation_selection_fails_closed(values: dict[str, JsonValue]) -> None:
     with pytest.raises(ValueError):
         ValuationSelection.model_validate(values)
     with pytest.raises(ValueError):
@@ -69,6 +70,7 @@ def test_dated_and_saved_hedges_keep_the_selected_valuation(
     ledger_session: Session, session_token: str
 ) -> None:
     user = ledger_session.scalar(select(models.User))
+    assert user is not None
     settings = {
         "mode": "NET",
         "instrument_type": "FUTURE_ESTIMATE",
@@ -80,20 +82,31 @@ def test_dated_and_saved_hedges_keep_the_selected_valuation(
     }
     service = HedgeService(ledger_session)
     dated = service.create(
-        "book", HedgeRequest(**settings, valuation_date=date(2026, 1, 7)), user.id
+        "book",
+        HedgeRequest.model_validate({**settings, "valuation_date": date(2026, 1, 7)}),
+        user.id,
     )
     saved = service.create(
-        "book", HedgeRequest(**settings, valuation_run_id=dated["valuation_run_id"]), user.id
+        "book",
+        HedgeRequest.model_validate({**settings, "valuation_run_id": dated["valuation_run_id"]}),
+        user.id,
     )
     ledger_session.commit()
     assert dated["valuation_date"] == saved["valuation_date"] == "2026-01-07"
     assert dated["valuation_run_id"] == saved["valuation_run_id"]
     assert dated["signed_notional"] == saved["signed_notional"]
     run = ledger_session.get(models.AnalysisRun, dated["id"])
+    assert run is not None
     assert run.parameters["valuation_date"] == "2026-01-07"
-    assert run.parameters["_portfolio"]["valuation_run_id"] == dated["valuation_run_id"]
+    snapshot = run.parameters["_portfolio"]
+    assert isinstance(snapshot, dict)
+    assert snapshot["valuation_run_id"] == dated["valuation_run_id"]
     with pytest.raises(ValueError, match="not found"):
-        service.create("book", HedgeRequest(**settings, valuation_run_id="unknown"), user.id)
+        service.create(
+            "book",
+            HedgeRequest.model_validate({**settings, "valuation_run_id": "unknown"}),
+            user.id,
+        )
 
 
 def test_stress_pins_dated_snapshot_and_rejects_invalid_selection(
@@ -107,7 +120,7 @@ def test_stress_pins_dated_snapshot_and_rejects_invalid_selection(
     app = FastAPI()
     app.include_router(terminal_api.router)
     app.dependency_overrides[get_session] = lambda: ledger_session
-    launched = []
+    launched: list[str] = []
     monkeypatch.setattr(terminal_api, "launch_worker", launched.append)
     with TestClient(app) as client:
         client.cookies.set("knk_session", session_token)
@@ -125,8 +138,15 @@ def test_stress_pins_dated_snapshot_and_rejects_invalid_selection(
         )
         assert response.status_code == 202, response.text
         run = ledger_session.get(models.AnalysisRun, response.json()["id"])
-        assert run.parameters["_portfolio"]["curve"][-1]["date"] == "2026-01-07"
-        assert run.parameters["_portfolio"]["valuation_run_id"]
+        assert run is not None
+        snapshot = run.parameters["_portfolio"]
+        assert isinstance(snapshot, dict)
+        curve = snapshot["curve"]
+        assert isinstance(curve, list)
+        last = curve[-1]
+        assert isinstance(last, dict)
+        assert last["date"] == "2026-01-07"
+        assert snapshot["valuation_run_id"]
         invalid = client.post(
             "/api/v1/terminal/runs",
             json={
