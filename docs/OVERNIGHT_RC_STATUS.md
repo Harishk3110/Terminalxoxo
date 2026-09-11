@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the simulation commit: cbb2cf1, pushed and deployed locally.
-Monte Carlo/backtest pinning contracts pass focused checks; full backend 25 is active.
+Current HEAD before the macro/options visual commit: 50c1b60, pushed.
+Docker remains on cbb2cf1. Full backend 25 and browser 13 have finished successfully.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,17 +32,26 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Macro/options visual corrections: 317 terminal unit tests pass, TypeScript,
+  ESLint and Node 22 production build pass. Three focused browser tests pass
+  with zero retries (40.4s). Desktop/mobile screenshots were inspected: observed
+  macro dates are separate from ingestion times and negative GEX labels fit.
+  Calendar 1Y/5Y ranges and all fetched MAX rows replace fixed row slices.
+- Full backend 25: 1,427 passed, 123 warnings, 496.94s, native exit 0;
+  coverage 11,148 / 12,562 statements (88.7438%). Source: simulation batch.
+- Full browser 13: 45 passed, zero failed/skipped/flaky, zero retries, 18.6m,
+  native exit 0. All five viewport sweeps pass. It used the cbb2cf1 frontend;
+  later API worker imports could include the simulation batch, so it is not
+  uniform final-source certification. New macro/GEX regressions follow that run.
 - Pinned simulation contracts: 59 affected tests pass, followed by ten passing
   consumer regressions. Four focused modules pass strict types. Eight complete
   backtest input maps, 80 seeded Monte Carlo outputs and nine saved-backtest
   pin/result pairs equal the prior implementation exactly. Whole strict 24:
-  1,260 diagnostics / 94 files / 274 sources; API 630 / 27 files. Backend 25 is active.
+  1,260 diagnostics / 94 files / 274 sources; API 630 / 27 files. Backend 25 passed.
 - Docker build and final health-gated refresh carry cbb2cf1. All ten services are
   healthy, MinIO init succeeded, and /overview reaches login with HTTP 200 and
   Keep-Alive timeout=70. Source hashes verify that later simulation edits are not
   yet deployed. The watchdog remains active; no data or volumes were reset.
-- Full browser 13 is active, zero retries. Ledger correction, quant, reports and
-  health workflows have passed. The new options-axis visual test is not in this run.
 - Research desk: 39 affected tests pass; source and new contract tests pass strict
   types. Quant and Equity views exactly match the prior implementation on an
   in-memory copy of populated browser data. Whole strict 21: 1,281 diagnostics /
@@ -237,10 +246,9 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-browser-full-13.log -Tail 12`.
-Finish browser 13 and backend 25. Run the new options-axis negative control on
-the existing frontend build, correct its spacing, rebuild and verify without retries.
-Continue remaining engine/API contracts after that checkpoint. The clean
+Exact next command: `.venv-release/Scripts/python.exe -m pytest tests/sprint/test_macro_contracts.py -q` after adding the macro API regressions.
+Continue remaining engine/API contracts, then run the full 47-test browser suite
+against one source checkpoint and refresh Docker. The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
 in the clean environment. Whole strict checkpoint 24 remains red at 1,260 errors.

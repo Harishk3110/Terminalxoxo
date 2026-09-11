@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { records, usePortfolio, useTabState, useTerminal } from "./context";
+import { macroProvenance, macroRange } from "./macro-data";
 import {
   Badge,
   Chart,
@@ -254,13 +255,7 @@ export function OverviewPage() {
         </Panel>
         <Panel
           title="Macro monitor"
-          source="Per-series provider"
-          asOf={macro.data?.items[0]?.ingestion_timestamp}
-          quality={
-            macro.data?.items.some((i) => i.quality === "DEMO DATA")
-              ? "DEMO DATA"
-              : "MIXED"
-          }
+          {...macroProvenance(macro.data?.items.slice(0, 8) ?? [])}
           error={macro.error}
           loading={macro.isLoading}
         >
@@ -1337,13 +1332,16 @@ export function MacroPage() {
     source?: string;
     quality?: string;
     as_of?: string;
-  }>("macro-series", `/api/v1/macro/series/${series}/observations?limit=1000`);
+  }>("macro-series", `/api/v1/macro/series/${series}/observations?limit=10000`);
   const items = query.data?.items ?? [];
   const selected = items.find((i) => i.series_id === series);
   const raw = observations.data?.items ?? observations.data?.observations ?? [];
-  const rows = raw
-    .slice(range === "1Y" ? -12 : range === "5Y" ? -60 : -120)
-    .map((r) => ({ ...r, date: r.observation_date ?? r.date, value: r.value }));
+  const rows = macroRange(raw, range);
+  const provenance = macroProvenance(items);
+  const selectedProvenance = macroProvenance(selected ? [selected] : []);
+  const treasuryProvenance = macroProvenance(
+    items.filter((item) => ["DGS2", "DGS10", "DGS30"].includes(item.series_id)),
+  );
   const refresh = useMutation({
     mutationFn: () => knkApi.post(`/api/v1/macro/series/${series}/refresh`),
     onSuccess: () => {
@@ -1354,15 +1352,11 @@ export function MacroPage() {
   return (
     <>
       <PageTitle code="MACRO" title="Global Macro Monitor">
-        <Badge>
-          {items.some((i) => i.quality === "DEMO DATA")
-            ? "DEMO DATA"
-            : "MIXED SOURCES"}
-        </Badge>
+        <Badge>{provenance.quality}</Badge>
       </PageTitle>
       <Kpis
         source="Per-series source"
-        asOf={selected?.ingestion_timestamp ?? undefined}
+        asOf={macroProvenance(items.slice(0, 7)).asOf ?? undefined}
         items={items.slice(0, 7).map((i) => ({
           label: i.series_id,
           value: number(i.latest_value),
@@ -1372,9 +1366,7 @@ export function MacroPage() {
       <div className="page-grid analytics-grid">
         <Panel
           title={`Economic series / ${series}`}
-          source={selected?.source}
-          asOf={selected?.ingestion_timestamp}
-          quality={selected?.quality}
+          {...selectedProvenance}
           error={observations.error}
           loading={observations.isLoading}
           rows={rows}
@@ -1407,12 +1399,7 @@ export function MacroPage() {
             keys={[{ key: "value", name: series }]}
           />
         </Panel>
-        <Panel
-          title="US Treasury yield curve"
-          source="Per-series macro observations"
-          asOf={selected?.ingestion_timestamp}
-          quality="DEMO DATA"
-        >
+        <Panel title="US Treasury yield curve" {...treasuryProvenance}>
           <Chart
             label="US Treasury curve"
             option={{
@@ -1442,9 +1429,7 @@ export function MacroPage() {
         </Panel>
         <Panel
           title="Latest observations / all series"
-          source="Per-series provenance"
-          asOf={selected?.ingestion_timestamp}
-          quality="MIXED CAPABLE"
+          {...provenance}
           rows={records(items)}
         >
           <DataTable
@@ -1454,12 +1439,7 @@ export function MacroPage() {
             onSelect={(row) => setSeries(String(row.series_id))}
           />
         </Panel>
-        <Panel
-          title="Selected series / metadata"
-          source={selected?.source}
-          asOf={selected?.ingestion_timestamp}
-          quality={selected?.quality}
-        >
+        <Panel title="Selected series / metadata" {...selectedProvenance}>
           <dl className="detail-list section-pad">
             <dt>Series</dt>
             <dd>{selected?.title}</dd>
@@ -1469,6 +1449,8 @@ export function MacroPage() {
             <dd>{selected?.frequency}</dd>
             <dt>Observation</dt>
             <dd>{selected?.latest_observation_date}</dd>
+            <dt>Ingested / SGT</dt>
+            <dd>{timestamp(selected?.ingestion_timestamp)}</dd>
             <dt>Revision</dt>
             <dd>{selected?.revision_state}</dd>
             <dt>Source</dt>

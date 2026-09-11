@@ -1053,3 +1053,36 @@ frontend and its initially loaded API, with later worker processes able to impor
 the simulation worktree; it is not a uniform final-release source certification.
 The new options-axis canvas regression is added but has not run yet. No visual
 baseline was accepted. Cloud and live-provider verification remain external.
+
+## Macro Provenance And GEX Label Containment
+
+2026-09-12 07:01-07:14 SGT, 50c1b60 plus frontend worktree.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Clean full backend pytest with API coverage | 0 | overnight-backend-25.log/xml: 1,427 passed, 123 warnings, 496.94s; overnight-coverage-25.json: 11,148/12,562 statements (88.7438%) |
+| Full Node 22 Playwright, one worker, zero retries | 0 | overnight-browser-full-13.log / overnight-full-13-results.json: 45 passed, zero failed/skipped/flaky, 18.6m; source qualification above still applies |
+| Macro range/provenance unit tests | 0 | overnight-macro-data-tests.log: ten passed |
+| Macro page old-source negative control | 1 | overnight-macro-page-before.log: all four new assertions fail on old date, quality, range and unavailable behavior |
+| Corrected macro page/helper unit selection | 0 | overnight-macro-page-after.log: 14 passed, 5.13s |
+| Old-build macro/GEX browser negative control | 1 | overnight-macro-options-negative-01.log/json: macro expected 28 Aug but rendered 12 Sep; GEX test incorrectly expected HTTP 200 instead of documented 201 |
+| Corrected GEX negative control, unchanged old build | 1 | overnight-options-negative-02.log: -2,400,000 label begins at x=-5.98046875; trace preserved in overnight-options-negative-02-failures |
+| Final Node 22 Next build | 0 | overnight-macro-options-build.log |
+| Final TypeScript / ESLint | 0 each | overnight-macro-options-types.log / overnight-macro-options-lint.log |
+| Final complete terminal Vitest | 0 | overnight-macro-options-full-ui.log: 317 tests, 25 files, 60.34s |
+| Rebuilt macro-provenance/options-layout/options-research browser selection | 0 | overnight-macro-options-positive-01.log/results.json: three passed, zero retries, 40.4s |
+| Secret and broker-action scans | 0 each | overnight-macro-options-secrets.log / overnight-macro-options-no-execution.log |
+
+Macro panels use observation dates, actual contributing sources/quality and
+unavailable gaps; ingestion time is separately labelled. Calendar ranges replace
+row-count approximations. MAX retains all fetched observations (request limit
+10,000), not a claim of unbounded history. GEX uses chart-local containLabel sizing;
+no global chart spacing, financial value, tolerance or retry was changed.
+
+Inspected corrected screenshots: logs/macro-screenshots/provenance-{1366,390}.png
+and logs/options-layout/gamma-{1366,390}.png. Negative signs are visible and the
+macro dates read 28 Aug rather than ingestion day. Canvas and document bounds pass.
+Additional 1920px route reviews included alpha, backtests, macro, portfolio,
+data drop/catalogue, quant, hedge, Excel, Deck, stress and risk/trade. The old
+portfolio-command-centre-1920.png (6e707d3, SGD70K) is stale and excluded from
+current evidence. Full visual matrix and 27-gate release remain open.

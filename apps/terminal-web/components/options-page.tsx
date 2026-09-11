@@ -91,6 +91,7 @@ const sections = [
 ];
 function chart(rows: Row[], x: string, keys: string[], bar = false) {
   return {
+    grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
     legend: { top: 0, textStyle: { color: COLORS.text, fontSize: 10 } },
     xAxis: {
       type: "category" as const,
