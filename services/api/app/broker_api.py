@@ -1,11 +1,13 @@
 """Read-only paper broker snapshots and explicitly approved fill-to-ledger imports."""
 
 import hashlib
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import NotRequired, TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -23,6 +25,20 @@ SESSION_DEPENDENCY = Depends(get_session)
 AGENT_DEPENDENCY = Depends(agent_auth)
 
 router = APIRouter()
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+TEXT = TypeAdapter(str)
+
+
+class SnapshotReceipt(TypedDict):
+    id: str
+    duplicate: NotRequired[bool]
+    status: NotRequired[str]
+    fills_require_approval: NotRequired[bool]
+
+
+class SnapshotView(TypedDict):
+    state: str
+    snapshot: dict[str, JsonValue] | None
 
 
 class CashRecord(BaseModel):
@@ -64,10 +80,29 @@ class SnapshotRequest(BaseModel):
     fx: dict[str, str] = Field(default_factory=dict)
 
 
+class BrokerHoldings(BaseModel):
+    cash: list[CashRecord] = Field(default_factory=list, max_length=50)
+    positions: list[PositionRecord] = Field(default_factory=list, max_length=2000)
+    fx: dict[str, str] = Field(default_factory=dict)
+
+
+class RecordedFills(BaseModel):
+    account_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    fills: list[FillRecord] = Field(default_factory=list, max_length=10000)
+
+
+def complete_total(values: Sequence[Decimal | None]) -> str | None:
+    if any(value is None for value in values):
+        return None
+    return str(sum((value for value in values if value is not None), Decimal(0)))
+
+
 @router.post("/agent/v1/broker-snapshots")
 def receive_snapshot(
-    payload: SnapshotRequest, agent=AGENT_DEPENDENCY, session: Session = SESSION_DEPENDENCY
-):
+    payload: SnapshotRequest,
+    agent: models.LocalAgent = AGENT_DEPENDENCY,
+    session: Session = SESSION_DEPENDENCY,
+) -> SnapshotReceipt:
     scope(agent, "broker:read-sync")
     binding = next(
         (p.removeprefix("portfolio:") for p in agent.scopes if p.startswith("portfolio:")), None
@@ -199,7 +234,9 @@ def receive_snapshot(
     return {"id": row.id, "status": "STORED", "fills_require_approval": True}
 
 
-def current_snapshot(session, portfolio_id):
+def current_snapshot(
+    session: Session, portfolio_id: str
+) -> tuple[models.BrokerAccountSnapshot | None, bool]:
     row = session.scalar(
         select(models.BrokerAccountSnapshot)
         .where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id)
@@ -208,7 +245,8 @@ def current_snapshot(session, portfolio_id):
     )
     if row is None:
         return None, False
-    agent = session.get(models.LocalAgent, row.payload.get("agent_id"))
+    agent_id = row.payload.get("agent_id")
+    agent = session.get(models.LocalAgent, agent_id) if isinstance(agent_id, str) else None
     active = bool(
         agent
         and not agent.revoked_at
@@ -220,8 +258,10 @@ def current_snapshot(session, portfolio_id):
 
 
 @router.get("/api/v1/broker/snapshot")
-def snapshot(session: Session = SESSION_DEPENDENCY):
+def snapshot(session: Session = SESSION_DEPENDENCY) -> SnapshotView:
     profile = profile_for(session)
+    if profile is None:
+        return {"state": "NOT CONNECTED", "snapshot": None}
     row, active = current_snapshot(session, profile.portfolio_id)
     if row is None:
         return {"state": "NOT CONNECTED", "snapshot": None}
@@ -249,29 +289,35 @@ class ApproveFillRequest(BaseModel):
 @router.post("/api/v1/broker/fills/import")
 def approve_fill(
     payload: ApproveFillRequest, request: Request, session: Session = SESSION_DEPENDENCY
-):
+) -> dict[str, JsonValue]:
     actor = identity(request, session)
     row = session.get(models.BrokerAccountSnapshot, payload.snapshot_id)
+    if row is None:
+        raise HTTPException(404, "Recorded broker fill not found")
+    try:
+        recorded = RecordedFills.model_validate(row.payload)
+    except ValidationError as exc:
+        raise HTTPException(
+            422, "Recorded broker fill data is invalid; reconciliation required"
+        ) from exc
     fill = next(
-        (
-            f
-            for f in (row.payload.get("fills", []) if row else [])
-            if f["execution_id"] == payload.execution_id
-        ),
+        (fill for fill in recorded.fills if fill.execution_id == payload.execution_id),
         None,
     )
-    if row is None or fill is None:
+    if fill is None:
         raise HTTPException(404, "Recorded broker fill not found")
-    if fill.get("contract_type", "STK") != "STK":
+    if fill.contract_type != "STK":
         raise HTTPException(
             422,
             "Only mapped stock/ETF fills can enter this ledger; other contracts require reconciliation",
         )
-    allowed = {"BUY", "COVER"} if fill["side"] in {"BOT", "BUY"} else {"SELL", "SHORT"}
+    if fill.side not in {"BOT", "BUY", "SLD", "SELL"}:
+        raise HTTPException(422, "Recorded execution side is invalid")
+    allowed = {"BUY", "COVER"} if fill.side in {"BOT", "BUY"} else {"SELL", "SHORT"}
     if payload.transaction_type not in allowed:
         raise HTTPException(422, "Ledger type must match the recorded execution side")
-    if fill.get("commission") is None or fill.get("commission_currency") not in {
-        fill["currency"],
+    if fill.commission is None or fill.commission_currency not in {
+        fill.currency,
         None,
     }:
         raise HTTPException(
@@ -282,45 +328,51 @@ def approve_fill(
         result = PortfolioLedgerService(session).add(
             {
                 "transaction_type": payload.transaction_type,
-                "trade_date": fill["time"][:10],
-                "symbol": fill["symbol"],
-                "quantity": fill["quantity"],
-                "price": fill["price"],
-                "currency": fill["currency"],
-                "commission": fill["commission"],
+                "trade_date": fill.time.date().isoformat(),
+                "symbol": fill.symbol,
+                "quantity": fill.quantity,
+                "price": fill.price,
+                "currency": fill.currency,
+                "commission": fill.commission,
                 "fx_rate_to_base": payload.fx_rate_to_base,
-                "external_reference": row.payload["account_fingerprint"]
-                + ":"
-                + fill["execution_id"],
+                "external_reference": recorded.account_fingerprint + ":" + fill.execution_id,
                 "notes": payload.rationale,
-                "metadata": {"broker_snapshot_id": row.id, "execution_id": fill["execution_id"]},
+                "metadata": {"broker_snapshot_id": row.id, "execution_id": fill.execution_id},
             },
             row.portfolio_id,
             source="IBKR PAPER",
             actor=actor,
         )
+        output = JSON_OBJECT.validate_python(result, strict=True)
         session.commit()
-        return result
+        return output
     except ValueError as exc:
         session.rollback()
         raise HTTPException(422, str(exc)) from exc
 
 
-def account_view(session, internal):
-    row, active = current_snapshot(session, internal["portfolio"]["id"])
+def account_view(session: Session, internal: Mapping[str, object]) -> dict[str, JsonValue]:
+    internal_json = JSON_OBJECT.validate_python(internal, strict=True)
+    internal_portfolio = JSON_OBJECT.validate_python(internal_json["portfolio"], strict=True)
+    portfolio_id = TEXT.validate_python(internal_portfolio["id"], strict=True)
+    row, active = current_snapshot(session, portfolio_id)
     if row is None or not active:
         return {
-            **internal,
+            **internal_json,
             "broker_state": "NOT CONNECTED" if row is None else "STALE / OFFLINE",
             "account_source": "INTERNAL LEDGER",
         }
-    data = {
-        "portfolio": {
-            key: internal["portfolio"].get(key)
-            for key in ("id", "code", "name", "base_currency", "execution_mode", "broker_mode")
-        },
-        "performance": {key: None for key in internal["performance"]},
-        "risk": {key: None for key in internal["risk"]},
+    holdings = BrokerHoldings.model_validate(row.payload)
+    internal_performance = JSON_OBJECT.validate_python(internal_json["performance"], strict=True)
+    internal_risk = JSON_OBJECT.validate_python(internal_json["risk"], strict=True)
+    p = {
+        key: internal_portfolio.get(key)
+        for key in ("id", "code", "name", "base_currency", "execution_mode", "broker_mode")
+    }
+    data: dict[str, JsonValue] = {
+        "portfolio": p,
+        "performance": {key: None for key in internal_performance},
+        "risk": {key: None for key in internal_risk},
         "transactions": [],
         "lots": [],
         "lot_matches": [],
@@ -333,7 +385,6 @@ def account_view(session, internal):
         "calculated_at": None,
         "methodology": "Reported paper account snapshot; no internal ledger analytics",
     }
-    p = data["portfolio"]
     for key in (
         "reference_capital",
         "opening_capital",
@@ -356,39 +407,47 @@ def account_view(session, internal):
             "opening_nav": None,
         }
     )
-    fx = {**row.payload.get("fx", {}), row.currency: "1"}
-    cash, positions = [], []
-    for c in row.payload.get("cash", []):
-        rate = Decimal(fx[c["currency"]]) if c["currency"] in fx else None
+    fx = {currency: decimal(rate, positive=True) for currency, rate in holdings.fx.items()}
+    if row.currency in fx and fx[row.currency] != 1:
+        raise ValueError("Recorded identity FX must equal one")
+    fx[row.currency] = Decimal(1)
+    cash: list[JsonValue] = []
+    positions: list[JsonValue] = []
+    cash_values: list[Decimal | None] = []
+    position_values: list[Decimal | None] = []
+    for c in holdings.cash:
+        rate = fx.get(c.currency)
+        amount = decimal(c.amount)
+        base_value = amount * rate if rate is not None else None
+        cash_values.append(base_value)
         cash.append(
             {
-                **c,
-                "base_value": str(Decimal(c["amount"]) * rate) if rate is not None else None,
+                **JSON_OBJECT.validate_python(c.model_dump(mode="json", exclude_unset=True)),
+                "base_value": str(base_value) if base_value is not None else None,
                 "fx_rate": str(rate) if rate is not None else None,
                 "quality": "BROKER REPORTED",
                 "source": row.source,
                 "as_of": row.as_of.isoformat(),
             }
         )
-    for pos in row.payload.get("positions", []):
+    for pos in holdings.positions:
         item = session.scalar(
-            select(models.Instrument).where(models.Instrument.symbol == pos["symbol"])
+            select(models.Instrument).where(models.Instrument.symbol == pos.symbol)
         )
-        rate = Decimal(fx[pos["currency"]]) if pos["currency"] in fx else None
+        rate = fx.get(pos.currency)
+        quantity = decimal(pos.quantity)
+        multiplier = decimal(pos.multiplier, positive=True)
+        price = decimal(pos.market_price, positive=True) if pos.market_price is not None else None
         value = (
-            Decimal(pos["quantity"])
-            * Decimal(pos["market_price"])
-            * rate
-            * Decimal(pos["multiplier"])
-            if pos.get("market_price") and rate is not None
-            else None
+            quantity * price * rate * multiplier if price is not None and rate is not None else None
         )
+        position_values.append(value)
         positions.append(
             {
-                **pos,
-                "id": item.id if item else pos["symbol"],
+                **JSON_OBJECT.validate_python(pos.model_dump(mode="json", exclude_unset=True)),
+                "id": item.id if item else pos.symbol,
                 "instrument_id": item.id if item else None,
-                "name": item.name if item else pos["symbol"],
+                "name": item.name if item else pos.symbol,
                 "sector": item.sector if item else "Unmapped",
                 "country": item.country if item else "Unmapped",
                 "asset_class": item.asset_class if item else "Unmapped",
@@ -406,16 +465,8 @@ def account_view(session, internal):
                 "quality": "BROKER REPORTED",
             }
         )
-    p["cash"] = (
-        str(sum((Decimal(c["base_value"]) for c in cash), Decimal(0)))
-        if all(c["base_value"] is not None for c in cash)
-        else None
-    )
-    p["market_value"] = (
-        str(sum((Decimal(v["market_value"]) for v in positions), Decimal(0)))
-        if all(v["market_value"] is not None for v in positions)
-        else None
-    )
+    p["cash"] = complete_total(cash_values)
+    p["market_value"] = complete_total(position_values)
     p["gross_asset_value"] = None
     for key in (
         "accrued_income",
@@ -430,8 +481,6 @@ def account_view(session, internal):
         {
             "positions": positions,
             "cash": cash,
-            "performance": {k: None for k in data["performance"]},
-            "risk": {k: None for k in data["risk"]},
             "curve": [],
             "correlation": {"symbols": [], "values": []},
             "monthly": [],
@@ -444,16 +493,18 @@ def account_view(session, internal):
             "account_source": "BROKER",
             "broker_state": "CONNECTED READ ONLY",
             "broker_snapshot_id": row.id,
-            "internal_ledger_nav": internal["portfolio"]["nav"],
+            "internal_ledger_nav": internal_portfolio["nav"],
             "reconciliation": {
                 "state": "REQUIRES RECONCILIATION",
-                "internal_nav": internal["portfolio"]["nav"],
+                "internal_nav": internal_portfolio["nav"],
                 "broker_nav": str(row.nav),
             },
             "metric_metadata": {},
             "freshness": {
-                "price_coverage_pct": sum(p.get("market_price") is not None for p in positions)
-                / len(positions)
+                "price_coverage_pct": sum(
+                    pos.market_price is not None for pos in holdings.positions
+                )
+                / len(holdings.positions)
                 * 100
                 if positions
                 else 100,

@@ -7,10 +7,14 @@ from types import SimpleNamespace
 
 import pytest
 from app import broker_api
+from pydantic import JsonValue, TypeAdapter
 from sqlalchemy.orm import Session
 
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+TEXT = TypeAdapter(str)
 
-def internal_snapshot() -> dict:
+
+def internal_snapshot() -> dict[str, JsonValue]:
     return {
         "portfolio": {
             "id": "book",
@@ -72,26 +76,31 @@ def test_connected_view_does_not_leak_existing_or_future_internal_fields(
     before = deepcopy(internal)
     monkeypatch.setattr(broker_api, "current_snapshot", lambda *_: (reported_snapshot(), True))
     data = broker_api.account_view(ledger_session, internal)
-    assert data["portfolio"]["nav"] == "700"
-    assert D(data["portfolio"]["cash"]) == 100
-    assert D(data["portfolio"]["market_value"]) == 600
-    assert data["portfolio"]["view"] == "BROKER REPORTED"
-    assert data["portfolio"]["settled_cash"] is data["portfolio"]["available_cash"] is None
-    assert data["portfolio"]["reference_capital"] is None
-    assert "new_internal_measure" not in data["portfolio"]
+    portfolio = JSON_OBJECT.validate_python(data["portfolio"], strict=True)
+    accounting = JSON_OBJECT.validate_python(data["accounting"], strict=True)
+    performance = JSON_OBJECT.validate_python(data["performance"], strict=True)
+    risk = JSON_OBJECT.validate_python(data["risk"], strict=True)
+    reconciliation = JSON_OBJECT.validate_python(data["reconciliation"], strict=True)
+    assert portfolio["nav"] == "700"
+    assert D(TEXT.validate_python(portfolio["cash"], strict=True)) == 100
+    assert D(TEXT.validate_python(portfolio["market_value"], strict=True)) == 600
+    assert portfolio["view"] == "BROKER REPORTED"
+    assert portfolio["settled_cash"] is portfolio["available_cash"] is None
+    assert portfolio["reference_capital"] is None
+    assert "new_internal_measure" not in portfolio
     assert "new_internal_top_level" not in data
     assert data["transactions"] == data["lots"] == data["lot_matches"] == []
-    assert data["accounting"]["state"] == "UNAVAILABLE"
-    assert data["accounting"]["totals"] is None
+    assert accounting["state"] == "UNAVAILABLE"
+    assert accounting["totals"] is None
     assert data["cost_basis"] is None
     assert data["exposure_balances"] == []
     assert data["exposure_methodology"] is None
     assert data["valuation_run_id"] is None
     assert data["calculation_version"] == "BROKER SNAPSHOT"
     assert data["calculated_at"] is None
-    assert data["performance"]["twr"] is data["risk"]["beta"] is None
-    assert data["reconciliation"]["internal_nav"] == "10000"
-    assert data["reconciliation"]["broker_nav"] == "700"
+    assert performance["twr"] is risk["beta"] is None
+    assert reconciliation["internal_nav"] == "10000"
+    assert reconciliation["broker_nav"] == "700"
     assert data["broker_snapshot_id"] == "paper-snapshot"
     assert internal == before
 
@@ -105,11 +114,11 @@ def test_disconnected_view_remains_explicitly_internal_without_altering_snapshot
     data = broker_api.account_view(ledger_session, internal)
     assert data["account_source"] == "INTERNAL LEDGER"
     assert data["broker_state"] == "NOT CONNECTED"
-    assert data["portfolio"]["nav"] == "10000"
+    assert JSON_OBJECT.validate_python(data["portfolio"], strict=True)["nav"] == "10000"
     assert data["valuation_run_id"] == "internal-run"
     assert data["exposure_balances"] == internal["exposure_balances"]
     monkeypatch.setattr(broker_api, "current_snapshot", lambda *_: (reported_snapshot(), False))
     offline = broker_api.account_view(ledger_session, internal)
     assert offline["broker_state"] == "STALE / OFFLINE"
     assert offline["account_source"] == "INTERNAL LEDGER"
-    assert offline["portfolio"]["nav"] == "10000"
+    assert JSON_OBJECT.validate_python(offline["portfolio"], strict=True)["nav"] == "10000"

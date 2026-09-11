@@ -906,3 +906,40 @@ and stress at 1366/390px. Evidence remains local under logs/research-screenshots
 No visual baselines were accepted, and the full visual matrix is not certified.
 The persistent Docker stack still carries 6edb4e2 until the next explicit refresh.
 Full browser 12 and all 27 release stages remain unverified for this batch.
+
+## Broker Snapshot Contracts And Local Refresh
+
+2026-09-12 SGT, 68698d8 plus broker worktree. The Docker build and health-gated
+refresh use 68698d8, before the broker edit. Both commands returned native 0:
+`docker compose --env-file .env.compose.local -p knk-final-local build api
+worker-data worker-quant report-engine terminal-web`, followed by `up -d
+--no-deps --no-build --wait --wait-timeout 240` for those five services. Logs:
+overnight-research-docker-build.log / overnight-research-docker-up.log. Deployed
+/app/app/broker_api.py SHA256 equals git 68698d8's source. No database or volume
+reset. Observe-only watchdog returned 0 at 2026-09-11T22:20:42Z; all ten long-running
+services healthy and MinIO init succeeded. /overview reaches /login with HTTP 200.
+
+Broker input/output annotations are now explicit. Stored fills validate shape and
+account fingerprint before approval; invalid sides cannot fall through to SELL.
+Typed holdings preserve missing FX and reject invalid financial values. A complete
+total is unavailable when any component is missing, but an actual empty/zero total
+remains zero. Approval still requires authenticated manual action and recorded
+commission. No broker order method was introduced.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Clean Python pytest broker views + existing agent tests | 0 | overnight-broker-contracts-01.log: seven passed, three warnings, 42.48s |
+| Expanded persisted-fill contracts + prior selection | 0 | overnight-broker-contracts-02.log: 32 passed, three warnings, 10.31s |
+| Financial-value guards + broker/ledger revisions | 0 | overnight-broker-contracts-03.log: 62 passed, three warnings, 18.75s |
+| Final consumer-typed same selection | 0 | overnight-broker-contracts-04.log: 62 passed, three warnings, 13.36s |
+| Strict broker source + new contract tests | 1 then 0 | overnight-broker-types-02.log caught three test imports through a non-exporting module; corrected to the defining module in -03/-04 |
+| Strict broker source + both sprint test files | 0 | overnight-broker-types-05.log: three files, no errors |
+| Ruff changed source/tests | 0 | All checks passed |
+| OpenAPI generation | 0 | overnight-broker-openapi.log: 170 paths, 79 schemas; all three broker routes present |
+| 200 deterministic old/new broker views | 0 | overnight-broker-view-parity.log; signed positions, multipliers, zero NAV and missing FX, exact dictionary equality and input nonmutation |
+| Whole first-party strict checkpoint 19 | 1 | overnight-whole-types-19/: 1,441 distinct diagnostics, 99 files, 272 sources; API 738 in 30 files |
+
+The type checkpoint exposed new test consumer narrowing needs; the affected broker
+view and approval assertions now validate their JSON shape without weakening the
+financial assertions. Checkpoint 20 is running after those fixes. Existing broader
+agent/reconciliation typing remains open. Full backend/browser gates are next.

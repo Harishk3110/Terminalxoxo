@@ -53,6 +53,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2/M15: read-only recovery inventories, source-output collision rejection, optimized-Python preservation checks, malformed health JSON handling, and typed migration configuration; 45 recovery/backup and 19 migration tests pass.
 - [ ] M7: full FRED/SEC/OpenFIGI/vendor/FX/options adapters and source conflicts.
 - [ ] M8: complete paper read-only broker contract/reconnect/dedup tests.
+- [x] M2/M8: validate persisted broker holdings/fills, preserve recorded approval values and account/execution dedup identity, reject invalid sides/fingerprints/FX before financial use; 62 affected tests and 200 exact old/new broker views pass.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.
 - [ ] M10: segments/ROIC/multiples/normalization/estimates/research linkage and DCF.
 - [ ] M11: full options unit/expiry/coverage/history/portfolio acceptance.

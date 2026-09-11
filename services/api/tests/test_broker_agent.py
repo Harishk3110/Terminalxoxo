@@ -13,6 +13,9 @@ from app import models
 from app.auth_sessions import token_digest
 from app.broker_api import (
     ApproveFillRequest,
+    CashRecord,
+    FillRecord,
+    PositionRecord,
     SnapshotRequest,
     account_view,
     approve_fill,
@@ -23,10 +26,15 @@ from app.portfolio_operations import PortfolioReconciliationService
 from app.portfolio_seed import profile_for
 from app.portfolio_valuation import PortfolioValuationService
 from fastapi import HTTPException
+from pydantic import JsonValue, TypeAdapter
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 from test_portfolio_accounting import accounting_session as accounting_session
 from test_portfolio_operations import drop as drop
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+TEXT = TypeAdapter(str)
 
 
 def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
@@ -34,6 +42,7 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
 ) -> None:
     session = accounting_session
     main = profile_for(session)
+    assert main is not None
     agent = models.LocalAgent(
         name="Scoped broker",
         token_hash=hashlib.sha256(b"test").hexdigest(),
@@ -48,28 +57,32 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
         currency="SGD",
         as_of=now,
         nav="71000",
-        cash=[{"currency": "USD", "amount": "100"}],
+        cash=[CashRecord(currency="USD", amount="100")],
         positions=[
-            {
-                "symbol": "AAPL",
-                "currency": "USD",
-                "quantity": "41",
-                "average_cost": "210",
-                "market_price": "220",
-            }
+            PositionRecord.model_validate(
+                {
+                    "symbol": "AAPL",
+                    "currency": "USD",
+                    "quantity": "41",
+                    "average_cost": "210",
+                    "market_price": "220",
+                }
+            )
         ],
         fills=[
-            {
-                "execution_id": "E1",
-                "symbol": "AAPL",
-                "currency": "USD",
-                "side": "BOT",
-                "quantity": "1",
-                "price": "220",
-                "time": now,
-                "commission": "1",
-                "commission_currency": "USD",
-            }
+            FillRecord.model_validate(
+                {
+                    "execution_id": "E1",
+                    "symbol": "AAPL",
+                    "currency": "USD",
+                    "side": "BOT",
+                    "quantity": "1",
+                    "price": "220",
+                    "time": now,
+                    "commission": "1",
+                    "commission_currency": "USD",
+                }
+            )
         ],
     )
     with pytest.raises(HTTPException) as exc:
@@ -79,9 +92,14 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
     result = receive_snapshot(payload, agent, session)
     assert receive_snapshot(payload, agent, session)["duplicate"]
     view = account_view(session, PortfolioValuationService(session).latest())
-    assert view["account_source"] == "BROKER" and view["portfolio"]["nav"].startswith("71000")
-    assert view["portfolio"]["cash"] is None and view["positions"][0]["market_value"] is None
-    assert view["risk"]["beta"] is None and not view["curve"]
+    portfolio = JSON_OBJECT.validate_python(view["portfolio"], strict=True)
+    positions = JSON_ROWS.validate_python(view["positions"], strict=True)
+    risk = JSON_OBJECT.validate_python(view["risk"], strict=True)
+    assert view["account_source"] == "BROKER" and TEXT.validate_python(
+        portfolio["nav"], strict=True
+    ).startswith("71000")
+    assert portfolio["cash"] is None and positions[0]["market_value"] is None
+    assert risk["beta"] is None and not view["curve"]
     reconcile = PortfolioReconciliationService(session).reconcile()
     assert any(r["type"] == "UNMATCHED_BROKER_FILL" for r in reconcile["items"])
     request = Request({"type": "http", "headers": [], "session": {}})
@@ -109,23 +127,24 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
     session.commit()
     request = Request({"type": "http", "headers": [(b"cookie", f"knk_session={token}".encode())]})
     added = approve_fill(approval, request, session)
+    transaction_id = TEXT.validate_python(added["id"], strict=True)
     assert added["trade_event_id"]
     assert approve_fill(approval, request, session)["duplicate"]
     assert not any(
         r["type"] == "UNMATCHED_BROKER_FILL"
         for r in PortfolioReconciliationService(session).reconcile()["items"]
     )
-    from app.ledger_contracts import AmendmentRequest, RevisionRequest
+    from app.ledger_contracts import AmendmentRequest, RevisionRequest, TransactionChanges
     from app.ledger_revisions import PortfolioTransactionService
 
     corrections = PortfolioTransactionService(session)
     corrections.revise(
         main.portfolio_id,
-        added["id"],
+        transaction_id,
         AmendmentRequest(
             expected_version=1,
             reason="Correct the recorded commission",
-            changes={"commission": "2"},
+            changes=TransactionChanges(commission="2"),
         ),
         actor=user.id,
     )
@@ -136,7 +155,7 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
     )
     corrections.revise(
         main.portfolio_id,
-        added["id"],
+        transaction_id,
         RevisionRequest(expected_version=2, reason="Void duplicate internal allocation"),
         actor=user.id,
     )
@@ -156,10 +175,12 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
 
 def test_broker_rejects_live_account_and_future_timestamp(accounting_session: Session) -> None:
     session = accounting_session
+    profile = profile_for(session)
+    assert profile is not None
     agent = models.LocalAgent(
         name="test",
         token_hash="different",
-        scopes=["broker:read-sync", "portfolio:" + profile_for(session).portfolio_id],
+        scopes=["broker:read-sync", "portfolio:" + profile.portfolio_id],
         status={},
     )
     session.add(agent)
