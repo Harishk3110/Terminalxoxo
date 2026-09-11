@@ -11,6 +11,7 @@ Pillow==12.2.0
 pyxirr==0.10.8
 openpyxl==3.1.5
 argon2-cffi==23.1.0
+cryptography==50.0.1
 boto3==1.35.90
 fastapi==0.115.6
 httpx==0.28.1

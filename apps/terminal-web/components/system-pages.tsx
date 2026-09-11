@@ -7,6 +7,7 @@ import { records, useTerminal } from "./context";
 import { Badge, DataTable, Empty, Field, Panel, timestamp } from "./ui";
 import { PageTitle, useApi } from "./core-pages";
 import type { Health, ProviderPayload, Row } from "./types";
+import { AccountSecurity } from "./account-security";
 
 export function HealthPage() {
   const query = useApi<Health>(
@@ -228,6 +229,7 @@ export function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function login(e: React.FormEvent) {
@@ -240,7 +242,8 @@ export function AuthPage() {
       await knkApi.post("/api/v1/auth/login", {
         email,
         password,
-        totp_code: totp || null,
+        totp_code: useRecovery ? null : totp || null,
+        recovery_code: useRecovery ? totp || null : null,
       });
       setPassword("");
       client.invalidateQueries();
@@ -331,10 +334,24 @@ export function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </Field>
-              <Field label="TOTP code (if enabled)">
+              <label className="security-checkbox">
                 <input
-                  aria-label="TOTP code"
+                  type="checkbox"
+                  checked={useRecovery}
+                  onChange={(e) => {
+                    setUseRecovery(e.target.checked);
+                    setTotp("");
+                  }}
+                />{" "}
+                Use recovery code
+              </label>
+              <Field
+                label={useRecovery ? "Recovery code" : "TOTP code (if enabled)"}
+              >
+                <input
+                  aria-label={useRecovery ? "Recovery code" : "TOTP code"}
                   autoComplete="one-time-code"
+                  maxLength={useRecovery ? 128 : 6}
                   value={totp}
                   onChange={(e) => setTotp(e.target.value)}
                 />
@@ -354,22 +371,26 @@ export function AuthPage() {
             </form>
           )}
         </Panel>
-        <Panel
-          title="Environment access"
-          source="Server configuration"
-          quality="LOCAL DEMO"
-        >
-          <dl className="detail-list section-pad">
-            <dt>Mode</dt>
-            <dd>Local demo / paper</dd>
-            <dt>Session</dt>
-            <dd>HTTP-only cookie / 8 hours</dd>
-            <dt>Broker</dt>
-            <dd>Manual execution only</dd>
-            <dt>Access</dt>
-            <dd>Private terminal / sign-in required</dd>
-          </dl>
-        </Panel>
+        {session.data?.authenticated ? (
+          <AccountSecurity />
+        ) : (
+          <Panel
+            title="Environment access"
+            source="Server configuration"
+            quality="LOCAL DEMO"
+          >
+            <dl className="detail-list section-pad">
+              <dt>Mode</dt>
+              <dd>Local demo / paper</dd>
+              <dt>Session</dt>
+              <dd>HTTP-only cookie / 8 hours</dd>
+              <dt>Broker</dt>
+              <dd>Manual execution only</dd>
+              <dt>Access</dt>
+              <dd>Private terminal / sign-in required</dd>
+            </dl>
+          </Panel>
+        )}
       </div>
     </>
   );

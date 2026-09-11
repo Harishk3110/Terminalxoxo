@@ -35,6 +35,14 @@ def accounting_session():
     engine.dispose()
 
 
+def test_dated_demo_marks_remain_stale_outside_snapshot_window(accounting_session):
+    report = PortfolioValuationService(accounting_session).latest(end=date(2026, 9, 11))
+    assert report["positions"]
+    assert all(row["price_provenance"]["stale"] for row in report["positions"])
+    assert all(row["quality"] == "STALE" for row in report["positions"])
+    assert report["risk"]["beta"] is None
+
+
 def test_deposit_requires_explicit_amount():
     with pytest.raises(ValueError, match="explicit"):
         LedgerState().apply(entry("DEPOSIT"))

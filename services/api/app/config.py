@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     object_storage_bucket: str = Field(default="knk-terminal-local", alias="OBJECT_STORAGE_BUCKET")
     object_storage_local_dir: str = Field(default=".knk-object-store", alias="OBJECT_STORAGE_LOCAL_DIR")
     backup_dir: str = Field(default="infrastructure/backups", alias="KNK_BACKUP_DIR")
+    auth_secret: str | None = Field(default=None, alias="AUTH_SECRET", repr=False, exclude=True)
+    auth_key_file: str | None = Field(default=None, alias="KNK_AUTH_KEY_FILE", repr=False, exclude=True)
     fred_enabled: bool = Field(default=False, alias="FRED_ENABLED")
     fred_api_key: str | None = Field(default=None, alias="FRED_API_KEY")
     fred_base_url: str = Field(default="https://api.stlouisfed.org/fred", alias="FRED_BASE_URL")

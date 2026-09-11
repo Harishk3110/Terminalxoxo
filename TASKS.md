@@ -5,8 +5,10 @@ Historical completed work below is preserved, not equivalent to final acceptance
 
 - [x] M0: inspect baseline, push pre-final-knk-terminal-build tag and record FINAL_GAP_AUDIT.
 - [x] M0: verify current terminal build and meaningful categorized LOC report (71 counter tests; Next production build passed).
-- [ ] M1: repair Compose/monitoring/startup; verify clean migrations and full Docker health.
-- [ ] M1: complete TOTP enrollment/recovery/password/session security workflows.
+- [x] M1: preserve local configuration/data and start PostgreSQL, Redis, MinIO, API, data/quant workers, terminal and monitoring with real health checks.
+- [x] M1: complete TOTP enrollment/recovery/password/session security workflows; focused API, UI and browser tests pass.
+- [ ] M1: replace disabled report-engine with authenticated source-pinned jobs on the existing SQL queue; then verify full Compose health including reports.
+- [ ] M1: complete trusted-device lifecycle, production provisioning/key operations and broader security/concurrency review.
 - [ ] M2: complete security-master lifecycle, immutable remote storage and source conflict policies.
 - [ ] M3: rerun full 100K ledger/NAV/corporate-action/FX and restart acceptance without resetting user data.
 - [ ] M4: complete alpha attribution and certify performance coverage.
@@ -19,6 +21,7 @@ Historical completed work below is preserved, not equivalent to final acceptance
 - [ ] M11: finish multi-expiry payoff, full portfolio Greeks and supported options history.
 - [ ] M12: finish isolated report workbooks/decks/PDF and Pine acceptance.
 - [ ] M13: verify complete registry, linked desks, source/timestamp/loading/error states.
+- [ ] M14: resolve six remaining stress/hedge/dependent visual failures with explicit dated inputs and separate error-state tests; do not fabricate beta history or relabel stale data.
 - [ ] M14: full lint/types/coverage, visual/performance, PostgreSQL backup/restore and deployment gates.
 - [ ] M15: pass every applicable step in docs/FINAL_ACCEPTANCE.md, commit and push.
 
@@ -47,7 +50,7 @@ Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority o
 - [ ] Verify licensed live vendors, full SEC history/curation, separate FX priority and remaining specialized data adapters.
 - [x] Implement saved Pine v6 templates and user-export direction comparison with honest compilation limits.
 - [x] Fix existing report source metadata, column alignment and contract multiplier formulas.
-- [ ] Complete model XLSX/decks/PDF outputs (artifact runtime unavailable; alternate-engine approval pending).
+- [ ] Complete model XLSX/decks/PDF outputs (alternate-engine permission granted by final master directive; implementation remains open).
 - [x] Replace synthetic daemon completion with atomically claimed analytical/provider queues and expiring heartbeats.
 - [x] Verify local database/object backup and isolated non-overwriting restore.
 - [x] Add persisted login throttles, origin checks and per-user all-session revocation.

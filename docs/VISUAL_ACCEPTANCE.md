@@ -1,5 +1,22 @@
 # Terminal Visual Acceptance
 
+## Final Master Checkpoint, 2026-09-11
+
+Current full browser run: 28/35 passed. The multi-security backtest test now uses
+an explicit date and the newly submitted job ID; its targeted retry passed. Hedge,
+stress and four dependent desktop visual checks still fail with insufficient
+history/error states. The archived blanket visual pass below is not current.
+
+New MFA controls passed the isolated browser workflow; 1440px and 390px screenshots
+were inspected. The real Docker production setup/sign-in page was also inspected
+at both widths: stylesheet loaded, black/amber presentation, no horizontal page
+overflow or page errors. Evidence: `logs/security-1440.png`, `logs/security-390.png`,
+`logs/live-login-1440.png`, `logs/live-login-390.png`. No live administrator or
+investment records were created by the anonymous production-page probes.
+
+In-app browser connection failed at tool setup; existing repository Playwright
+was used. No claim of Firefox-engine E2E coverage or hosted deployment is made.
+
 ## Portfolio-First Release
 
 Date: 2026-09-06. Final normal run started at 09:28:45 UTC in C:\Dev, against a

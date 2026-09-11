@@ -20,6 +20,22 @@ def anyio_backend():
     return "asyncio"
 
 
+@pytest.fixture
+def seeded_market_clock(monkeypatch):
+    """Financial demo assertions use a dated snapshot, not the machine's day."""
+    from datetime import UTC, datetime
+    from app import portfolio_valuation
+
+    class SnapshotClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = datetime.now(UTC).replace(year=2026, month=9, day=5)
+            return value.astimezone(tz) if tz else value.replace(tzinfo=None)
+
+    # Authentication and audit clocks remain real; only valuation time is pinned.
+    monkeypatch.setattr(portfolio_valuation, "datetime", SnapshotClock)
+
+
 @pytest.fixture(scope="session")
 def authenticated_token():
     import secrets

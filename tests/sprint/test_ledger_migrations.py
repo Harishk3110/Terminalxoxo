@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from app import models
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
@@ -19,6 +20,7 @@ NEW_TABLES = {
     "portfolio_fees",
     "portfolio_accruals",
     "portfolio_liabilities",
+    "auth_totp_states",
 }
 
 
@@ -61,7 +63,7 @@ def test_fresh_head_schema_matches_orm_column_ownership(
         with engine.connect() as connection:
             assert (
                 connection.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0005_accounting_subledgers"
+                == ScriptDirectory.from_config(config).get_current_head()
             )
     finally:
         engine.dispose()

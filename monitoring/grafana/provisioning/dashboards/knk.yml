@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: KnK Operations
+    folder: KnK Capital
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/knk-dashboards

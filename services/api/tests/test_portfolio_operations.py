@@ -94,7 +94,7 @@ def test_manual_trade_review_and_duplicate(accounting_session):
     assert accounting_session.get(models.TradeEvent, trade["id"]).review_state == "REVIEWED"
 
 
-def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(accounting_session):
+def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(accounting_session, seeded_market_clock):
     from app.hedge_engine import HedgeRequest, HedgeService
     result = HedgeService(accounting_session).create("KNK_MAIN", HedgeRequest(target=.2, fee_bps=2), None)
     assert result["var_state"] == "AVAILABLE"

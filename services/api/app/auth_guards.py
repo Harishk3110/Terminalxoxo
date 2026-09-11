@@ -1,12 +1,14 @@
+from collections.abc import Collection
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from . import models
 
 
-def check_login_limit(session, email, ip):
+def check_login_limit(session: Session, email: str, ip: str | None) -> None:
     failures = (
         select(func.count())
         .select_from(models.LoginAttempt)
@@ -25,7 +27,9 @@ def check_login_limit(session, email, ip):
         )
 
 
-def origin_allowed(method, origin, fetch_site, allowed):
+def origin_allowed(
+    method: str, origin: str | None, fetch_site: str | None, allowed: Collection[str]
+) -> bool:
     if method in ("GET", "HEAD", "OPTIONS"):
         return True
     if fetch_site == "cross-site":

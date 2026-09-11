@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
-import pyotp
 import structlog
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
@@ -21,6 +20,9 @@ from sqlalchemy.orm import Session
 from . import models
 from .config import get_settings
 from .auth_sessions import token_digest
+from .auth_api import router as auth_router
+from .auth_security import verify_factor, revoke_sessions
+from .telemetry import JOB_STATES, metric_path, request_id
 from .database import SessionLocal, engine, get_session
 from .providers.fred import FredProvider
 from .repositories import InstrumentRepository, JobRepository, ProviderRepository, StrategyRepository, SystemRepository
@@ -73,6 +75,7 @@ app.include_router(options_router)
 app.include_router(provider_router)
 app.include_router(attachments_router)
 app.include_router(pine_router)
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -86,14 +89,15 @@ _DB_READY = False
 
 
 class AdminSetupRequest(BaseModel):
-    email: str
-    password: str = Field(min_length=12)
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=12, max_length=1024)
 
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
-    totp_code: str | None = None
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=1, max_length=1024)
+    totp_code: str | None = Field(default=None, max_length=6)
+    recovery_code: str | None = Field(default=None, max_length=128)
 
 
 class TransactionRequest(BaseModel):
@@ -120,7 +124,7 @@ class BackfillRequest(BaseModel):
 
 
 def correlation_id(request: Request) -> str:
-    return request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+    return request_id(request.headers.get("X-Correlation-ID"))
 
 
 @app.on_event("startup")
@@ -133,21 +137,23 @@ def startup() -> None:
 async def request_middleware(request: Request, call_next):
     ensure_database_ready()
     path = request.url.path
+    start = datetime.now(timezone.utc)
+    cid = correlation_id(request)
+    denied = None
     from .auth_guards import origin_allowed
     if not origin_allowed(request.method, request.headers.get("origin"), request.headers.get("sec-fetch-site"), settings.allowed_origins):
-        return JSONResponse({"detail": "Untrusted request origin"}, status_code=403, headers={"Cache-Control": "no-store"})
+        denied = JSONResponse({"detail": "Untrusted request origin"}, status_code=403)
     session_paths = {"/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/session", "/api/v1/auth/logout"}
-    if path.startswith("/api/") and path not in session_paths and request.method != "OPTIONS":
+    if denied is None and path.startswith("/api/") and path not in session_paths and request.method != "OPTIONS":
         from .terminal_api import auth_session
         with SessionLocal() as session:
             if not auth_session(request, session)["authenticated"]:
-                return JSONResponse({"detail": "Authentication required"}, status_code=401, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
-    start = datetime.now(timezone.utc)
-    cid = correlation_id(request)
-    response = await call_next(request)
+                denied = JSONResponse({"detail": "Authentication required"}, status_code=401)
+    response = denied if denied is not None else await call_next(request)
     elapsed = (datetime.now(timezone.utc) - start).total_seconds()
-    REQUEST_COUNT.labels(request.method, request.url.path, str(response.status_code)).inc()
-    REQUEST_LATENCY.labels(request.method, request.url.path).observe(elapsed)
+    label = metric_path(request.scope, rejected=denied is not None)
+    REQUEST_COUNT.labels(request.method, label, str(response.status_code)).inc()
+    REQUEST_LATENCY.labels(request.method, label).observe(elapsed)
     response.headers["X-Correlation-ID"] = cid
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -193,8 +199,7 @@ def live():
     return {"status": "live", "environment": settings.knk_env}
 
 
-@app.get("/health/ready")
-def ready(session: Session = Depends(get_session)):
+def readiness_checks(session: Session) -> dict[str, Any]:
     checks: dict[str, Any] = {"api": "ready"}
     try:
         session.execute(text("select 1"))
@@ -217,6 +222,12 @@ def ready(session: Session = Depends(get_session)):
         checks["object_storage"] = "ready" if storage.get_bytes("health/readiness.txt") == b"knk-ready" else "failed"
     except Exception:
         checks["object_storage"] = "failed"
+    return checks
+
+
+@app.get("/health/ready")
+def ready(session: Session = Depends(get_session)):
+    checks = readiness_checks(session)
     status = "ready" if checks.get("database") == checks.get("object_storage") == "ready" else "not-ready"
     return JSONResponse({"status": status, "checks": checks}, status_code=200 if status == "ready" else 503)
 
@@ -224,8 +235,8 @@ def ready(session: Session = Depends(get_session)):
 @app.get("/metrics")
 def metrics(session: Session = Depends(get_session)):
     counts = {row[0]: row[1] for row in session.execute(select(models.IngestionJob.status, func.count()).group_by(models.IngestionJob.status)).all()} if session.bind else {}
-    for state, count in counts.items():
-        JOB_COUNT.labels(state).set(count)
+    for state in JOB_STATES:
+        JOB_COUNT.labels(state).set(counts.get(state, 0))
     return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
@@ -254,15 +265,10 @@ def setup_admin(payload: AdminSetupRequest, response: Response, request: Request
     user = models.User(email=payload.email, password_hash=hasher.hash(payload.password), role="ADMIN")
     session.add(user)
     session.flush()
-    secret = pyotp.random_base32()
-    session.add(models.TotpSetting(user_id=user.id, secret_encrypted=f"local-demo:{secret}", enabled=False))
-    recovery_codes = [secrets.token_urlsafe(18) for _ in range(8)]
-    for code in recovery_codes:
-        session.add(models.RecoveryCode(user_id=user.id, code_hash=hasher.hash(code)))
     session.add(models.AuditLog(actor_user_id=user.id, action="auth.setup", resource_type="user", resource_id=user.id, correlation_id=correlation_id(request), metadata_json={"email": payload.email}))
     session.commit()
     response.set_cookie("knk_setup", "complete", httponly=True, samesite="strict", secure=settings.knk_env == "production-paper")
-    return {"status": "configured", "totp_secret": secret, "recovery_codes": recovery_codes}
+    return {"status": "configured"}
 
 
 @app.post("/api/v1/auth/login")
@@ -282,18 +288,14 @@ def login(payload: LoginRequest, response: Response, request: Request, session: 
         session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="password", ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
         session.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials") from exc
-    totp = session.execute(select(models.TotpSetting).where(models.TotpSetting.user_id == user.id)).scalars().first()
-    if totp and totp.enabled and not payload.totp_code:
-        session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="totp_required", ip_address=request.client.host if request.client else None))
+    if not verify_factor(session, user.id, payload.totp_code, payload.recovery_code):
+        AUTH_FAILURES.inc()
+        session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="one_time_proof", ip_address=request.client.host if request.client else None))
         session.commit()
-        raise HTTPException(status_code=401, detail="TOTP code required")
-    if payload.totp_code and totp:
-        secret = totp.secret_encrypted.removeprefix("local-demo:")
-        if not pyotp.TOTP(secret).verify(payload.totp_code):
-            AUTH_FAILURES.inc()
-            session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="totp", ip_address=request.client.host if request.client else None))
-            session.commit()
-            raise HTTPException(status_code=401, detail="Invalid TOTP code")
+        raise HTTPException(status_code=401, detail="Authenticator code or unused recovery code required")
+    if payload.recovery_code:
+        revoke_sessions(session, user.id)
+        session.add(models.AuditLog(actor_user_id=user.id, action="AUTH_RECOVERY_LOGIN", resource_type="user", resource_id=user.id, correlation_id=correlation_id(request), metadata_json={}))
     session_id = secrets.token_urlsafe(32)
     session.add(models.UserSession(user_id=user.id, session_hash=token_digest(session_id), expires_at=datetime.now(timezone.utc) + timedelta(hours=8)))
     session.add(models.LoginAttempt(email=payload.email, success=True, ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
@@ -601,13 +603,13 @@ def acknowledge_alert(alert_id: str, session: Session = Depends(get_session)):
 
 @app.get("/api/v1/system/health")
 def system_health(session: Session = Depends(get_session)):
-    ready_payload = ready(session)
+    checks = readiness_checks(session)
     counts = SystemRepository(session).counts()
     return {
         "environment": settings.knk_env,
         "application_version": "0.2.0",
         "current_commit": "runtime",
-        "checks": ready_payload["checks"],
+        "checks": checks,
         "provider_state": providers(session)["items"],
         "counts": counts,
         "last_backup": None,

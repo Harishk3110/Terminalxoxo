@@ -18,6 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server --appendonly yes
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
@@ -69,7 +70,7 @@ services:
       args:
         SERVICE_DIR: api
     command: /bin/sh -c "alembic upgrade head && python scripts/seed_demo.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    env_file: .env
+    env_file: ${KNK_COMPOSE_ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env for PostgreSQL}
       REDIS_URL: redis://redis:6379/0
@@ -97,7 +98,7 @@ services:
       dockerfile: infrastructure/docker/node.Dockerfile
       args:
         APP_FILTER: "@knk/terminal-web"
-    command: pnpm --filter @knk/terminal-web dev --hostname 0.0.0.0 --port 3001
+    command: pnpm --filter @knk/terminal-web start --hostname 0.0.0.0 --port 3001
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
       KNK_API_URL: http://api:8000
@@ -120,16 +121,15 @@ services:
       args:
         SERVICE_DIR: api
     command: python -m app.queue_worker --kind data --daemon
-    env_file: .env
+    env_file: ${KNK_COMPOSE_ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env for PostgreSQL}
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: http://minio:9000
       OBJECT_STORAGE_BUCKET: knk-terminal-local
     depends_on:
-      - api
-      - redis
-      - postgres
+      api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-m", "app.queue_worker", "--kind", "data", "--healthcheck"]
       interval: 15s
@@ -144,15 +144,15 @@ services:
       args:
         SERVICE_DIR: api
     command: python -m app.queue_worker --kind quant --daemon
-    env_file: .env
+    env_file: ${KNK_COMPOSE_ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env for PostgreSQL}
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: http://minio:9000
       OBJECT_STORAGE_BUCKET: knk-terminal-local
     depends_on:
-      - api
-      - postgres
+      api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-m", "app.queue_worker", "--kind", "quant", "--healthcheck"]
       interval: 15s
@@ -167,7 +167,7 @@ services:
       args:
         SERVICE_DIR: report-engine
     command: uvicorn app.main:app --host 0.0.0.0 --port 8010
-    env_file: .env
+    env_file: ${KNK_COMPOSE_ENV_FILE:-.env}
     ports:
       - "127.0.0.1:8010:8010"
     healthcheck:
@@ -175,35 +175,6 @@ services:
       interval: 15s
       timeout: 8s
       retries: 10
-    restart: unless-stopped
-
-  broker-agent:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/python.Dockerfile
-      args:
-        SERVICE_DIR: broker-agent
-    command: uvicorn agent.main:app --host 0.0.0.0 --port 8020
-    env_file: .env
-    ports:
-      - "127.0.0.1:8020:8020"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health/live', timeout=5).read()"]
-      interval: 15s
-      timeout: 8s
-      retries: 10
-    restart: unless-stopped
-
-  prefect-server:
-    image: prefecthq/prefect:3.1.11-python3.12
-    command: prefect server start --host 0.0.0.0
-    ports:
-      - "127.0.0.1:4200:4200"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4200/api/health', timeout=5).read()"]
-      interval: 15s
-      timeout: 8s
-      retries: 20
     restart: unless-stopped
 
   prometheus:
@@ -221,10 +192,16 @@ services:
 
   grafana:
     image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     ports:
-      - "127.0.0.1:3002:3000"
+      - "127.0.0.1:3003:3000"
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/knk-dashboards:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1"]
       interval: 15s

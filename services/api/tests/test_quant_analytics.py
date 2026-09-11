@@ -3,7 +3,7 @@ from test_portfolio_accounting import accounting_session
 from app.monte_carlo import pin_monte_carlo, monte_carlo_result
 
 
-def test_portfolio_alpha_uses_net_gross_and_additional_costs(accounting_session):
+def test_portfolio_alpha_uses_net_gross_and_additional_costs(accounting_session, seeded_market_clock):
     data = analyse(accounting_session, AlphaRequest(estimated_cost_bps_per_period=1))
     assert data["state"] == "AVAILABLE"
     assert data["results"]["NET"]["p_value"] is not None
@@ -12,7 +12,7 @@ def test_portfolio_alpha_uses_net_gross_and_additional_costs(accounting_session)
     assert data["inputs"]["valuation_run_id"]
 
 
-def test_portfolio_monte_carlo_pins_eligible_net_returns(accounting_session):
+def test_portfolio_monte_carlo_pins_eligible_net_returns(accounting_session, seeded_market_clock):
     params = pin_monte_carlo(accounting_session, {"settings": {"paths": 100, "horizon": 10}})
     assert params["_evidence"]["valuation_run_id"]
     result = monte_carlo_result(params)

@@ -6,15 +6,48 @@ The 2026-09-11 master directive supersedes prior scope. Baseline `597f346` was
 clean; recovery tag `pre-final-knk-terminal-build` is pushed. Current audit:
 docs/FINAL_GAP_AUDIT.md. Final acceptance is not complete.
 
-Fresh runtime inspection: Docker Linux engine unavailable and no local terminal,
-API, PostgreSQL, Redis or MinIO listeners. Previous September 7 startup evidence
-is historical, not a claim that services are still running. TOTP enrollment and
-recovery login are missing despite existing storage tables. These are being fixed.
-Docker Desktop was subsequently started hidden and daemon 29.4.2 responds; no
-containers are running yet. Next production build passed. Both LOC suites passed
-(71 tests); eligible total 47,617, not a product-completion measure.
+The final-build checkpoint implements encrypted TOTP enrollment/confirmation,
+one-use recovery login, password changes and user-scoped session revocation.
+Desktop/mobile security controls are operational. Trusted devices, production
+provisioning and broader concurrency/security review remain open.
 
-Controlling scope: PRD_TERMINAL_ONLY.md, 2026-09-07. The previous second-frontend
+Docker Desktop 29.4.2 now runs PostgreSQL, Redis, MinIO, API, data/quant workers,
+terminal, Prometheus and Grafana with healthy probes. Six migrations passed clean
+SQLite and isolated PostgreSQL upgrade/downgrade/upgrade. The production frontend
+image runs Next.js as a non-root user. The disabled report-engine is not running:
+this is NOT an all-services or production-ready certification.
+
+Local URL: http://127.0.0.1:3001/overview. It redirects anonymous visitors to the
+styled setup/sign-in page. This is a separate Docker demo, not a migration of the
+old SQLite installation. Its administrator has not been created. Existing `.env`,
+`knk_terminal.db`, `.knk-object-store` and unrelated Docker volumes were preserved.
+Keep Docker Desktop running. There is no verified public hosted URL.
+
+Fresh verification:
+
+- Backend: 923 passed, 13 warnings; 86.58% statement/line coverage. No branch
+  coverage claim. Initial failed runs are retained in BUILD_EVIDENCE.md.
+- Frontend: 235 terminal plus five shared unit tests passed; workspace TypeScript
+  and lint passed. Node 22 production build passed both locally and in Docker.
+- Four authentication modules passed scoped strict mypy; changed security,
+  telemetry, bootstrap and migration modules passed scoped Ruff.
+- Whole backend still fails: Ruff 218 errors; mypy 1,260 errors in 56 files.
+- Full browser suite: 28/35 passed. A corrected explicit-date, run-ID-pinned
+  multi-security backtest rerun passed. Six other failures remain: hedge, stress
+  and four visual workflows dependent on those results. Old September demo data
+  must not be relabelled fresh to conceal insufficient beta history.
+- Live local setup page: HTTP 200, 45,884-byte CSS, 476 applied rules, no page errors
+  or horizontal overflow at 1440px and 390px. Screenshots inspected.
+- Prometheus API target is up; one Grafana dashboard is provisioned. Nine requested
+  dashboards and managed PostgreSQL/object backup-restore are not complete.
+- Meaningful LOC: 48,915 total, 35,642 source and 13,273 test lines. This is not a
+  functional completion measure and is below the requested inventory target.
+
+First unchecked task: replace disabled report-engine with authenticated,
+source-pinned jobs on the existing SQL queue, then verify full Compose health.
+See TASKS.md, docs/ACCOUNT_SECURITY.md, docs/LOCAL_DOCKER.md and BUILD_EVIDENCE.md.
+
+Historical scope: PRD_TERMINAL_ONLY.md, 2026-09-07. The previous second-frontend
 scope is cancelled. The 25K line-count target is not a completion certification.
 
 ## Current Verification, 2026-09-07

@@ -137,16 +137,36 @@ test("multi-security backtest persists costs, FX and next-open fills", async ({
   test.setTimeout(180000);
   await page.goto("/backtests");
   await page.getByLabel("Backtest source").selectOption("DEMO_RESEARCH");
+  await page.getByLabel("Start", { exact: true }).fill("2025-01-01");
   await page.getByLabel("Backtest additional securities").fill("AAPL,MSFT");
   await page.getByLabel("Backtest strategy").selectOption("MOMENTUM");
+  const queued = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/terminal/runs") &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Run backtest", exact: true }).click();
+  const response = await queued;
+  expect(response.status(), await response.text()).toBe(202);
+  const submitted = await response.json();
+  await expect
+    .poll(
+      async () =>
+        (
+          await (
+            await request.get(`/backend/api/v1/terminal/runs/${submitted.id}`)
+          ).json()
+        ).status,
+      { timeout: 120000 },
+    )
+    .toBe("SUCCEEDED");
   await expect(page.locator(".page-toolbar")).toContainText("SUCCEEDED", {
     timeout: 120000,
   });
-  const runs = await (
-    await request.get("/backend/api/v1/terminal/runs?kind=backtest")
+  const finished = await (
+    await request.get(`/backend/api/v1/terminal/runs/${submitted.id}`)
   ).json();
-  const result = runs.items[0].result;
+  const result = finished.result;
   expect(Object.keys(result.inputs)).toHaveLength(3);
   expect(result.currency).toBe("SGD");
   expect(result.fills.length).toBeGreaterThan(0);

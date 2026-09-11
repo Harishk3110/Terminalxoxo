@@ -283,14 +283,14 @@ class DemoIngestionService:
             ]
         )
         for component, state in [
-            ("api", "ready"),
-            ("postgres", "ready"),
-            ("redis", "ready"),
-            ("object_storage", "ready"),
+            ("api", "NOT_PROBED"),
+            ("postgres", "NOT_PROBED"),
+            ("redis", "NOT_PROBED"),
+            ("object_storage", "NOT_PROBED"),
             ("fred", "NOT_CONFIGURED"),
-            ("worker-data", "ready"),
-            ("worker-quant", "ready"),
-            ("report-engine", "ready"),
+            ("worker-data", "NOT_PROBED"),
+            ("worker-quant", "NOT_PROBED"),
+            ("report-engine", "NOT_PROBED"),
         ]:
             self.session.add(models.SystemHealthSnapshot(component=component, state=state, details={"quality": QUALITY_DEMO}, checked_at=datetime(2026, 9, 5, 0, 5, tzinfo=timezone.utc)))
 

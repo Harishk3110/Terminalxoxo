@@ -16,6 +16,7 @@ from app.terminal_analytics import FUNCTIONS, portfolio_analytics, stress_result
 from app.terminal_worker import execute_run, backtest_result
 
 client = TestClient(app)
+pytestmark = pytest.mark.usefixtures("seeded_market_clock")
 
 
 def test_registry_is_unique_and_bootstrap_matches():

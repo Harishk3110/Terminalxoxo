@@ -63,3 +63,27 @@ tests; PARTIAL means the complete requested workflow has missing layers.
 - Implement missing workflows behind authenticated APIs and existing UI patterns.
 - Do not infer coverage, production safety, provider connectivity or all-services
   health from unit-test count or code volume.
+
+## 2026-09-11 Remediation Delta
+
+The table above remains the original baseline assessment. Current changes:
+
+- Authentication now has encrypted confirmed/expiring TOTP enrollment, one-use
+  recovery login, password change, recovery-code replacement and owned-session
+  revocation. Tests pass; trusted devices and production/concurrency review remain.
+- Docker daemon, separate credential bootstrap, persistent local infrastructure,
+  production Next image and data/quant workers now run. The old SQLite/object data
+  are preserved, not silently migrated. Disabled report-engine remains the first
+  infrastructure gap.
+- Six migrations pass clean SQLite and isolated PostgreSQL roundtrips. Existing
+  initial migration schema imports and runtime create_all remain architectural debt.
+- Metrics use bounded route labels, reset missing ingestion-job states to zero,
+  and include rejected responses. Legacy health no longer subscripts JSONResponse.
+  One actual Grafana dashboard is provisioned. Full monitoring coverage is partial.
+- Backend 923 tests pass; frontend 240 unit tests, lint/types and production build
+  pass. Whole backend Ruff (218) and mypy (1,260 errors) still fail.
+- Full browser result is 28/35; corrected backtest targeted retry passes. Six
+  stress/hedge/dependent visual checks remain unresolved. No final pass is claimed.
+- Latest meaningful count is 48,915 (35,642 source + 13,273 tests), not a measure of
+  completion. Complete model/deck/PDF reporting remains unimplemented; the user's
+  final directive has explicitly authorized the existing report-library family.

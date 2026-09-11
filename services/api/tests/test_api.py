@@ -1,9 +1,11 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 
 
 client = TestClient(app)
+pytestmark = pytest.mark.usefixtures("seeded_market_clock")
 
 
 def test_environment_badges_are_explicit():

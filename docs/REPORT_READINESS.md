@@ -12,9 +12,11 @@ readiness probe returns 503. Existing exports are generated within the private A
 
 The requested complete formula-driven equity/quant/portfolio workbook families,
 26-section IC decks, PPTX/PDF conversion and PNG chart packages are **not complete**.
-The mandated artifact authoring runtime is unavailable in this session. Approval
-to extend the repository's existing export libraries was requested and has not
-been received. Existing exports are not represented as those finished deliverables.
+The 2026-09-11 final master directive explicitly permits XlsxWriter/OpenPyXL and
+python-pptx/PptxGenJS with appropriate PDF/chart libraries. The earlier alternate
+engine approval blocker is therefore superseded. Implementation and verification
+of the isolated report worker and full workbook/deck/PDF families are still
+outstanding. Existing exports are not represented as those finished deliverables.
 
 Pine generation and user-export comparison are implemented separately; see
 TRADINGVIEW_STUDIO.md. Broker connectivity remains read-only.

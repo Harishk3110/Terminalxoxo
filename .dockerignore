@@ -10,6 +10,12 @@ node_modules
 !.env.example
 *.db
 *.db-*
+*.sqlite*
+*.key
+*.pem
+infrastructure/backups
+uploads
+docs/screenshots
 .knk-object-store
 .coverage*
 .pytest_cache
