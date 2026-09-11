@@ -10,19 +10,129 @@ import uuid
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import IO, Literal, TypedDict
 from zipfile import ZIP_DEFLATED, ZipFile
 
 MAX_EXPANDED = 20_000_000_000
 
 
-def digest(stream):
+class FileEvidence(TypedDict):
+    sha256: str
+    bytes: int
+
+
+class ArchiveManifest(TypedDict):
+    version: Literal[1]
+    created_at: str
+    database: Literal["database.sqlite"]
+    encryption: Literal["NONE"]
+    sensitive: Literal[True]
+    consistency: str
+    files: dict[str, FileEvidence]
+    tables: dict[str, int]
+
+
+class BackupReceipt(TypedDict):
+    state: Literal["VERIFIED"]
+    archive: str
+    created_at: str
+    verified_at: str
+    file_count: int
+    sha256: str
+    encryption: Literal["NONE"]
+
+
+class CreatedBackup(BackupReceipt):
+    path: str
+
+
+class VerifiedBackup(TypedDict):
+    state: Literal["VERIFIED"]
+    manifest: ArchiveManifest
+    archive_hash: str
+
+
+class RestoredBackup(TypedDict):
+    state: Literal["RESTORED_VERIFIED"]
+    target: str
+    archive_hash: str
+
+
+def unique_manifest_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate backup manifest field")
+        result[key] = value
+    return result
+
+
+def archive_manifest(value: object) -> ArchiveManifest:
+    if not isinstance(value, dict):
+        raise ValueError("Invalid backup manifest")
+    if (
+        type(value.get("version")) is not int
+        or value["version"] != 1
+        or value.get("database") != "database.sqlite"
+        or value.get("encryption") != "NONE"
+        or value.get("sensitive") is not True
+    ):
+        raise ValueError("Unsupported backup manifest")
+    created_at, consistency = value.get("created_at"), value.get("consistency")
+    raw_files, raw_tables = value.get("files"), value.get("tables")
+    if (
+        not isinstance(created_at, str)
+        or not isinstance(consistency, str)
+        or not consistency
+        or not isinstance(raw_files, dict)
+        or not isinstance(raw_tables, dict)
+    ):
+        raise ValueError("Invalid backup manifest fields")
+    try:
+        timestamp = datetime.fromisoformat(created_at)
+    except ValueError:
+        raise ValueError("Invalid backup manifest timestamp") from None
+    if timestamp.tzinfo is None:
+        raise ValueError("Invalid backup manifest timestamp")
+    files: dict[str, FileEvidence] = {}
+    for name, evidence in raw_files.items():
+        if not isinstance(name, str) or not isinstance(evidence, dict):
+            raise ValueError("Invalid backup manifest file evidence")
+        checksum, size = evidence.get("sha256"), evidence.get("bytes")
+        if (
+            not isinstance(checksum, str)
+            or len(checksum) != 64
+            or any(character not in "0123456789abcdef" for character in checksum)
+            or type(size) is not int
+            or not 0 <= size <= MAX_EXPANDED
+        ):
+            raise ValueError("Invalid backup manifest file evidence")
+        files[name] = {"sha256": checksum, "bytes": size}
+    tables: dict[str, int] = {}
+    for name, count in raw_tables.items():
+        if not isinstance(name, str) or type(count) is not int or count < 0:
+            raise ValueError("Invalid backup manifest table count")
+        tables[name] = count
+    return {
+        "version": 1,
+        "created_at": created_at,
+        "database": "database.sqlite",
+        "encryption": "NONE",
+        "sensitive": True,
+        "consistency": consistency,
+        "files": files,
+        "tables": tables,
+    }
+
+
+def digest(stream: IO[bytes]) -> str:
     result = hashlib.sha256()
     while chunk := stream.read(1024 * 1024):
         result.update(chunk)
     return result.hexdigest()
 
 
-def inspect_database(path):
+def inspect_database(path: Path) -> dict[str, int]:
     with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         if db.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
             raise ValueError("SQLite integrity check failed")
@@ -40,7 +150,7 @@ def inspect_database(path):
         }
 
 
-def create_backup(database: Path, objects: Path, destination: Path):
+def create_backup(database: Path, objects: Path, destination: Path) -> CreatedBackup:
     database, objects, destination = (
         database.resolve(strict=True),
         objects.resolve(strict=True),
@@ -53,7 +163,7 @@ def create_backup(database: Path, objects: Path, destination: Path):
     destination.mkdir(parents=True, exist_ok=True)
     backup_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     output = destination / f"knk-backup-{backup_id}.zip"
-    manifest = {
+    manifest: ArchiveManifest = {
         "version": 1,
         "created_at": datetime.now(UTC).isoformat(),
         "database": "database.sqlite",
@@ -61,14 +171,15 @@ def create_backup(database: Path, objects: Path, destination: Path):
         "sensitive": True,
         "consistency": "SQLite online snapshot; object files hashed individually. Pause ingestion for cross-store consistency.",
         "files": {},
+        "tables": {},
     }
     with tempfile.TemporaryDirectory(prefix="knk-backup-") as temporary:
         snapshot = Path(temporary) / "database.sqlite"
         with (
-            closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as source,
-            closing(sqlite3.connect(snapshot)) as target,
+            closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as source_db,
+            closing(sqlite3.connect(snapshot)) as target_db,
         ):
-            source.backup(target)
+            source_db.backup(target_db)
         manifest["tables"] = inspect_database(snapshot)
         files = [("database.sqlite", snapshot)]
         for root, dirs, names in os.walk(objects, followlinks=False):
@@ -108,7 +219,7 @@ def create_backup(database: Path, objects: Path, destination: Path):
                     manifest["files"][name] = {"sha256": checksum.hexdigest(), "bytes": size}
                 archive.writestr("manifest.json", json.dumps(manifest, sort_keys=True))
     verified = verify_backup(output)
-    receipt = {
+    receipt: BackupReceipt = {
         "state": "VERIFIED",
         "archive": output.name,
         "created_at": manifest["created_at"],
@@ -123,7 +234,7 @@ def create_backup(database: Path, objects: Path, destination: Path):
     return {**receipt, "path": str(output)}
 
 
-def safe_members(archive):
+def safe_members(archive: ZipFile) -> list[str]:
     members = archive.infolist()
     names = [item.filename for item in members]
     if len(names) != len({name.casefold() for name in names}) or len(names) > 1000000:
@@ -157,14 +268,14 @@ def safe_members(archive):
     return names
 
 
-def verify_backup(path: Path):
+def verify_backup(path: Path) -> VerifiedBackup:
     with ZipFile(path) as archive:
         names = safe_members(archive)
         if "manifest.json" not in names or archive.getinfo("manifest.json").file_size > 25_000_000:
             raise ValueError("Missing or excessive manifest")
-        manifest = json.loads(archive.read("manifest.json"))
-        if manifest.get("version") != 1 or manifest.get("database") != "database.sqlite":
-            raise ValueError("Unsupported backup manifest")
+        manifest = archive_manifest(
+            json.loads(archive.read("manifest.json"), object_pairs_hook=unique_manifest_fields)
+        )
         if (
             set(names) != set(manifest["files"]) | {"manifest.json"}
             or "database.sqlite" not in manifest["files"]
@@ -187,7 +298,7 @@ def verify_backup(path: Path):
         return {"state": "VERIFIED", "manifest": manifest, "archive_hash": digest(stream)}
 
 
-def restore_backup(archive_path: Path, target: Path):
+def restore_backup(archive_path: Path, target: Path) -> RestoredBackup:
     evidence = verify_backup(archive_path)
     target = target.resolve()
     if target.exists():

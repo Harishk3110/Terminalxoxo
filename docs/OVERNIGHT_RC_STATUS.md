@@ -3,9 +3,9 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: f0d92e3, pushed. Dated-source/options/risk, ledger/factor and local
-archive/reader fixes are committed. ASGI concurrency and bounded agent status
-lookup are undergoing final batch verification. Full release remains open.
+Current HEAD: 667c0a6, pushed. Dated-source/options/risk, ledger/factor, local
+archive/reader, ASGI concurrency and bounded agent status fixes are committed.
+Local backup manifest validation is verified separately. Full release remains open.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -29,10 +29,13 @@ Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_p
 Current evidence:
 - Current focused selection: 71 passed, three warnings, 32.65s. Full backend 21:
   1,263 passed, 13 warnings, 447.63s; 10,901/12,366 statements covered (88.1530%).
-  Browser 10 remains active with application edits paused.
+  Browser 10 remains active and has reproduced the quant SQLite lock failure.
+- Local backup manifest selection: 23 passed, native exit 0; six affected source
+  and test files pass strict types. Malformed and duplicate manifest fields are
+  rejected before creating the restore target. This is separate from backend 21.
 - Browser 09: 38 passed / one failed / zero retries, 20.7m. All five viewport
   sweeps passed; quant hit SQLite lock errors. The new ASGI checks pass two
-  deterministic concurrency regressions but still require this fresh full run.
+  deterministic concurrency regressions but have not closed the database locks.
 - Agent/reader focused selection: 30 passed; both source modules and both new test
   modules pass strict types. Ruff/format/pip check pass. Full backend run 19:
   1,244 passed, 13 warnings, 447.09s; 10,875/12,341 statements covered (88.1209%).
@@ -151,8 +154,9 @@ Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
 Exact next command: `Get-Content logs/overnight-browser-full-10.log -Tail 8`.
-Finish browser 10, verify and push the ASGI/status batch, then
-continue remaining engine/API contracts. Agent startup installation, structured
+Finish browser 10 and trace concurrent factor-history reads and workspace writes;
+the ASGI/status batch is already pushed. Continue remaining engine/API contracts.
+Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and
 queue commit; the completed archive journal does not cover that earlier move.

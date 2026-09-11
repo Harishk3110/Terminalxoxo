@@ -1,8 +1,10 @@
 import argparse
 import json
+import sys
 from pathlib import Path
 
-from backup_archive import restore_backup
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from infrastructure.scripts.backup_archive import restore_backup
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

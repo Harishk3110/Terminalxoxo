@@ -42,7 +42,8 @@ milestone remain open unless explicitly verified below.
 - [ ] M6: Windows outbound watcher/pairing/revocation/credentials/logs/startup.
 - [x] M6/M8: durable archive journal, acknowledgement integrity and typed paper reader guards; 30 new focused tests and full backend 19 (1,244 tests) pass.
 - [ ] M3/M13: keep blocking database checks off the ASGI loop; two concurrency negative controls reproduce the blocked-loop behavior, browser lock closure pending.
-- [ ] M6: bounded identity lookup for pending files older than the latest 500; ownership/revocation/hash/missing-record tests pass, complete batch verification pending.
+- [x] M6: bounded identity lookup for pending files older than the latest 500; ownership/revocation/hash/missing-record tests and full backend 21 pass; pushed as 667c0a6.
+- [x] M15: typed local archive manifests, duplicate/malformed-field rejection before restore, and CLI operation from unrelated working directories; 23 focused tests pass.
 - [ ] M7: full FRED/SEC/OpenFIGI/vendor/FX/options adapters and source conflicts.
 - [ ] M8: complete paper read-only broker contract/reconnect/dedup tests.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.

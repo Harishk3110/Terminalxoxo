@@ -656,3 +656,32 @@ change. Overall release status remains open.
 Additional direct visual review: equity 1366px, portfolio and data-drop 1440px,
 and quant-dashboard 1920px. Tables, pane boundaries and toolbar controls were
 inspected; this does not certify all snapshots or replace the strict visual gate.
+
+## Local Backup Manifest Contracts
+
+Baseline 667c0a6 plus working tree, 2026-09-12 SGT. The ASGI/status batch is pushed.
+Local archive manifests now validate version, timestamp, encryption/sensitivity,
+file sizes/hashes and table counts before creating a restore directory. Duplicate
+JSON keys are rejected rather than overwritten. Existing valid v1 archives retain
+their format and SQLite snapshot/hash/integrity verification. The three direct
+CLI entrypoints resolve their package imports from unrelated working directories.
+No active database, object store, credential or production volume was changed.
+
+Negative controls: nine failed / two passed in
+overnight-local-backup-manifest-before.log. Final combined selection: 23 passed,
+one warning, 4.44s, native exit 0 in overnight-local-backup-manifest-after-03.log.
+Coverage of infrastructure.scripts.backup_archive is 176/201 statements (87.5622%),
+25 missing, in overnight-local-backup-coverage.json. The earlier after-02 invocation
+used an incorrect coverage target; its empty coverage is not accepted as evidence.
+Six affected source/test files pass strict mypy in overnight-local-backup-types-04.log.
+Whole Ruff and format checks pass after the final test annotations. Backend 21
+preceded this batch; no newer complete backend pass is claimed here.
+
+Browser 10 is still active and has reproduced the quant journey failure at the
+unchanged factor-table assertion. Its API log contains workspace commit and read
+lock errors. The middleware fix closes the independently reproduced event-loop
+block, but does not close this database contention. A read-only profile against
+browser 09's retained database takes 4.50s, with 3.19s in price-resolver loading and
+0.19s in factor statistics. Three concurrent read-only calls take 8.52s, 11.26s and
+12.16s (overnight-factor-profile-03.log / overnight-factor-concurrent-01.log).
+No journal mode, timeout, financial tolerance or browser assertion was changed.
