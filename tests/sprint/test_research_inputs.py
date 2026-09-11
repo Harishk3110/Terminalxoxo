@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,7 @@ from app.research_inputs import ResearchInput, bars_frame, pin_input
 from sqlalchemy.orm import Session
 
 
-def seed_bars(session):
+def seed_bars(session: Session) -> None:
     import numpy as np
     import pandas as pd
 
@@ -55,6 +56,7 @@ def test_research_snapshot_is_deduplicated_and_hash_verified(
     )
     assert result["metrics"][2]["partition"] == "TEST"
     key = first["schema"]["curated_key"]
+    assert isinstance(key, str)
     ObjectStorage().put_bytes(key=key, data=b"[]", content_type="application/json")
     with pytest.raises(ValueError, match="integrity"):
         dataset_rows(ledger_session, first["dataset_version_id"])
@@ -75,6 +77,30 @@ def test_bar_validation_rejects_duplicates_missing_bounds_and_bad_dates() -> Non
     ):
         with pytest.raises(ValueError):
             bars_frame(rows, "SPY")
+
+
+def test_research_date_bounds_are_inclusive_and_preserve_missing_volume() -> None:
+    import pandas as pd
+
+    rows: list[Mapping[str, object]] = [
+        {
+            "date": f"2026-01-0{day}",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": None,
+        }
+        for day in (5, 6, 7, 8)
+    ]
+    frame = bars_frame(rows, "SPY", "2026-01-06", "2026-01-07")
+    assert pd.DatetimeIndex(frame.index).strftime("%Y-%m-%d").tolist() == [
+        "2026-01-06",
+        "2026-01-07",
+    ]
+    assert frame.volume.isna().all()
+    with pytest.raises(ValueError, match="empty"):
+        bars_frame(rows, "SPY", "2026-01-08", "2026-01-07")
 
 
 def test_fx_snapshot_uses_only_prior_fixings(

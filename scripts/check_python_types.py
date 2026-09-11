@@ -86,6 +86,7 @@ def main() -> int:
             # Runtime services have independent app/agent packages. API imports in
             # tests and compatibility launchers resolve to the API distribution.
             env = dict(os.environ)
+            env["PYTHONHASHSEED"] = "0"
             env["MYPYPATH"] = os.pathsep.join((str(ROOT / "typings"), str(ROOT / "services/api")))
             print(f"Checking {group}: {len(paths)} files", flush=True)
             result = subprocess.run(

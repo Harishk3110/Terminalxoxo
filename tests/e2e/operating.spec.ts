@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 
 test("portfolio operating desks render across desktop and mobile", async ({
   page,
+  request,
 }) => {
   test.setTimeout(180000);
   const errors: string[] = [];
@@ -72,11 +73,55 @@ test("portfolio operating desks render across desktop and mobile", async ({
     });
   }
   expect(errors).toEqual([]);
-  await page.goto("/factor-lab");
-  await page.getByLabel("Factor horizon").selectOption("252");
-  await expect(
-    page.getByText("Requested factor lookback exceeds available history"),
-  ).toBeVisible();
+  // Select a genuinely short source in the isolated test database. The unpinned
+  // universe also contains valid older history and need not be insufficient.
+  const quotesResponse = await request.get("/backend/api/v1/quotes");
+  expect(quotesResponse.ok()).toBe(true);
+  const quotes: { items: { symbol: string; asset_class: string }[] } =
+    await quotesResponse.json();
+  const previous: { path: string; rule: Record<string, unknown> }[] = [];
+  try {
+    for (const quote of quotes.items.filter((item) =>
+      ["Equity", "ETF"].includes(item.asset_class),
+    )) {
+      const path =
+        "/backend/api/v1/operations/sources/" +
+        encodeURIComponent(quote.symbol);
+      const response = await request.get(path);
+      expect(response.ok()).toBe(true);
+      const { rule } = await response.json();
+      previous.push({ path, rule });
+      const saved = await request.post(path, {
+        data: {
+          ...rule,
+          preferred_source: "KnK Demo / coherent daily series",
+          reason: "Isolated browser short-history fixture",
+        },
+      });
+      expect(saved.ok()).toBe(true);
+    }
+    expect(previous.length).toBeGreaterThan(1);
+    await page.goto("/factor-lab");
+    const factorResponse = page.waitForResponse((response) =>
+      response.url().includes("/api/v1/factors?lookback=252&"),
+    );
+    await page.getByLabel("Factor horizon").selectOption("252");
+    const response = await factorResponse;
+    expect(response.ok()).toBe(true);
+    expect(await response.json()).toMatchObject({
+      lookback: 252,
+      quality: "INSUFFICIENT DATA",
+      items: [],
+    });
+    await expect(
+      page.getByText("Requested factor lookback exceeds available history"),
+    ).toBeVisible();
+  } finally {
+    for (const { path, rule } of previous) {
+      const restored = await request.post(path, { data: rule });
+      expect(restored.ok()).toBe(true);
+    }
+  }
   expect(errors).toEqual([]);
 });
 

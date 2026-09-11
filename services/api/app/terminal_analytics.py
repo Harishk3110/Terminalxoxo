@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd
@@ -12,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models
+from .price_sources import DailyBar, MarketPriceResolver
 from .repositories import MarketRepository, PortfolioRepository
 from .services import PortfolioService
 
@@ -86,17 +89,14 @@ def price_frame(session: Session, ids: list[str], limit_days=3700):
     )
 
 
-def quotes(session: Session):
+def quotes(session: Session, price_book: MarketPriceResolver | None = None):
     rows = session.execute(
         select(models.Instrument, models.LatestQuote, models.Exchange)
         .join(models.LatestQuote, models.LatestQuote.instrument_id == models.Instrument.id)
         .outerjoin(models.Exchange, models.Exchange.id == models.Instrument.exchange_id)
     ).all()
-    frame = price_frame(session, [item.id for item, _, _ in rows], 8)
     result = []
     for item, quote, exchange in rows:
-        prices = frame[item.id].dropna() if item.id in frame else []
-        previous = float(prices.iloc[-2]) if len(prices) > 1 else float(quote.price)
         result.append(
             {
                 "id": item.id,
@@ -109,18 +109,20 @@ def quotes(session: Session):
                 "industry": item.industry,
                 "exchange": exchange.code if exchange else None,
                 "price": float(quote.price),
-                "change": float(quote.price) - previous,
-                "change_pct": float(quote.price) / previous - 1 if previous else None,
+                "change": None,
+                "change_pct": None,
                 "source": quote.provider,
                 "quality": quote.quality,
                 "as_of": quote.as_of.isoformat(),
                 "market_state": "DEMO" if quote.quality == "DEMO DATA" else "EOD",
             }
         )
-    from .price_sources import MarketPriceResolver
-
     at = datetime.now(UTC)
-    book = MarketPriceResolver(session, [r["id"] for r in result])
+    book = (
+        price_book
+        if price_book is not None
+        else MarketPriceResolver(session, [r["id"] for r in result])
+    )
     for row in result:
         observation = book.resolve(row["id"], at)
         if observation:
@@ -157,25 +159,38 @@ def quotes(session: Session):
     return result
 
 
-def history(session: Session, key: str, limit=2600):
+class HistoryPayload(TypedDict):
+    instrument_id: str
+    symbol: str
+    source: str | None
+    quality: str
+    as_of: str | None
+    items: Sequence[DailyBar]
+
+
+def history(
+    session: Session,
+    key: str,
+    limit: int = 2600,
+    *,
+    price_book: MarketPriceResolver | None = None,
+) -> HistoryPayload:
     item = instrument(session, key)
     if session.scalar(
         select(models.MarketObservation.id)
         .where(models.MarketObservation.instrument_id == item.id)
         .limit(1)
     ):
-        from .price_sources import MarketPriceResolver
-
         today = datetime.now(UTC).date()
-        book = MarketPriceResolver(session, [item.id])
-        rows = book.history(item.id, today - timedelta(days=limit * 2), today)[-limit:]
+        book = price_book if price_book is not None else MarketPriceResolver(session, [item.id])
+        observations = book.history(item.id, today - timedelta(days=limit * 2), today)[-limit:]
         return {
             "instrument_id": item.id,
             "symbol": item.symbol,
-            "source": rows[-1]["source"] if rows else None,
-            "quality": rows[-1]["data_state"] if rows else "UNAVAILABLE",
-            "as_of": rows[-1]["as_of"] if rows else None,
-            "items": rows,
+            "source": observations[-1]["source"] if observations else None,
+            "quality": observations[-1]["data_state"] if observations else "UNAVAILABLE",
+            "as_of": observations[-1]["as_of"] if observations else None,
+            "items": observations,
         }
     rows = session.scalars(
         select(models.PriceBar)
@@ -196,7 +211,7 @@ def history(session: Session, key: str, limit=2600):
                 "high": float(bar.high),
                 "low": float(bar.low),
                 "close": float(bar.close),
-                "volume": float(bar.volume or 0),
+                "volume": float(bar.volume) if bar.volume is not None else None,
             }
             for bar in rows
         ],
@@ -541,7 +556,6 @@ def valuation(session: Session, key: str, growth=0.08, wacc=0.10, terminal_growt
 
 
 def factor_analysis(session: Session, lookback=63, factor="MOMENTUM", horizon=5, cost_bps=10):
-    universe = [q for q in quotes(session) if q["asset_class"] in ("Equity", "ETF")]
     if (
         not 5 <= lookback <= 500
         or not 1 <= horizon <= 63
@@ -549,14 +563,24 @@ def factor_analysis(session: Session, lookback=63, factor="MOMENTUM", horizon=5,
         or not 0 <= cost_bps <= 500
     ):
         raise ValueError("Invalid factor lookback, horizon or cost assumption")
+    identifiers = session.scalars(
+        select(models.Instrument.id).join(
+            models.LatestQuote, models.LatestQuote.instrument_id == models.Instrument.id
+        )
+    ).all()
+    book = MarketPriceResolver(session, identifiers)
+    universe = [q for q in quotes(session, book) if q["asset_class"] in ("Equity", "ETF")]
     frame = pd.DataFrame(
         {
             q["id"]: pd.Series(
                 {
                     pd.Timestamp(row["date"]): row["close"]
-                    for row in history(session, q["id"], 800)["items"]
-                    if not row.get("as_of")
-                    or pd.Timestamp(row["as_of"]).date() == pd.Timestamp(row["date"]).date()
+                    for row in history(session, q["id"], 800, price_book=book)["items"]
+                    if not (observed_as_of := row.get("as_of"))
+                    or (
+                        isinstance(observed_as_of, str)
+                        and pd.Timestamp(observed_as_of).date() == pd.Timestamp(row["date"]).date()
+                    )
                 },
                 dtype=float,
             )

@@ -2,16 +2,18 @@
 
 import hashlib
 import json
+from collections.abc import Mapping, Sequence
 from typing import Literal
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
 from .object_storage import ObjectStorage
-from .quant_data import dataset_rows
+from .quant_data import JSON_ROWS, DatasetProvenance, dataset_rows
 from .terminal_analytics import history, instrument
 
 
@@ -24,7 +26,12 @@ class ResearchInput(BaseModel):
     end: str | None = None
 
 
-def bars_frame(rows: list[dict], symbol: str, start=None, end=None) -> pd.DataFrame:
+def bars_frame(
+    rows: Sequence[Mapping[str, object]],
+    symbol: str,
+    start: str | None = None,
+    end: str | None = None,
+) -> pd.DataFrame:
     selected = [row for row in rows if row.get("symbol", symbol) == symbol]
     if not selected or len(selected) > 10000:
         raise ValueError("Research requires 1 to 10,000 bars per security")
@@ -53,15 +60,16 @@ def bars_frame(rows: list[dict], symbol: str, start=None, end=None) -> pd.DataFr
     if ((frame.high < prices.max(axis=1)) | (frame.low > prices.min(axis=1))).any():
         raise ValueError("OHLC high/low bounds are inconsistent")
     if start:
-        frame = frame.loc[pd.Timestamp(start) :]
+        frame = frame.loc[frame.index >= pd.Timestamp(start)]
     if end:
-        frame = frame.loc[: pd.Timestamp(end)]
+        frame = frame.loc[frame.index <= pd.Timestamp(end)]
     if frame.empty:
         raise ValueError("Selected research interval is empty")
     return frame
 
 
-def pin_input(session, request: ResearchInput) -> dict:
+def pin_input(session: Session, request: ResearchInput) -> DatasetProvenance:
+    rows: list[dict[str, JsonValue]]
     if request.dataset_version_id:
         rows, evidence = dataset_rows(session, request.dataset_version_id)
         bars_frame(rows, request.symbol, request.start, request.end)
@@ -88,10 +96,11 @@ def pin_input(session, request: ResearchInput) -> dict:
         source, quality = "DemoProvider independent research fixture", "DEMO DATA"
     else:
         payload = history(session, item.id, 10000)
-        rows, source, quality = payload["items"], payload["source"], payload["quality"]
+        rows = JSON_ROWS.validate_python(payload["items"], strict=True)
+        source, quality = payload["source"] or "UNAVAILABLE", payload["quality"]
     rows = [{**row, "symbol": item.symbol, "currency": item.currency} for row in rows]
     frame = bars_frame(rows, request.symbol, request.start, request.end)
-    selected = set(frame.index.strftime("%Y-%m-%d"))
+    selected = set(pd.DatetimeIndex(frame.index).strftime("%Y-%m-%d"))
     rows = [row for row in rows if row["date"] in selected]
     content = json.dumps(rows, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     digest = hashlib.sha256(content).hexdigest()

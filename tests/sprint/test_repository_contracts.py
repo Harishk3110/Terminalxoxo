@@ -84,7 +84,12 @@ def test_invalid_dataset_schema_fails_before_persistence(ledger_session, columns
 
 
 @pytest.mark.parametrize("volume", [None, Decimal("0"), Decimal("25")])
-def test_price_bar_history_preserves_missing_versus_zero_volume(ledger_session, volume):
+def test_price_bar_history_preserves_missing_versus_zero_volume(
+    ledger_session: Session,
+    volume: Decimal | None,
+) -> None:
+    from app.terminal_analytics import history
+
     ledger_session.add(
         models.Instrument(
             id="CASH_TEST",
@@ -118,3 +123,6 @@ def test_price_bar_history_preserves_missing_versus_zero_volume(ledger_session, 
     )
     assert len(rows) == 1
     assert rows[0]["volume"] == (float(volume) if volume is not None else None)
+    terminal_rows = history(ledger_session, "CASH_TEST")["items"]
+    assert len(terminal_rows) == 1
+    assert terminal_rows[0]["volume"] == (float(volume) if volume is not None else None)

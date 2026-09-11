@@ -21,6 +21,11 @@ milestone remain open unless explicitly verified below.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
 - [x] M2: shared validated DCF result consumers; existing financial assertions retained.
+- [x] M2/M7: eligible dated market/FX candidates across legacy/imported stores; preferred-source and stale/no-demo-fallback regressions.
+- [x] M2/M11: typed options rows/results, historical specification checks, finite owned-equity guard and exact 144-case chain/position baseline comparison.
+- [x] M3: explicit risk variance/correlation empty states, genuine-zero preservation and desktop/mobile browser verification.
+- [x] M2/M9: one market-history load per factor request and typed vectorized diagnostics; direct pandas and exact old/new financial comparisons.
+- [x] M3/M4: cancel pending initial ledger reads after a successful write; five unit regressions and the real browser audit/reload journey pass.
 - [x] M2: 152 test function contracts in 44 files; executable AST/import bindings preserved, full backend pass.
 - [x] M4: dated stress/hedge snapshots, future-date rejection and historical/current projection isolation.
 - [x] M5: imported security/version handoff to backtesting; newly queued run identity asserted.

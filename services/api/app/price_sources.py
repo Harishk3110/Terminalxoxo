@@ -54,13 +54,17 @@ class PriceAlternative(PriceProvenance):
     difference_pct: float | None
 
 
-class HistoricalPrice(PriceProvenance):
+class DailyBar(TypedDict):
     date: str
     close: float
     open: float | None
     high: float | None
     low: float | None
     volume: float | None
+
+
+class HistoricalPrice(PriceProvenance, DailyBar):
+    pass
 
 
 def _numeric_field(value: JsonValue) -> float | None:
@@ -148,10 +152,11 @@ class MarketPriceResolver:
                     row.fields,
                 )
             )
-        missing = [key for key in instrument_ids if key not in self.series]
-        if missing:
+        # Legacy history remains eligible even after a newer observation is imported.
+        # Dated selection and source preferences are applied across both stores.
+        if instrument_ids:
             query = select(models.PriceBar).where(
-                models.PriceBar.instrument_id.in_(missing), models.PriceBar.interval == "1d"
+                models.PriceBar.instrument_id.in_(instrument_ids), models.PriceBar.interval == "1d"
             )
             if start:
                 query = query.where(
@@ -278,23 +283,21 @@ class FxRateResolver:
                     row.source_file_id,
                 )
             )
-        existing = set(self.series)
         for rate in session.scalars(select(models.FxRate).order_by(models.FxRate.date)).all():
             key = (rate.base_currency, rate.quote_currency)
-            if key not in existing:
-                category = "DEMO" if rate.quality == "DEMO DATA" else "PROVIDER"
-                self.series[key].append(
-                    Observation(
-                        rate.rate,
-                        datetime.combine(rate.date, time.min, UTC),
-                        utc(rate.created_at),
-                        rate.provider,
-                        category,
-                        "DEMO" if category == "DEMO" else "EOD",
-                        rate.quote_currency,
-                        rate.id,
-                    )
+            category = "DEMO" if rate.quality == "DEMO DATA" else "PROVIDER"
+            self.series[key].append(
+                Observation(
+                    rate.rate,
+                    datetime.combine(rate.date, time.min, UTC),
+                    utc(rate.created_at),
+                    rate.provider,
+                    category,
+                    "DEMO" if category == "DEMO" else "EOD",
+                    rate.quote_currency,
+                    rate.id,
                 )
+            )
         self.groups: dict[tuple[str, str], ObservationGroups] = {}
         for key, rows in self.series.items():
             groups: dict[tuple[str, str], list[Observation]] = defaultdict(list)
@@ -302,7 +305,7 @@ class FxRateResolver:
                 groups[(observation.category, observation.source)].append(observation)
             self.groups[key] = {}
             for group, values in groups.items():
-                values.sort(key=lambda r: (r.timestamp, r.ingested_at))
+                values.sort(key=lambda r: (r.timestamp, r.ingested_at, r.id))
                 self.groups[key][group] = ([r.timestamp for r in values], values)
 
     def resolve(
@@ -316,17 +319,32 @@ class FxRateResolver:
                 "stale": False,
                 "value": "1",
             }
-        reverse = (currency, base) not in self.groups and (base, currency) in self.groups
-        groups = self.groups.get((base, currency) if reverse else (currency, base), {})
-        candidates = []
-        for dates, rows in groups.values():
-            index = bisect_right(dates, utc(at)) - 1
-            if index >= 0:
-                candidates.append(rows[index])
+        candidates: list[tuple[Observation, bool]] = []
+        for pair, inverse in (((currency, base), False), ((base, currency), True)):
+            for dates, rows in self.groups.get(pair, {}).values():
+                index = bisect_right(dates, utc(at)) - 1
+                if index >= 0:
+                    candidates.append((rows[index], inverse))
+        # Select eligible history first. A future direct quote must not hide an
+        # older inverse rate, and direction cannot outrank provider precedence.
         for category in PRIORITY:
-            matches = [r for r in candidates if r.category == category]
+            matches = [item for item in candidates if item[0].category == category]
             if matches:
-                row = max(matches, key=lambda r: (r.timestamp, r.ingested_at))
+                row, reverse = max(
+                    matches,
+                    key=lambda item: (
+                        item[0].timestamp,
+                        item[0].ingested_at,
+                        not item[1],
+                        item[0].id,
+                    ),
+                )
+                if not row.value.is_finite() or row.value <= 0:
+                    return None, {
+                        **row.provenance(at),
+                        "data_state": "INVALID",
+                        "inverse": reverse,
+                    }
                 value = 1 / row.value if reverse else row.value
                 return value, {**row.provenance(at), "value": str(value), "inverse": reverse}
         return None, {

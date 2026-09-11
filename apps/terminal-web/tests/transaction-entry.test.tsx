@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { QueryObserver } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { knkApi } from "@knk/api-client";
 import { TransactionEntryDialog } from "../components/ledger/transaction-entry";
@@ -159,6 +160,62 @@ describe("manual transaction entry", () => {
       queryKey: ["ledger-accounting", "book"],
     });
   });
+
+  it.each([
+    ["operating-trades"],
+    ["terminal-portfolio"],
+    ["ledger-summary", "book"],
+    ["ledger-accounting", "book"],
+    ["ledger-transactions", "book"],
+  ])(
+    "replaces the pending initial %s read after a successful entry",
+    async (...queryKey) => {
+      const post = vi.spyOn(knkApi, "post").mockResolvedValue(transaction);
+      const close = vi.fn();
+      const { client } = renderLedger(
+        <TransactionEntryDialog portfolioKey="book" onClose={close} />,
+      );
+      let finishOldRead: (value: string[]) => void = () => {};
+      let oldSignal: AbortSignal | undefined;
+      const oldRead = new Promise<string[]>((resolve) => {
+        finishOldRead = resolve;
+      });
+      const read = vi.fn(({ signal }: { signal: AbortSignal }) => {
+        if (!oldSignal) {
+          oldSignal = signal;
+          return oldRead;
+        }
+        return Promise.resolve([transaction.id]);
+      });
+      const observer = new QueryObserver(client, { queryKey, queryFn: read });
+      const unsubscribe = observer.subscribe(() => {});
+      try {
+        await waitFor(() => expect(read).toHaveBeenCalledOnce());
+        await choose("TAX");
+        await userEvent.type(
+          screen.getByLabelText("Gross amount", { exact: true }),
+          "1.23",
+        );
+        await userEvent.click(
+          screen.getByRole("button", { name: "Record transaction" }),
+        );
+        await waitFor(() => expect(post).toHaveBeenCalledOnce());
+        await waitFor(() => expect(close).toHaveBeenCalledOnce());
+        expect(read).toHaveBeenCalledTimes(2);
+        expect(oldSignal?.aborted).toBe(true);
+        expect(observer.getCurrentResult().data).toEqual([transaction.id]);
+        await act(async () => {
+          finishOldRead([]);
+          await oldRead;
+        });
+        expect(observer.getCurrentResult().data).toEqual([transaction.id]);
+      } finally {
+        finishOldRead([]);
+        unsubscribe();
+        client.clear();
+      }
+    },
+  );
 
   it("defaults cash to the book currency and never offers an identical FX pair", async () => {
     renderLedger(

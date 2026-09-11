@@ -430,3 +430,136 @@ ordering of missing TypedDict key names in the same existing diagnostic. No new
 runner/lifecycle module has a strict error. API-only remains 1,107 errors in 36
 files. Gates 8-27 are NOT_RUN in both release invocations, not passing checks.
 See RELEASE_CANDIDATE.md for commands, prerequisites and failure semantics.
+
+## Dated Sources, Typed Options and Risk Availability
+
+Baseline a3a5d79 plus working tree, 2026-09-12 SGT. Paths below are under logs/.
+No complete release-candidate pass is claimed.
+
+| Check | Native exit / result | Evidence |
+| --- | --- | --- |
+| FX negative-control regressions before fix | 1; nine failed, two passed | overnight-fx-source-before.log |
+| Market-price negative control before fix | 1; three failed, five passed | overnight-market-source-before.log |
+| FX/market/history/research/type-gate selection | 0; 46 passed, 7.88s | overnight-source-input-tests-03.log |
+| Options dated-specification negative control | 1; four failed, three passed | overnight-options-asof-before.log |
+| Options pricing/analytics/API/result tests | 0; 37 passed, 4.64s | overnight-options-types-tests-02.log |
+| Exact old/new options comparison | 0; 144 chain and 144 position cases | overnight-options-parity-03.log / verify-options-parity.py |
+| Full backend run 15 | 1; 1,184 passed, one failed, 359.79s | overnight-backend-15.log |
+| Explicit short-source factor fixture | 0; one passed, 22.54s | overnight-factor-horizon-03.log |
+| Full backend run 16 | 0; 1,199 passed, 13 warnings, 376.31s | overnight-backend-16.log / overnight-coverage-16.json |
+| Whole strict typing checkpoint 09 | 1; 1,859 distinct diagnostics / 123 files / 257 sources | python-types-09/manifest.json |
+| Whole strict typing checkpoint 10 | 1; 1,732 distinct diagnostics / 121 files / 259 sources | python-types-10/manifest.json |
+| Scoped strict types, eight changed source/test modules | 0; imports silent only in this scoped check, never in the whole runner | overnight-source-options-scoped-types-01.log |
+| Pandas stubs install / pip check | 0 / 0 | overnight-pandas-stubs-install.log / overnight-pandas-stubs-pip-check.log |
+| Risk UI regression negative control | 1; four failed, one passed | overnight-risk-empty-before.log |
+| Risk UI regression after fix | 0; five passed, 2.79s | overnight-risk-empty-after.log |
+| Full frontend unit tests | 0; 261 terminal + five shared tests | overnight-source-options-frontend-unit.log |
+| TypeScript / ESLint / Node 22 build | 0 each | overnight-source-options-frontend-types.log / overnight-source-options-frontend-lint.log / overnight-risk-empty-build.log |
+
+The source resolvers now select only observations eligible at the requested date
+before applying priority. Future direct FX cannot hide older inverse FX; direction
+does not outrank source quality. Invalid selected FX remains INVALID, not demo.
+Legacy historical rows remain eligible after newer imported observations arrive.
+Explicit preferred sources still exclude alternatives; stale preferred observations
+retain their original timestamps and stale flags. Missing volume remains null,
+distinct from reported zero, through history and research input validation.
+
+The factor regression previously relied on legacy history being globally hidden.
+Restoring valid history correctly made the unpinned 252-day request calculable.
+The fixture now explicitly selects the short managed series inside a rolled-back
+test transaction, verifies its source and actual length, and keeps the original
+252-day/INSUFFICIENT DATA/empty-result assertions. First fixture attempt omitted
+the required rule priority; its NOT NULL failure is retained in run 02. Run 03
+includes the explicit priority and passes. No runtime history was shortened.
+
+Options contract identity now includes exercise style and UTC expiry clock and is
+checked only after excluding future observations. Typed rows preserve all existing
+Greek/state/provenance fields. Provider Greeks are not silently substituted with
+model Greeks. Missing interest is null; explicit zero interest remains included.
+Position tests verify signed owned quantity, explicit zero premium and a known
+combined option/equity payoff; nonfinite equity quantities are rejected.
+
+The initial exact comparison caught last-bit rounding changes from converting
+NumPy profile values before Python 3.12 summation. Conversion was moved after the
+original NumPy accumulation. All 144 chain and 144 position scenarios now match
+the committed engine exactly, including provider/calculated, European/American,
+missing/zero/positive interest, missing/provided IV and stale/current combinations.
+The tolerance was not widened. Full backend run 17 passed 1,199 tests with 13
+warnings in 491.91s, exit 0; coverage is 10,823/12,293 statements. Receipt:
+overnight-backend-17.log / overnight-coverage-17.json.
+
+The pandas stub update uses the same 2.2.3 runtime target and fixes the upstream
+typing of pct_change(fill_method=None). Primary references:
+[compatible stub release](https://pypi.org/project/pandas-stubs/2.2.3.250527/) and
+[maintained Series declarations](https://github.com/pandas-dev/pandas-stubs/blob/v2.2.3.250527/pandas-stubs/core/series.pyi).
+No dependency-wide missing-import suppression was introduced.
+
+Risk charts now state unavailable variance/correlation explicitly, omit missing
+heatmap cells without changing coordinates, retain actual zero values and defer
+to loading/error states. Existing 1920px overview/risk/options images were reviewed;
+new desktop/mobile empty-state screenshots were inspected. Both focused browser
+tests passed with zero retries. Runtime UI/API/workers/report refresh returned
+healthy, native exit 0 (overnight-source-options-docker-refresh-01.log).
+
+## Ledger Read Race and Factor Latency
+
+2026-09-12 SGT, baseline a3a5d79 plus working tree; full release remains red.
+
+Full browser run 08 exposed an initial query/mutation race. The POST returned 201,
+but the only trade-list GET started before the save. TanStack Query 5.62.8 keeps
+an in-flight initial read when invalidated with no existing data. The dialog now
+explicitly cancels each affected read before invalidation. Five deterministic
+negative-control tests failed before the fix; all 18 transaction-entry tests pass
+after, including late-response rejection and exact persisted transaction identity.
+Logs: overnight-ledger-refresh-before.log / overnight-ledger-refresh-after.log.
+
+The browser short-history assertion now explicitly selects the short managed demo
+source in its isolated database and restores every original source rule in finally.
+The 252-day, INSUFFICIENT DATA and empty-row assertions remain intact. No real
+source rules or live portfolio data are changed by this fixture.
+
+Factor profiling found 19 resolver constructions and 107,597 ORM materializations
+per request (13.679s instrumented). One shared resolver removes duplicate reads;
+the six-security SQL-count fixture now performs one price-history SELECT rather
+than eight. Both query-count tests failed before the fix. The affected selection
+then passed 29 tests, exit 0 (overnight-factor-reads-after.log).
+
+Repeated pandas row objects were the other major cost. Pairwise masks and average
+ranks are prepared once; stable sorting, NumPy correlation, quantile means and
+turnover preserve the previous calculation. No history/horizon/tolerance was
+shortened. Eighteen complete result comparisons cover all six factors across full,
+missing/tied/infinite and insufficient data. Exact comparison run 03 exits 0;
+complete 800-date calculations improved from multi-second runs to subsecond runs.
+Evidence: overnight-factor-statistics-parity-03.log / verify-factor-statistics.py.
+
+Permanent direct-pandas, missing-benchmark and SQL-count tests: 22 passed, 5.29s
+in overnight-factor-optimized-tests-02.log. The first new missing-data fixture also
+removed the benchmark's entire rolling history and correctly returned no beta;
+it now retains the benchmark for cross-section checks and separately asserts the
+missing-benchmark empty state. Scoped strict types for factor statistics and its
+test module pass (overnight-factor-scoped-types-02.log).
+
+Current frontend units: 266 terminal + five shared = 271, native exit 0
+(overnight-ledger-factor-unit.log). TypeScript, ESLint, Ruff and formatting pass.
+The Node 22 production build passed (overnight-ledger-factor-build.log).
+Whole strict types checkpoint 12 exits 1: 1,667 distinct diagnostic lines in 119
+files, 260 inventoried sources; API 913 errors in 33 files. Checkpoint 11 had 1,732
+diagnostics. No global type suppressions were added. Backend run 18 passed 1,214
+tests with 13 warnings in 469.49s, native exit 0. Coverage: 10,871/12,341 statements.
+Receipts: overnight-backend-18.log / overnight-backend-18.xml /
+overnight-coverage-18.json. The three affected browser journeys passed, native exit
+0, zero skipped/flaky/retries, 2.7m. Their durations were 19.7s (manual ledger),
+1.1m (operating desks including all sizes and explicit factor source), and 51.1s
+(saved alpha/model/Monte Carlo and the interactive 21-day volatility factor).
+Receipts: overnight-ledger-factor-focused-01.log /
+overnight-ledger-factor-focused-01-results.json. This is a focused pass, not a
+replacement for the next complete browser run.
+
+Full browser run 08 finished exit 1: 36 passed, three failed, zero skipped/flaky,
+23.3m. JSON receipt: overnight-full-08-results.json. All five viewport sweeps
+passed, but the full suite did not. The exact failing journeys are manual ledger
+audit persistence, operating desks/short factor history, and saved quant runs/
+interactive Factor Lab. The corrected build is under targeted verification.
+Additional original screenshots inspected: macro at 1366px and GEX at 2560px.
+Secret scan passed for 587 text files with zero findings; the broker-action scan
+passed. Both receipts have prefix overnight-ledger-factor-.

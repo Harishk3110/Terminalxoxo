@@ -37,12 +37,12 @@ export interface PortfolioData extends PortfolioPayload {
       sector: string;
       country: string;
       currency: string;
-      beta: number;
+      beta: number | null;
       daily_pnl: number;
       source: string;
       as_of: string;
       fx_rate: number;
-      risk_contribution: number;
+      risk_contribution: number | null;
     }
   >;
   performance: Metrics;

@@ -73,6 +73,8 @@ def test_failed_distribution_is_not_converted_into_a_warning(
     monkeypatch.setattr(sys, "argv", ["check", "--output", str(tmp_path)])
 
     def fail(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        environment = kwargs["env"]
+        assert isinstance(environment, dict) and environment["PYTHONHASHSEED"] == "0"
         return subprocess.CompletedProcess(["mypy"], 1, b"example.py:1: error: fixture\n")
 
     monkeypatch.setattr(subprocess, "run", fail)

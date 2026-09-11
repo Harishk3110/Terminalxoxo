@@ -615,6 +615,15 @@ export function RiskPage() {
   const query = usePortfolio();
   const d = query.data;
   const { open } = useTerminal();
+  const hasVariance = d?.positions.some((p) =>
+    Number.isFinite(p.risk_contribution),
+  );
+  const correlationCells =
+    d?.correlation.values.flatMap((row, y) =>
+      row.flatMap((value, x) =>
+        value !== null && Number.isFinite(value) ? [[x, y, value]] : [],
+      ),
+    ) ?? [];
   return (
     <>
       <PageTitle code="RISK" title="Portfolio Risk / Historical Simulation">
@@ -656,71 +665,90 @@ export function RiskPage() {
           error={query.error}
           loading={query.isLoading}
         >
-          <Chart
-            label="Position variance contribution"
-            option={{
-              xAxis: {
-                type: "category",
-                data: d?.positions.map((p) => p.symbol),
-              },
-              yAxis: {
-                type: "value",
-                axisLabel: {
-                  formatter: (value: number) => `${(value * 100).toFixed(0)}%`,
+          {hasVariance ? (
+            <Chart
+              label="Position variance contribution"
+              option={{
+                xAxis: {
+                  type: "category",
+                  data: d?.positions.map((p) => p.symbol),
                 },
-                splitLine: { lineStyle: { color: COLORS.grid } },
-              },
-              series: [
-                {
-                  type: "bar",
-                  barMaxWidth: 40,
-                  data: d?.positions.map((p) => p.risk_contribution),
+                yAxis: {
+                  type: "value",
+                  axisLabel: {
+                    formatter: (value: number) =>
+                      `${(value * 100).toFixed(0)}%`,
+                  },
+                  splitLine: { lineStyle: { color: COLORS.grid } },
                 },
-              ],
-            }}
-          />
+                series: [
+                  {
+                    type: "bar",
+                    barMaxWidth: 40,
+                    data: d?.positions.map((p) =>
+                      Number.isFinite(p.risk_contribution)
+                        ? p.risk_contribution
+                        : null,
+                    ),
+                  },
+                ],
+              }}
+            />
+          ) : (
+            <Empty
+              title="INSUFFICIENT DATA"
+              detail="Variance contributions are unavailable for this snapshot."
+            />
+          )}
         </Panel>
         <Panel
           title="Daily return correlation"
           source={d?.source}
           asOf={d?.as_of}
           quality={d?.quality}
+          error={query.error}
+          loading={query.isLoading}
         >
-          <Chart
-            label="Correlation matrix"
-            option={{
-              tooltip: {
-                position: "top",
-                formatter: (p: unknown) => {
-                  const v = (p as { data: number[] }).data;
-                  return `${d?.correlation.symbols[v[0]]} / ${d?.correlation.symbols[v[1]]}: ${number(v[2])}`;
-                },
-              },
-              grid: { left: 50, right: 12, top: 12, bottom: 30 },
-              xAxis: { type: "category", data: d?.correlation.symbols },
-              yAxis: { type: "category", data: d?.correlation.symbols },
-              visualMap: {
-                show: false,
-                min: -1,
-                max: 1,
-                inRange: { color: [COLORS.red, COLORS.panel, COLORS.blue] },
-              },
-              series: [
-                {
-                  type: "heatmap",
-                  label: {
-                    show: true,
-                    fontSize: 10,
-                    formatter: (p: unknown) =>
-                      number((p as { data: number[] }).data[2]),
+          {correlationCells.length ? (
+            <Chart
+              label="Correlation matrix"
+              option={{
+                tooltip: {
+                  position: "top",
+                  formatter: (p: unknown) => {
+                    const v = (p as { data: number[] }).data;
+                    return `${d?.correlation.symbols[v[0]]} / ${d?.correlation.symbols[v[1]]}: ${number(v[2])}`;
                   },
-                  data: d?.correlation.values.flatMap((row, y) =>
-                    row.map((v, x) => [x, y, v]),
-                  ),
                 },
-              ],
-            }}
-          />
+                grid: { left: 50, right: 12, top: 12, bottom: 30 },
+                xAxis: { type: "category", data: d?.correlation.symbols },
+                yAxis: { type: "category", data: d?.correlation.symbols },
+                visualMap: {
+                  show: false,
+                  min: -1,
+                  max: 1,
+                  inRange: { color: [COLORS.red, COLORS.panel, COLORS.blue] },
+                },
+                series: [
+                  {
+                    type: "heatmap",
+                    label: {
+                      show: true,
+                      fontSize: 10,
+                      formatter: (p: unknown) =>
+                        number((p as { data: number[] }).data[2]),
+                    },
+                    data: correlationCells,
+                  },
+                ],
+              }}
+            />
+          ) : (
+            <Empty
+              title="INSUFFICIENT DATA"
+              detail="No eligible return pairs are available for this snapshot."
+            />
+          )}
         </Panel>
         <Panel
           title="Risk exposure decomposition"

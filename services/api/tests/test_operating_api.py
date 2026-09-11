@@ -3,9 +3,15 @@ import io
 import uuid
 from pathlib import Path
 
+import pytest
+from app import models
+from app.database import SessionLocal, get_session
 from app.main import app
+from app.portfolio_seed import DEMO_SOURCE
+from app.terminal_analytics import history
 from fastapi.testclient import TestClient
 from openpyxl import load_workbook
+from sqlalchemy import select
 
 client = TestClient(app)
 
@@ -131,9 +137,31 @@ def test_candidate_requires_pinned_version_and_blocks_unverified_promotion() -> 
     assert missing.status_code == 422
 
 
-def test_factor_horizon_never_silently_shortens() -> None:
-    response = client.get("/api/v1/factors?lookback=252")
-    assert response.status_code == 200
-    assert response.json()["quality"] == "INSUFFICIENT DATA"
-    assert response.json()["lookback"] == 252
-    assert response.json()["items"] == []
+def test_factor_horizon_never_silently_shortens(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Pin the deliberately short managed series; legacy history now remains
+    # available unless the selected source explicitly excludes it.
+    with SessionLocal() as session:
+        for item in session.scalars(select(models.Instrument)).all():
+            rule = session.scalar(
+                select(models.SourcePrecedenceRule).where(
+                    models.SourcePrecedenceRule.instrument_id == item.id
+                )
+            )
+            if rule is None:
+                rule = models.SourcePrecedenceRule(
+                    instrument_id=item.id,
+                    priority=["BROKER", "PROVIDER", "FILE", "DEMO"],
+                    reason="Short factor-history test fixture",
+                )
+                session.add(rule)
+            rule.preferred_source = DEMO_SOURCE
+        session.flush()
+        monkeypatch.setitem(app.dependency_overrides, get_session, lambda: session)
+        selected = history(session, "AAPL", 800)["items"]
+        assert 5 < len(selected) < 252
+        assert all(row.get("source") == DEMO_SOURCE for row in selected)
+        response = client.get("/api/v1/factors?lookback=252")
+        assert response.status_code == 200
+        assert response.json()["quality"] == "INSUFFICIENT DATA"
+        assert response.json()["lookback"] == 252
+        assert response.json()["items"] == []

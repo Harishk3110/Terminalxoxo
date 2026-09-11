@@ -3,13 +3,14 @@ from datetime import UTC, datetime
 import pytest
 from app.option_contracts import ChainContract, normalize_option
 from app.options_analytics import OptionLeg, OptionsRequest, analyse_chain, position_analytics
+from app.options_results import DealerConvention
 
 AS_OF = datetime(2026, 1, 2, 20, tzinfo=UTC)
 
 
-def contract(**overrides):
-    return ChainContract(
-        **{
+def contract(**overrides: object) -> ChainContract:
+    return ChainContract.model_validate(
+        {
             "symbol": "AAA",
             "option_symbol": "AAA-C-100",
             "expiry": "2026-02-02",
@@ -31,20 +32,29 @@ def contract(**overrides):
 
 def test_gex_formula_dealer_signs_and_open_interest_not_owned_quantity() -> None:
     contracts = [contract(), contract(option_symbol="AAA-P-100", right="PUT")]
-    for sign in ("DEALER_SHORT", "NEUTRAL", "CALL_POSITIVE_PUT_NEGATIVE"):
+    conventions: tuple[DealerConvention, ...] = (
+        "DEALER_SHORT",
+        "NEUTRAL",
+        "CALL_POSITIVE_PUT_NEGATIVE",
+    )
+    for sign in conventions:
         result = analyse_chain(
             contracts, OptionsRequest(symbol="AAA", dealer_sign=sign), 100, AS_OF
         )
         first = result["items"][0]
+        assert first["gamma"] is not None
         expected = 50 * first["gamma"] * 100 * 100**2 * 0.01 * (-1 if sign == "DEALER_SHORT" else 1)
         assert first["gex"] == pytest.approx(expected)
+        buckets = [row["net_gex"] for row in result["by_strike"]]
+        assert all(value is not None for value in buckets)
         assert result["summary"]["net_gex"] == pytest.approx(
-            sum(row["net_gex"] for row in result["by_strike"])
+            sum(value for value in buckets if value is not None)
         )
         assert result["coverage"]["gex_included"] == 2
         if sign == "CALL_POSITIVE_PUT_NEGATIVE":
             assert result["summary"]["net_gex"] == pytest.approx(0)
     positions = position_analytics(result, [OptionLeg(option_symbol="AAA-C-100", quantity=-2)])
+    assert result["items"][0]["gamma"] is not None
     assert positions["totals"]["gamma"] == pytest.approx(-2 * 100 * result["items"][0]["gamma"])
     assert len(positions["payoff"]) == 101
 

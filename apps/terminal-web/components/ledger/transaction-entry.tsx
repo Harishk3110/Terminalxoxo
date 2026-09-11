@@ -77,6 +77,8 @@ export function TransactionEntryDialog({
         ["ledger-accounting", portfolioKey],
         ["ledger-transactions", portfolioKey],
       ]) {
+        // Initial reads are otherwise deduplicated even when invalidated after a write.
+        await client.cancelQueries({ queryKey });
         await client.invalidateQueries({ queryKey });
       }
       onClose();
