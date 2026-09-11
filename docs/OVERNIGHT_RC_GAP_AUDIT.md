@@ -18,12 +18,12 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Quant | PARTIAL | Corporate actions, PIT fundamentals, general walk-forward |
 | Equity | PARTIAL | Segments, ROIC, historical/forward multiples and feeds |
 | Options | PARTIAL | Historical OI/cones, multi-expiry and full portfolio scope |
-| Reports | PARTIAL | Owned queued exports verified; full financial-model content and rendered artifacts pending |
+| Reports | PARTIAL | Owned queued exports and native DCF formulas/Excel recalculation verified; remaining financial-model/deck depth pending |
 | MFA/auth | PARTIAL | Trusted devices, provisioning and concurrency closure |
 | Monitoring | PARTIAL | Ten dashboards and external alert delivery remain |
 | PostgreSQL/object backup | DEMO_FUNCTIONAL | Snapshot/hash/private isolated restore verified; operator-managed offsite storage and retention deletion |
 | Python quality | PARTIAL | Ruff/format pass; whole first-party strict runner now executes, but engine/API/test errors remain |
-| Browser release | PARTIAL | Full run 06 passed 37/37; compact chart/risk-panel fixes pass targeted desktop/mobile journeys; full run 07 underway |
+| Browser release | PARTIAL | Full run 07 passed 37/37, zero retries, 8.3m; complete direct screenshot review still pending |
 | Release command / hosted deployment | MISSING | Script implementation / external account access |
 
 No report formatting, service health or test count certifies financial accuracy.

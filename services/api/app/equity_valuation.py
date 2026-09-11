@@ -1,14 +1,55 @@
 """Explicit, unlevered FCFF research assumptions; no market execution or advice."""
 
+from collections.abc import Mapping
 from decimal import Decimal, localcontext
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 D = Decimal
 Rate = Annotated[Decimal, Field(ge=-1, le=2, allow_inf_nan=False)]
 Fraction = Annotated[Decimal, Field(ge=0, le=1, allow_inf_nan=False)]
 Amount = Annotated[Decimal, Field(ge=0, le=10**12, allow_inf_nan=False)]
+PriceInput = Decimal | str | int | float | None
+
+
+class WaccResult(TypedDict):
+    cost_of_equity: str
+    after_tax_cost_of_debt: str
+    equity_weight: str
+    debt_weight: str
+    wacc: str
+    inputs: dict[str, JsonValue]
+
+
+class ForecastYear(TypedDict):
+    year: int
+    growth: Decimal
+    revenue: Decimal
+    ebit_margin: Decimal
+    ebit: Decimal
+    tax: Decimal
+    nopat: Decimal
+    depreciation: Decimal
+    capex: Decimal
+    working_capital: Decimal
+    delta_working_capital: Decimal
+    fcff: Decimal
+    present_value: Decimal
+
+
+class DcfProjection(TypedDict):
+    name: str
+    forecast: list[ForecastYear]
+    enterprise_value: Decimal
+    equity_value: Decimal
+    fair_value: Decimal
+    net_debt: Decimal
+    shares: Decimal
+    terminal_value: Decimal
+    terminal_pv: Decimal
+    terminal_share: Decimal | None
+    upside: Decimal | None
 
 
 class WaccInputs(BaseModel):
@@ -22,13 +63,13 @@ class WaccInputs(BaseModel):
     debt_market_value: Amount = D("20")
 
     @model_validator(mode="after")
-    def positive_capital(self):
+    def positive_capital(self) -> Self:
         if self.equity_market_value + self.debt_market_value <= 0:
             raise ValueError("WACC requires positive total market capital")
         return self
 
 
-def calculate_wacc(inputs: WaccInputs):
+def calculate_wacc(inputs: WaccInputs) -> WaccResult:
     total = inputs.equity_market_value + inputs.debt_market_value
     equity_weight = inputs.equity_market_value / total
     cost_equity = inputs.risk_free + inputs.beta * inputs.equity_risk_premium
@@ -62,7 +103,7 @@ class DcfScenario(BaseModel):
     exit_multiple: Annotated[Decimal, Field(gt=0, le=100)] = D("12")
 
     @model_validator(mode="after")
-    def schedules(self):
+    def schedules(self) -> Self:
         if len(self.revenue_growth) != len(self.ebit_margins):
             raise ValueError("Revenue growth and margin schedules must have equal lengths")
         if any(value <= -1 for value in self.revenue_growth):
@@ -86,7 +127,7 @@ class DcfRequest(BaseModel):
     apply_calculated_wacc: bool = False
 
     @model_validator(mode="after")
-    def unique_scenarios(self):
+    def unique_scenarios(self) -> Self:
         if len({s.name for s in self.scenarios}) != len(self.scenarios):
             raise ValueError("Scenario names must be unique")
         if self.apply_calculated_wacc and self.wacc_inputs is None:
@@ -94,14 +135,19 @@ class DcfRequest(BaseModel):
         return self
 
 
-def _project(base: dict, scenario: DcfScenario, initial_wc: Decimal | None, price):
+def _project(
+    base: Mapping[str, JsonValue],
+    scenario: DcfScenario,
+    initial_wc: Decimal | None,
+    price: PriceInput,
+) -> DcfProjection:
     revenue, debt, cash, shares = (
         D(str(base[key])) for key in ("revenue", "debt", "cash", "shares")
     )
     if revenue <= 0 or shares <= 0 or debt < 0 or cash < 0:
         raise ValueError("DCF requires positive revenue/shares and non-negative debt/cash")
     wc = initial_wc if initial_wc is not None else revenue * scenario.working_capital_pct
-    rows = []
+    rows: list[ForecastYear] = []
     for year, (growth, margin) in enumerate(
         zip(scenario.revenue_growth, scenario.ebit_margins, strict=True), 1
     ):
@@ -139,7 +185,7 @@ def _project(base: dict, scenario: DcfScenario, initial_wc: Decimal | None, pric
         else (last["ebit"] + last["depreciation"]) * scenario.exit_multiple
     )
     terminal_pv = terminal / (1 + scenario.wacc) ** len(rows)
-    enterprise = sum(row["present_value"] for row in rows) + terminal_pv
+    enterprise = sum((row["present_value"] for row in rows), D(0)) + terminal_pv
     equity = enterprise - debt + cash
     fair = equity / shares
     return {
@@ -157,20 +203,29 @@ def _project(base: dict, scenario: DcfScenario, initial_wc: Decimal | None, pric
     }
 
 
-def _json(value):
+def _json(value: object) -> JsonValue:
     if isinstance(value, D):
         return str(value)
     if isinstance(value, list):
         return [_json(row) for row in value]
     if isinstance(value, dict):
+        if not all(isinstance(key, str) for key in value):
+            raise ValueError("Financial result keys must be strings")
         return {key: _json(row) for key, row in value.items()}
-    return value
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    raise TypeError("Unsupported financial result value")
 
 
-def dcf_scenarios(base: dict, request: DcfRequest, price=None):
+def dcf_scenarios(
+    base: Mapping[str, JsonValue], request: DcfRequest, price: PriceInput = None
+) -> dict[str, JsonValue]:
     base = dict(base)
-    for metric in ("debt", "cash", "shares"):
-        override = getattr(request, metric + "_override")
+    for metric, override in (
+        ("debt", request.debt_override),
+        ("cash", request.cash_override),
+        ("shares", request.shares_override),
+    ):
         if override is not None:
             base[metric] = str(override)
     if any(base.get(key) is None for key in ("revenue", "debt", "cash", "shares")):
@@ -184,6 +239,8 @@ def dcf_scenarios(base: dict, request: DcfRequest, price=None):
         for submitted in request.scenarios:
             assumptions = submitted.model_dump()
             if request.apply_calculated_wacc:
+                if wacc_result is None:
+                    raise ValueError("Calculated WACC requires explicit capital-market inputs")
                 assumptions["wacc"] = D(wacc_result["wacc"])
             scenario = DcfScenario.model_validate(assumptions)
             projected = _project(base, scenario, request.initial_working_capital, price)
@@ -248,7 +305,7 @@ def dcf_scenarios(base: dict, request: DcfRequest, price=None):
             )
     return {
         "scenarios": _json(result),
-        "wacc": wacc_result,
+        "wacc": _json(wacc_result),
         "base_statement": _json(base),
         "calculation_version": "knk-fcff-1.0",
         "warnings": [

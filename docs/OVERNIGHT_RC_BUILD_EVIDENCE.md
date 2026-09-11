@@ -311,10 +311,59 @@ track heights instead of allowing subsequent panels to cover them.
 | Corrected 1366px/390px visual journeys | 0; two passed, 2.2m | overnight-risk-layout-after.log |
 | Final chart frontend Docker build | 0 | overnight-chart-label-docker-build.log |
 | Frontend Compose refresh | Wrapper exit 1 despite healthy Docker result; explicit native-exit-code verification returned 0 | overnight-chart-label-docker-up.log / overnight-chart-label-docker-up-02.log |
-| Full browser run 07 | Running; no full-pass claim for this revision yet | overnight-browser-full-07.log |
+| Full browser run 07 | 37 passed, zero retries, 8.3m; JSON has zero unexpected/flaky/skipped tests | overnight-browser-full-07.log / overnight-full-07-results.json |
 
 The initial chart test needed the jsdom environment and an explicit value-axis
 type guard. Both were corrected without suppressing TypeScript diagnostics.
 Direct review of the corrected 1366px overview, performance, risk-monitor and
 risk screenshots confirms the label/containment changes. Screenshots are local
 evidence only; no all-pages/all-sizes visual-completion claim is made.
+
+## Native DCF Workbook
+
+2026-09-12 SGT, working tree based on pushed commit 955ec9b, branch main.
+The workbook builder validates the immutable result and reproduces every saved
+scenario before rendering native formulas. Missing source values and invalid
+assumptions do not become zero. The generic sixteen-family file test now uses a
+real DCF result for its DCF case, rather than relabelling a portfolio fixture.
+
+| Command / check | Exit / result | Evidence under logs/ |
+| --- | --- | --- |
+| DCF/report targeted tests, run 02 | 0; 57 passed, one warning | overnight-dcf-tests-02.log |
+| Added metadata and queued native-model tests | 0; 57 passed in the three-module selection | overnight-dcf-tests-03.log |
+| Scoped engine/builder/renderer strict mypy | 0 | overnight-dcf-types-05.log |
+| Scoped new unit/integration test strict mypy | 0 after installing pinned OpenPyXL stubs | overnight-dcf-test-types-02.log |
+| Whole strict runner 07 | 1; 1,966 distinct diagnostics, 125 files, 248 sources; API 1,107 in 36 files | python-types-07/manifest.json |
+| Full first-party Ruff / format | 0 / 0; 269 files formatted | overnight-dcf-full-ruff.log / overnight-dcf-full-format.log |
+| Full backend coverage run 13 | 0; 1,110 passed, 13 warnings, 301.79s; 10,601/12,078 covered | overnight-backend-13.log / overnight-coverage-13.json |
+| Real Excel full recalculation 01 | 0; three passed, 150.74s | overnight-dcf-excel-01.log |
+| Final Excel recalculation 02 | 0; three passed, 88.78s; 264 + 359 + 462 formula checks | overnight-dcf-excel-02.log |
+| API/data/quant/report Docker builds | 0 | overnight-dcf-docker-build.log |
+| Detached refresh with explicit native exit code | 0; all four refreshed services healthy | overnight-dcf-docker-up.log |
+| Live observe-only watchdog check | 0; ten healthy services and successful init | overnight-dcf-health.log |
+| PostgreSQL/MinIO report smoke | 0; three formats, private download/checksum and worker-exit persistence | overnight-dcf-report-smoke.log |
+| Focused equity/report browser check | 0; three passed, zero retries, 1.2m | overnight-dcf-browser.log |
+
+First-pass strict diagnostics in the workbook builder exposed reused variables
+with incompatible types. Descriptive local variables and validated numeric
+boundaries corrected them without ignores. Installing OpenPyXL stubs was required
+for the new test modules. Existing equity tests still index the now-typed JSON
+response without validation; their exposed diagnostics remain part of the total.
+
+Excel tests compare every formula against cached results at 1e-10 relative/absolute
+tolerance, then independently edit revenue and invalid WACC/growth assumptions.
+The 1-, 5- and 10-year cases cover losses, both terminal methods, initial WC zero,
+debt/cash/share overrides, missing prices and calculated WACC. No active workbook
+or user's spreadsheet is opened. Original generated source hashes are unchanged.
+Final artifacts are under logs/dcf-validation/e38eb804fcf14f4384e4d701ec89fc1f,
+c32feb1353b74db9934379f0e250e82a and 606dc82fcc4044709d3adb95db613e2c.
+
+PDFium initially rejected a nonexistent image output directory; explicitly creating
+the new directory fixed rendering. Direct review covered scenario summary, source
+inputs, one-year/ten-year forecasts, sensitivity table and source sheet. All have
+readable nonoverlapping content. The subsequent header-format-only change uses
+integer forecast years. This does not certify the other financial-model/deck families.
+
+The PostgreSQL smoke used newly created database knk_report_verify_20260911_190316_79384b.
+The active book was not its target. Generated sources, workbooks, PDFs, page images,
+databases, logs and credentials remain ignored local evidence.

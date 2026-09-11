@@ -15,8 +15,10 @@ factor/macro/DCF/comparables XLSX; quant PPTX. Unabridged immutable inputs remai
 in the authenticated JSON source download. PDF/PPTX abbreviate long table text
 with ellipses and explicitly reference that source. Missing inputs stay unavailable.
 Position XLSX formulas include multiplier/FX and tested caches; curve charts use
-pinned values. Other cells are exported engine results, not full editable financial
-spreadsheet models or an IC narrative certification.
+pinned values. DCF exports now have source-reconciled native forecast, WACC,
+terminal-value, equity-bridge and sensitivity formulas, with independent Excel
+recalculation tests; see DCF_WORKBOOK_VALIDATION.md. Other families remain review
+exports, not complete editable financial models or an IC narrative certification.
 
 Browser generation/download passed, with inspected desktop/mobile screenshots.
 Isolated PostgreSQL/MinIO file/hash/persistence and anonymous rejection passed.

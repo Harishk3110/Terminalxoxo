@@ -10,6 +10,7 @@ milestone remain open unless explicitly verified below.
 - [x] M1: authenticated report submission, owner scope, immutable input/hash/version.
 - [x] M1: SQL worker claim, bounded failure, private storage, download retention, audit.
 - [ ] M1: all 16 XLSX/PPTX/PDF report families with verified financial models.
+- [x] M1: DCF native forecast/WACC/terminal/bridge/sensitivity formulas, pinned-result reconciliation and independent Excel recalculation.
 - [x] M1: source metadata, hashes, owned downloads, worker-exit persistence and anonymous tests.
 - [x] M1: Excel Studio / Deck Builder, health, metrics, browser generation.
 - [ ] M2: whole first-party formatting/Ruff/mypy, TypeScript, ESLint, OpenAPI.
@@ -24,7 +25,7 @@ milestone remain open unless explicitly verified below.
 - [x] M5: imported security/version handoff to backtesting; newly queued run identity asserted.
 - [x] M5: missing saved backtest fields receive defaults without overwriting explicit zero/blank values.
 - [x] M8: retired inbound dummy broker pairing/snapshot/heartbeat responses disabled and tested.
-- [ ] M3: full single-run browser suite, zero retries masking failures.
+- [x] M3: full single-run browser suite, 37 passed in run 07 with zero retries; financial/layout assertions retained.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.
 - [ ] M4: BUY/partial SELL/dividend -> downstream risk/review and restart persistence.

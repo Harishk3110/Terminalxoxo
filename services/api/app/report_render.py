@@ -39,6 +39,9 @@ def metadata(snapshot: ReportSnapshot) -> ReportSection:
 def xlsx(snapshot: ReportSnapshot) -> bytes:
     import xlsxwriter  # type: ignore[import-untyped]  # 3.2.0 has no published stubs.
 
+    from .dcf_workbook import Formula, model_sheets
+
+    native_dcf = model_sheets(snapshot) if snapshot.kind == "dcf" else []
     output = BytesIO()
     workbook = xlsxwriter.Workbook(
         output, {"in_memory": True, "strings_to_formulas": False, "strings_to_urls": False}
@@ -56,9 +59,117 @@ def xlsx(snapshot: ReportSnapshot) -> bytes:
     formula = workbook.add_format(
         {"num_format": '#,##0.00;[Red](#,##0.00);"-"', "font_color": "#111111"}
     )
+    if native_dcf:
+        model_formats = {}
+        for role, color in (
+            ("header", "#F5B642"),
+            ("label", "#111111"),
+            ("input", "#1D4ED8"),
+            ("source", "#166534"),
+            ("formula", "#111111"),
+        ):
+            for percent in (False, True):
+                model_formats[(role, percent)] = workbook.add_format(
+                    {
+                        "font_name": "Aptos",
+                        "font_size": 10,
+                        "font_color": color,
+                        "text_wrap": True,
+                        "valign": "vcenter",
+                        "bold": role == "header",
+                        "bg_color": "#202124" if role == "header" else "#FFFFFF",
+                        "num_format": "General"
+                        if role in {"header", "label"}
+                        else "0.00%;[Red](0.00%);0.00%"
+                        if percent
+                        else '#,##0.00;[Red](#,##0.00);"-"',
+                    }
+                )
+        for model in native_dcf:
+            sheet = workbook.add_worksheet(model.name)
+            sheet.hide_gridlines(2)
+            sheet.set_landscape()
+            sheet.set_paper(8)
+            sheet.fit_to_pages(1, 1)
+            sheet.set_margins(0.3, 0.3, 0.5, 0.5)
+            sheet.set_header("&LKnK Capital&RPrivate internal research")
+            sheet.set_footer(
+                "&L"
+                + snapshot.quality
+                + " | "
+                + (snapshot.data_as_of or "Timestamp unavailable")
+                + "&RPage &P of &N"
+            )
+            sheet.set_column(0, 0, 38)
+            sheet.set_column(1, model.last_column, 16)
+            sheet.set_default_row(24)
+            sheet.freeze_panes(8, 2) if model.name in {
+                "DCF BASE",
+                "DCF BULL",
+                "DCF BEAR",
+            } else sheet.freeze_panes(1, 1)
+            for cell in model.cells:
+                style = model_formats[(cell.role, cell.percent)]
+                if isinstance(cell.value, Formula):
+                    sheet.write_formula(
+                        cell.address, cell.value.expression, style, cell.value.cached
+                    )
+                elif isinstance(cell.value, str) and (
+                    (cell.address == "A1" and model.name != "DCF Summary")
+                    or (cell.address.startswith("A") and len(cell.value) > 60)
+                    or (model.name == "DCF Inputs" and cell.address in {"B2", "B3", "B4", "B5"})
+                ):
+                    model_row = int(cell.address[1:]) - 1
+                    column = ord(cell.address[0]) - 65
+                    sheet.merge_range(
+                        model_row, column, model_row, model.last_column, cell.value, style
+                    )
+                    sheet.set_row(model_row, 36)
+                else:
+                    sheet.write(cell.address, cell.value, style)
+            if model.name in {"DCF BASE", "DCF BULL", "DCF BEAR"}:
+                sheet.set_row(4, 40)
+                sheet.set_row(5, 40)
+                sheet.data_validation(
+                    "H6", {"validate": "list", "source": ["PERPETUITY", "EXIT_MULTIPLE"]}
+                )
+                for address in ("B5", "D5", "F5", "H5"):
+                    sheet.data_validation(
+                        address,
+                        {"validate": "decimal", "criteria": "between", "minimum": 0, "maximum": 1},
+                    )
+                sheet.data_validation(
+                    "B6",
+                    {
+                        "validate": "decimal",
+                        "criteria": "between",
+                        "minimum": 0.00000001,
+                        "maximum": 1,
+                    },
+                )
+                sheet.data_validation(
+                    "D6",
+                    {"validate": "decimal", "criteria": "between", "minimum": -0.1, "maximum": 0.1},
+                )
+                sheet.data_validation(
+                    "F6",
+                    {
+                        "validate": "decimal",
+                        "criteria": "between",
+                        "minimum": 0.00000001,
+                        "maximum": 100,
+                    },
+                )
     charts = None
     chart_count = 0
-    for index, item in enumerate([metadata(snapshot), *snapshot.sections]):
+    sections = snapshot.sections
+    if native_dcf:
+        sections = [
+            item
+            for item in sections
+            if item.title in {"Warnings", "Statement Lineage", "Methodology"}
+        ]
+    for index, item in enumerate([metadata(snapshot), *sections]):
         name = f"{index:02d} {item.title}"[:31]
         sheet = workbook.add_worksheet(name)
         sheet.hide_gridlines(2)

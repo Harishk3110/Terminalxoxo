@@ -7,6 +7,7 @@ import pytest
 from app import models, report_api, report_jobs
 from app.auth_sessions import token_digest
 from app.database import get_session
+from app.equity_valuation import DcfRequest, DcfScenario, dcf_scenarios
 from app.object_storage import ObjectStorage
 from app.report_contracts import FORMATS, ReportRequest, ReportSection, ReportSnapshot, digest
 from app.report_models import ReportJob
@@ -92,6 +93,13 @@ def reports(ledger_session, monkeypatch, tmp_path):
 )
 def test_all_sixteen_report_outputs_are_real_files(snapshot, kind, format):
     document = snapshot.model_copy(update={"kind": kind})
+    if kind == "dcf":
+        request = DcfRequest(symbol="AAA", scenarios=[DcfScenario(name="BASE")])
+        payload = dcf_scenarios({"revenue": 100, "debt": 20, "cash": 10, "shares": 10}, request)
+        payload["parameters"] = request.model_dump(mode="json")
+        document = document.model_copy(
+            update={"payload": payload, "calculation_version": "knk-fcff-1.0"}
+        )
     content = render(document, format)
     assert len(content) > 1000
     if format == "pdf":
@@ -289,6 +297,37 @@ def test_real_portfolio_source_is_explicitly_dated(ledger_session: Session) -> N
 def test_missing_analysis_does_not_fabricate_report(ledger_session: Session) -> None:
     with pytest.raises(ValueError, match="completed matching"):
         capture(ledger_session, ReportRequest(kind="backtest"))
+
+
+def test_queued_dcf_uses_native_model_and_pinned_analysis(reports):
+    client, factory = reports
+    request = DcfRequest(symbol="AAA", scenarios=[DcfScenario(name="BASE")])
+    calculated = dcf_scenarios({"revenue": 100, "debt": 20, "cash": 10, "shares": 10}, request)
+    with factory() as session:
+        run = models.AnalysisRun(
+            kind="dcf",
+            name="Fictional native model",
+            status="SUCCEEDED",
+            parameters=request.model_dump(mode="json"),
+            result={**calculated, "source": "TEST", "quality": "DEMO", "currency": "USD"},
+        )
+        session.add(run)
+        session.commit()
+        run_id = run.id
+    response = client.post(
+        "/api/v1/report-jobs", json={"kind": "dcf", "format": "xlsx", "analysis_run_id": run_id}
+    )
+    assert response.status_code == 202
+    identifier = response.json()["id"]
+    assert report_jobs.execute(identifier)
+    result = client.get(f"/api/v1/report-jobs/{identifier}").json()
+    assert result["status"] == "SUCCEEDED"
+    source = client.get(result["source_url"]).json()
+    assert source["references"]["analysis_run_id"] == run_id
+    assert source["calculation_version"] == "knk-fcff-1.0"
+    book = load_workbook(BytesIO(client.get(result["download_url"]).content))
+    assert book["DCF BASE"]["B31"].value == "=IF(B30>0,B29/B30,NA())"
+    assert "DCF BASE Sens" in book.sheetnames
 
 
 def test_expired_worker_cannot_publish_after_lease_is_lost(reports, snapshot, monkeypatch):

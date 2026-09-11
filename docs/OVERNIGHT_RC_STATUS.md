@@ -3,25 +3,29 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: ce3def3; verified milestone changes and final visual fixes are uncommitted.
+Current HEAD at verification: 955ec9b, pushed. Native DCF workbook batch is uncommitted.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
 XLSX/PPTX/PDF downloads and observed worker health/metrics are implemented. All 16
-kind/format combinations produce real files in tests. Financial-model report depth
-and rendered artifact review remain PARTIAL; these are source-pinned review exports.
+kind/format combinations produce real files in tests. Native DCF/WACC/forecast/
+sensitivity formulas now reconcile to pinned inputs and independent Excel
+recalculation. Remaining financial-model/deck depth is PARTIAL.
 
 Next milestone: M2 static cleanup, then full browser closure. First unchecked report
 subtask: complete financial model/deck content and actual rendered-artifact review.
-Current code batch: PostgreSQL backup closure and final visual-workflow review.
-Next code batch: compact chart/risk-monitor layout verification, then engine/API contracts.
+Current code batch: native DCF workbook, independent Excel verification and typed
+valuation engine. Next batch: finish output-consumer types and the release runner.
 Dated stress/hedge selection is implemented. Historical valuations no longer rewrite
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
-- Latest completed full backend rerun 12: 1,097 passed / 13 warnings / 342.50s;
-  10,339/11,816 statements covered (87.5%), including final backup guard tests.
+- Latest completed full backend rerun 13: 1,110 passed / 13 warnings / 301.79s;
+  10,601/12,078 statements covered (87.7712%), including native DCF report jobs.
+- Windows Excel integration: three passed, 88.78s in final run 02; 1,085 formulas
+  recalculated, plus changed-revenue and invalid-perpetuity checks. Local rendered
+  one-/ten-year workbooks were inspected; other report-family artifacts remain open.
 - Subsequent native-chart report selection: 34 passed. Eight new report/watchdog
   modules passed scoped strict mypy; changed modules passed Ruff.
 - Full frontend rerun: 256 terminal + 5 shared tests passed (261 total), including
@@ -37,10 +41,13 @@ Current evidence:
   upstream scrape failures do not restart healthy Prometheus.
 
 First-party Ruff passes. The latest format command includes services, packages,
-scripts, tests, typings, infrastructure and migrations: 266 formatted files.
-Mypy is NOT green: API-only 1,119 errors in 37 files; whole first-party runner
-reports 1,896 distinct diagnostic lines in 126 files across nine distributions.
-The latest whole-run inventory contains 245 files, including managed-backup tests.
+scripts, tests, typings, infrastructure and migrations: 269 formatted files.
+Mypy is NOT green: API-only 1,107 errors in 36 files; whole first-party runner
+reports 1,966 distinct diagnostic lines in 125 files across nine distributions.
+The latest whole-run inventory contains 248 files. Explicit DCF result types expose
+previously unchecked JSON indexing in the existing equity tests (86 diagnostics).
+The engine, native workbook builder, renderer and new tests pass scoped strict types;
+the old consumers still need typed result validation. Counts have not been hidden.
 Flat invocation previously stopped on duplicate app/agent names; distribution
 grouping and explicit namespace bases for repository tools/tests fix that problem
 without suppressing errors. The runner and its tests pass strict mypy.
@@ -64,12 +71,15 @@ grid tracks extending beyond their parent rows at 1366px. The new containment
 assertion failed against the old build; the corrected build passed both targeted
 1366px/390px visual journeys (2.2m). Updated overview/performance/risk-monitor/risk
 screenshots at 1366px were inspected: labels and panel containment are corrected.
-Full browser run 07 is in progress. Visual and release-candidate completion are
-not claimed.
+Full browser run 07 passed all 37 tests, zero retries, 8.3m. Its JSON receipt is
+preserved in logs/overnight-full-07-results.json. Additional 2560px overview,
+performance and risk-monitor screenshots were inspected. Complete visual and
+release-candidate acceptance are not claimed.
 
 Ten long-running Docker services, including reports, are healthy; MinIO init exited
-0. Runtime carries the saved-form, backup-health and chart/layout batch based on
-ce3def3. The frontend refresh returned healthy, but the PowerShell command wrapper
+0. Runtime carries the saved-form, backup-health and chart/layout batch plus native
+DCF exports, based on 955ec9b. API/worker/report builds and refresh passed. The
+earlier frontend refresh returned healthy, but the PowerShell command wrapper
 reported exit 1 on Docker stderr progress. An explicit native-exit-code verification
 with --no-deps returned 0; the corrected watchdog remains active.
 Local URL: http://127.0.0.1:3001/overview (private login, not hosted).
@@ -83,6 +93,6 @@ require operator configuration. See MANAGED_BACKUP.md and build evidence.
 Ten dashboards, release runner and later domain gates remain open. No live provider
 or cloud deployment is certified. No execution added.
 
-Exact next verification: `Get-Content logs/overnight-browser-full-07.log -Tail 12`.
-Do not launch a second browser suite while run 07 is active. Next implementation:
-source-pinned native DCF workbook formulas and financial-model reconciliation.
+Focused equity/report browser rerun: three passed, zero retries, 1.2m.
+Exact next command: `Get-Content tests/sprint/test_equity_valuation.py`.
+Next implementation: typed DCF result consumers, then the 27-stage release command.
