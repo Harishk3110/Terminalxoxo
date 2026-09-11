@@ -23,7 +23,7 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Monitoring | PARTIAL | Ten dashboards and external alert delivery remain |
 | PostgreSQL/object backup | DEMO_FUNCTIONAL | Snapshot/hash/private isolated restore verified; operator-managed offsite storage and retention deletion |
 | Python quality | PARTIAL | Ruff/format pass; whole first-party strict runner now executes, but engine/API/test errors remain |
-| Browser release | PARTIAL | Full run 07 passed 37/37, zero retries, 8.3m; complete direct screenshot review still pending |
+| Browser release | PARTIAL | Full run 14 passed 47/47, zero retries, 18.1m; five viewport sweeps pass, but screenshot review found clipped report-history labels and complete visual closure remains |
 | Release command | PARTIAL | All 27 stages implemented and runner tests pass; actual run stops at strict types after gates 1-6 |
 | Hosted deployment | MISSING | Production/domain gates still open; external account access also required |
 

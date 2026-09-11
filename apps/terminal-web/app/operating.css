@@ -678,21 +678,35 @@
   align-items: center;
   gap: 5px;
 }
+.report-history-panel {
+  min-height: 120px;
+}
 .report-history {
   display: grid;
+  grid-auto-rows: max-content;
+  flex: 0 0 auto;
   max-height: 320px;
   overflow: auto;
 }
 .report-history button {
   display: grid;
-  grid-template-columns: minmax(130px, 1fr) 100px minmax(170px, 1fr) 100px;
+  grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr) minmax(0, 1.2fr);
   gap: 12px;
+  min-width: 0;
   text-align: left;
+  white-space: normal;
   padding: 10px;
   border-bottom: 1px solid var(--border);
 }
+.report-history button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 700px) {
+  .report-history-panel {
+    flex-shrink: 0;
+  }
   .report-history button {
-    grid-template-columns: minmax(0, 1fr) 100px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

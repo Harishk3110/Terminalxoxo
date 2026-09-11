@@ -254,6 +254,7 @@ export function ReportsWorkspace({ deck = false }: { deck?: boolean }) {
       </div>
       <Panel
         title="Report history"
+        className="report-history-panel"
         source="Owned report jobs"
         quality="AUDITED"
         loading={jobs.isLoading}

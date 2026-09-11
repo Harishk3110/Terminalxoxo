@@ -1181,3 +1181,94 @@ distribution. Runtime groups never receive test paths. No source is excluded and
 strict flags remain unchanged. Annotated DataDrop fixtures expose additional
 untyped source calls; these are retained for the source cleanup, not suppressed.
 Full backend 26 and full browser 14 are active, not reported as complete.
+
+## Full Backend Checkpoint 26
+
+2026-09-12 07:41 SGT: logs/overnight-backend-26.log and the corresponding XML
+record 1,455 passed, 123 warnings, 497.56s, native exit 0. The invocation used
+clean Python 3.12 and isolated logs/overnight-backend-26.db/object storage.
+Application/backend test source was unchanged throughout, equivalent to 72d634a
+(runtime application source 0699ab0). Coverage JSON records 11,200 / 12,605
+statements, 88.85362951209838%. PowerShell ConvertFrom-Json could not parse a
+coverage key; Node JSON.parse read the complete structured report successfully.
+
+Browser 14 is still active. Current 1366px screenshots inspected: HOME, macro,
+GEX, risk/trade monitor, portfolio, equity, Excel Studio and Deck Builder;
+Excel Studio was also inspected at 1920px. Report history clips the long
+CALCULATED WITH STALE DATA label at both sizes. This is a real remaining visual
+defect despite outer-page overflow assertions passing. A text-range containment
+regression is being added for both report workspaces and all five viewports.
+
+## Full Browser Checkpoint 14
+
+2026-09-12 07:43 SGT: logs/overnight-browser-full-14.log and
+logs/overnight-full-14-results.json record 47 expected passes, zero unexpected,
+skipped or flaky results, duration 1,085.409s (18.1m), native exit 0. One worker,
+zero retries. Application source remained 0699ab0 throughout; subsequent commits
+changed test/tooling/docs only. The unchanged production frontend is the
+macro/options build. All five viewport sweeps and nonblank canvas checks passed.
+
+The remaining report-history defect is not concealed by this pass. Two new
+text-range containment tests are running against this unchanged build as a
+negative control. Current mobile HOME and Excel Studio screenshots were also
+inspected; report history is below the initial viewport, so its regression
+explicitly scrolls the row into view before measuring.
+
+Clean Python integration checkpoint 27 started with all six real Excel,
+PostgreSQL lifecycle and managed backup cases explicitly enabled. Its resources
+are generated workbooks and newly named databases/buckets, not the active book.
+
+## Clean Real Integration Checkpoint 27
+
+2026-09-12 07:45 SGT, backend source 0699ab0 and tests/tooling 72d634a.
+logs/overnight-integration-27.log and .xml: six passed, zero failures/errors/skips,
+31 upstream botocore UTC deprecation warnings, 194.14s, native exit 0. Explicit
+opt-ins enabled all three real Windows Excel cases, both PostgreSQL migration
+and API/worker restart cases, and the private database/object recovery case.
+The active database and volumes were not reset or replaced.
+
+Generated Excel evidence directories:
+- logs/dcf-validation/2c7bfd59dfa540268ddebf002fabffa2: one-year perpetuity.
+- logs/dcf-validation/5cd745574890427c9bed2e174d5ae8f7: five-year calculated WACC.
+- logs/dcf-validation/c20ca2a03f9c4c51955768d1d45a005e: ten-year exit multiple.
+
+Each case recalculates baseline, changed and deliberately invalid inputs in
+native Excel, retaining the original source workbook. All seven baseline PDF
+pages in the ten-year case were rendered and inspected: summary, inputs, BASE
+forecast and sensitivities, BEAR forecast and sensitivities, and provenance.
+Forecast columns, negative results, source-state labels and sensitivity tables
+are legible and contained. This is not visual certification of all 16 report
+families. The first PDF render failed because its output directory did not yet
+exist; the directory was created and the final render returned 0. A separate
+optional text-inspection attempt used unsupported PdfPage context-manager syntax
+and returned 1; image inspection used the successfully rendered pages directly.
+
+Report-history negative control: both new tests fail specifically on the long
+quality text escaping its 1366px cell, not on setup or API behavior. Native exit
+1, logs/overnight-report-layout-negative-01.log; traces/screenshots preserved in
+logs/overnight-report-layout-negative-01-failures. The correction is scoped to
+report-history grid tracks and wrapping. Node 22 production build passes;
+the rebuilt two-layout/one-download browser selection is active with no retries.
+
+2026-09-12 07:49 SGT: first corrected-build browser selection returned 1:
+one download workflow passed, both layout tests passed four desktop sizes but
+failed at 390px because the history panel shrank below its contents. Artifacts
+are preserved in logs/overnight-report-layout-positive-01-failures. A scoped
+history-panel minimum height, mobile no-shrink rule and intrinsic grid rows fix
+that separate defect. The tests also require the complete row inside the visible
+viewport; no containment assertions were removed or relaxed.
+
+Final Node 22 production build returned 0 (overnight-report-layout-build-02.log).
+Three report component unit tests pass. Final rebuilt browser selection:
+three passed, zero retries, 51.1s, native exit 0
+(overnight-report-layout-positive-02.log and -results.json). Both history
+workspaces pass 1366, 1440, 1920, 2560 and 390px text containment, row visibility
+and no-horizontal-overflow checks. Real XLSX/PDF/PPTX generation/download passes.
+Final mobile screenshots for both workspaces and the 1366px deck screenshot were
+inspected; earlier corrected 1366px Excel screenshot also inspected. Prettier,
+secret scan and no-execution scan pass. Backend application source was unchanged.
+
+The next uncommitted parser regression batch has an intentional negative control:
+17 failures and three preservation passes in overnight-tabular-negative-01.log.
+Non-finite JSON (including nested values), blank headers and empty XLSX error
+semantics are not yet corrected. Those tests are not part of the report commit.

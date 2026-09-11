@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the accounting-fixture commit: e284269, pushed.
-Docker runtime is 0699ab0. Full backend 26 and browser 14 are active.
+Current HEAD before the report-history commit: 72d634a, pushed.
+Docker runtime is 0699ab0. Full backend 26 and browser 14 passed.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,11 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Full backend 26: 1,455 passed, 123 warnings, 497.56s, native exit 0;
+  coverage 11,200 / 12,605 statements (88.8536%). Source is 72d634a;
+  application source remains 0699ab0. No application or backend test edits were
+  made during this invocation. Report-history screenshot review found clipped
+  quality text at 1366px and 1920px; a browser regression is being added.
 - Accounting fixtures and sibling imports: 33 accounting/import/broker/quant tests
   pass, plus 117 agent/tooling tests and 21 type-runner/scanner tests. Type-runner
   source/tests pass strict types. Whole strict 29 exposed mixed qualified/sibling
@@ -46,9 +51,20 @@ Current evidence:
   long-running services are healthy and MinIO init succeeded. /overview returns
   HTTP 200 at private sign-in with Keep-Alive timeout=70. Deployed macro and
   simulation hashes match source. All persistent data and the watchdog remain.
-- Browser 14 is active: 47 tests, one worker, zero retries; runtime source is
-  0699ab0 with the unchanged frontend built for the macro/options batch. Subsequent
-  changes are tests/docs only. A full pass is not yet claimed.
+- Browser 14 passed: 47 tests, zero failed/skipped/flaky, one worker, zero retries,
+  18.1m, native exit 0. Runtime source is 0699ab0 with the unchanged frontend
+  built for the macro/options batch. Subsequent changes were tests/scripts/docs
+  only. All five populated viewport sweeps and canvas-pixel assertions pass.
+  Screenshot review identified a report-history clipping defect; the subsequent
+  scoped correction passes three rebuilt browser regressions with zero retries.
+  Long labels are contained at all five sizes and mobile history no longer
+  collapses. The full browser suite must be rerun after further source work.
+- Clean Python real integration checkpoint 27 passed: six tests, zero skips,
+  31 upstream botocore warnings, 194.14s, native exit 0. Three native Excel cases,
+  two isolated PostgreSQL lifecycle cases and one private database/object restore
+  case leave the active portfolio database untouched. All seven printed pages
+  of the ten-year DCF baseline were inspected; other report-family visual
+  acceptance remains open.
 - Macro API contracts: 110 affected backend tests pass, followed by 18 final
   consumer tests. Seventy-three complete populated responses match 804ec29;
   mixed-provider source and invalid-limit corrections have explicit regressions.

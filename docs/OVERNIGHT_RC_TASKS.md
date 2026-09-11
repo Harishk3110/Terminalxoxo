@@ -11,6 +11,7 @@ milestone remain open unless explicitly verified below.
 - [x] M1: SQL worker claim, bounded failure, private storage, download retention, audit.
 - [ ] M1: all 16 XLSX/PPTX/PDF report families with verified financial models.
 - [x] M1: DCF native forecast/WACC/terminal/bridge/sensitivity formulas, pinned-result reconciliation and independent Excel recalculation.
+- [x] M1/M15: clean Python checkpoint 27, all six real Excel/PostgreSQL/backup tests pass without skips; seven printed ten-year DCF baseline pages inspected.
 - [x] M1: source metadata, hashes, owned downloads, worker-exit persistence and anonymous tests.
 - [x] M1: Excel Studio / Deck Builder, health, metrics, browser generation.
 - [ ] M2: whole first-party formatting/Ruff/mypy, TypeScript, ESLint, OpenAPI.
@@ -60,6 +61,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2/M9: typed Monte Carlo outputs and pinned simulation inputs; missing returns remain unavailable, dataset/FX provenance retained; 59 affected tests, 80 seeded-output and 17 persisted-input/result parity checks pass.
 - [x] M3/M11: gamma-profile negative label containment; measured negative control, corrected desktop/mobile screenshots and three browser regressions pass with zero retries.
 - [x] M3/M7: macro observation/ingestion separation, actual quality, calendar ranges, all fetched MAX rows; 14 focused and 317 full terminal tests pass.
+- [x] M3: report-history text containment and mobile non-collapsing history; two negative controls, final three-browser selection with all five sizes and owned report downloads pass.
 - [x] M2/M7: typed macro responses, observation-level source and bounded history query; 110 affected backend tests, 73 complete response parity checks and OpenAPI contracts pass.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.
 - [ ] M10: segments/ROIC/multiples/normalization/estimates/research linkage and DCF.
