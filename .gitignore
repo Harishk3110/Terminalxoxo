@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 .venv-local-agent/
 .venv-sprint/
+.venv-release/
 .hypothesis/
 
 # Build outputs

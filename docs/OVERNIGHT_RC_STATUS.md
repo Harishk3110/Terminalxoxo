@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: 6edb4e2, pushed. Dated-source/options/risk, ledger/factor, local
+Current HEAD: 9c7428c, pushed. Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
 Factor request/loading improvements are committed and deployed locally. Typed alpha
@@ -27,9 +27,24 @@ agent uploads using bounded identity lookups with ownership/hash verification.
 Next batch: remaining engine/API contracts and source-adapter completeness.
 Dated stress/hedge selection is implemented. Historical valuations no longer rewrite
 the current portfolio projection; the calculation version is now knk-nav-4.9.
-Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
+Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Clean Python 3.12 environment created without system-site-packages. API and quant
+  worker NumPy/SciPy requirements are aligned at 2.5.3/1.18.1, matching Docker;
+  scipy-stubs targets 1.18.1. Installation/pip check pass, 40 scientific checks
+  pass, and 19 SQLite/PostgreSQL migration checks pass. Full backend 23: 1,330
+  passed, 122 warnings, 381.48s, native exit 0; coverage 10,959/12,424 (88.2083%).
+  Extra warnings are upstream pandas/NumPy timedelta and AnyIO deprecations.
+  The PowerShell release launcher prefers the clean environment when present.
+- Statement/ratio/comparable contracts: 33 affected tests pass in the original
+  environment, 1,500 old/new outputs match exactly, and three affected files pass
+  strict types. Whole strict checkpoint 18 in the clean environment reports
+  1,489 diagnostics / 100 files / 271 sources; API is 838 diagnostics in 31 files.
+- Visual follow-up: all 19 mobile screenshots were inspected. Desktop review found
+  collapsed Equity coverage/thesis panels at 1366px and rounded-to-zero alpha
+  inference values. Two new browser checks fail against the prior frontend as
+  expected; corrective grid/formatting changes are in progress, not yet certified.
 - Full backend 22: 1,300 passed, 13 warnings, 427.31s; coverage remains
   10,901/12,366 statements (88.1530%). This precedes the typed-alpha batch.
 - Typed alpha selection: 20 passed. Nine complete and four unavailable results
@@ -41,7 +56,9 @@ Current evidence:
   suite: 270 passed. Node 22 build, TypeScript and ESLint pass. Rebuilt operating/
   quant browser selection: four passed; deliberate overlap/reload test: one passed,
   both with zero retries and no recorded database-lock or HTTP 500 failures.
-  Full browser 11 (40 tests) remains active; its two quant journeys have passed.
+  Full browser 11: 40 passed, zero failed/skipped/flaky, zero retries, 16.3m,
+  native exit 0. Its API log contains no database-lock or HTTP 500 entries.
+  This run used the 6edb4e2 build, before the later alpha/dependency changes.
 - Recovery/backup focused selection: 45 passed. Migration selection: 19 passed,
   including real isolated PostgreSQL lifecycle and three URL configuration tests.
   Whole strict checkpoint 16: 1,564 diagnostics / 104 files / 267 sources. No

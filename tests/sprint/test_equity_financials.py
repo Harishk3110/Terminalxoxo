@@ -1,4 +1,9 @@
-from app.equity_financials import comparable_statistics, ratios, statements
+from copy import deepcopy
+from decimal import Decimal
+
+import pytest
+from app.equity_financials import comparable_statistics, divide, number, ratios, statements
+from pydantic import JsonValue, ValidationError
 
 
 def test_ttm_needs_consecutive_quarters_and_keeps_point_in_time_balances() -> None:
@@ -56,3 +61,51 @@ def test_comps_exclude_missing_multiples_and_translate_ev_to_equity() -> None:
     assert row["implied_price"] == 29
     assert row["outliers"] == ["4"]
     assert comparable_statistics([], target)[0]["median"] is None
+
+
+@pytest.mark.parametrize("value", [0, -0.0, "12.5", Decimal("12.5")])
+def test_numeric_statement_boundary_accepts_existing_scalar_inputs(value: object) -> None:
+    assert number(value) == float(str(value))
+
+
+@pytest.mark.parametrize("value", [None, [], {"value": 12}, object()])
+def test_compound_statement_metrics_are_not_coerced_to_numbers(value: object) -> None:
+    with pytest.raises(ValueError, match="numeric scalars"):
+        number(value)
+
+
+@pytest.mark.parametrize("denominator", [None, 0, -1])
+def test_unavailable_ratio_denominators_do_not_become_zero(denominator: float | None) -> None:
+    assert divide(10, denominator) is None
+    assert divide(None, 10) is None
+    assert divide(0, 10) == 0
+
+
+def test_ttm_preserves_lineage_and_does_not_mutate_input() -> None:
+    items: list[dict[str, JsonValue]] = [
+        {
+            "year": f"2025Q{i}",
+            "frequency": "Q",
+            "revenue": str(i),
+            "cash": i,
+            "report_date": f"2025-{i + 1:02}-01",
+            "metric_sources": {"revenue": {"dataset_version_id": str(i)}},
+        }
+        for i in range(1, 5)
+    ]
+    before = deepcopy(items)
+    result = statements({"items": items}, "TTM")
+    assert result[0]["revenue"] == 10
+    assert result[0]["cash"] == 4
+    assert result[0]["report_date"] == "2025-05-01"
+    assert result[0]["component_periods"] == [f"2025Q{i}" for i in range(1, 5)]
+    assert result[0]["lineage"] == [item["metric_sources"] for item in items]
+    assert items == before
+    result[0]["revenue"] = 100
+    assert items == before
+
+
+@pytest.mark.parametrize("items", [None, "not rows", [42], [{42: "not a column"}]])
+def test_statement_input_requires_named_json_rows(items: object) -> None:
+    with pytest.raises(ValidationError):
+        statements({"items": items})

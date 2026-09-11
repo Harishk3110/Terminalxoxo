@@ -813,3 +813,65 @@ Observed dependency gap: Windows NumPy/SciPy are 2.2.1/1.14.1, while the existin
 Docker environment is 2.5.3/1.18.1. Both carry statsmodels 0.15.0. The shared source
 tests and exact same-runtime comparisons do not establish cross-runtime parity;
 scientific dependency alignment and fresh verification remain open.
+
+## Browser 11 And Clean Scientific Environment
+
+2026-09-12 SGT, source 6edb4e2 for browser 11; current HEAD 9c7428c plus the
+numerical dependency/statement typing batch for subsequent checks.
+
+`corepack pnpm dlx node@22 node_modules/@playwright/test/cli.js test tests/e2e
+--workers=1 --retries=0` with isolated run ID overnight-full-11 completed with
+native exit 0: 40 passed, no skipped/unexpected/flaky results, 975.354 seconds.
+Start: 2026-09-11T21:32:34.267Z. Receipt: overnight-full-11-results.json; console:
+overnight-browser-full-11.log. API log has no database-lock or HTTP 500 entries.
+All five viewport sweeps and the added factor overlap journey passed in this
+single invocation. This does not certify later source changes or all 27 gates.
+
+A new `.venv-release` uses Python 3.12.10 without system-site-packages. The previous
+environment is preserved. Installation from API, dev, local-agent and report-engine
+requirements returned 0 (overnight-clean-install-01.log); pip check returned 0.
+API and quant worker now explicitly pin NumPy 2.5.3 / SciPy 1.18.1, the already
+observed Docker runtime versions; scipy-stubs is matched at 1.18.1.0. Three new
+tests enforce service pin consistency, installed numeric versions and stub/runtime
+alignment. No numerical tolerances were changed.
+
+Clean-environment scientific selection (dependency, alpha, statsmodels contract and
+equity financial tests): 40 passed, one warning, 28.78s, exit 0 in
+overnight-clean-scientific-01.log. SQLite/PostgreSQL migration selection: 19 passed,
+one warning, 34.15s, exit 0 in overnight-clean-migrations.log/xml. An observe-only
+watchdog check returned 0 at 2026-09-11T21:54:57Z: ten healthy services and successful
+MinIO initialization, no restart action. Full backend 23 is still running.
+
+Statement rows now validate their JSON shape before filtering/TTM aggregation.
+Scalar numeric conversion remains explicit, lineage and original inputs remain
+unchanged, and missing/zero denominator semantics are retained. Comparable outputs
+have a concrete typed result. The first strict check caught a reused comprehension
+variable name and an unannotated adapter; both were fixed without ignoring errors.
+Three affected files then pass strict mypy. The expanded affected suite passes
+33 tests, three warnings, 24.30s (overnight-equity-statements-02.log), exit 0.
+1,500 deterministic old/new statement, ratio and comparable outputs have exact
+equality in overnight-equity-statements-parity.log. New tests also reject malformed
+rows/compound numeric values and assert nonmutation and lineage retention.
+
+Whole strict checkpoint 18 returned 1: 1,489 distinct diagnostics in 100 files,
+271 sources across all distributions. API: 838 diagnostics in 31 files. Receipts
+are in overnight-whole-types-18/. Current Ruff and format checks returned 0 in
+overnight-clean-ruff.log / overnight-clean-format.log. Full release remains open.
+
+Full clean-environment backend 23 then completed: 1,330 passed, 122 warnings,
+381.48s, native exit 0. Command: `.venv-release/Scripts/python.exe -m pytest
+tests/sprint services/api/tests --cov=services/api/app --cov-report=term
+--cov-report=json:logs/overnight-coverage-23.json
+--junitxml=logs/overnight-backend-23.xml -q`, with isolated database/object/coverage
+paths. Coverage: 10,959/12,424 statements, 88.2083065%, 1,465 missing, 23 excluded.
+Warnings are deprecations in pandas/NumPy timedelta conversion, Starlette/AnyIO
+and the existing FastAPI startup hook, not failed financial assertions.
+
+All 19 full-browser-11 mobile screenshots were inspected. Desktop 1366px review
+of alpha/equity/quant revealed two additional defects: collapsed Equity top-row
+panels and rounded-to-zero nonzero alpha coefficients/errors. New research-layout
+browser tests reproduce both against the prior built frontend (two failed,
+native exit 1, zero retries). The Equity coverage table is hidden; alpha's
+rendered coefficient becomes zero. Traces/screenshots are preserved under
+logs/overnight-research-layout-before-artifacts. No baseline was auto-accepted.
+Corrective frontend work is separate from the verified backend batch above.

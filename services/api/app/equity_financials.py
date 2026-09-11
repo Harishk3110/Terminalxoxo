@@ -2,9 +2,28 @@
 
 import math
 import re
+from collections.abc import Mapping, Sequence
 from statistics import mean
+from typing import SupportsFloat, TypedDict
 
 import numpy as np
+from pydantic import JsonValue, TypeAdapter
+
+STATEMENT_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+JSON_VALUE: TypeAdapter[JsonValue] = TypeAdapter(JsonValue)
+TEXT_VALUE = TypeAdapter(str)
+
+
+class ComparableStatistics(TypedDict):
+    metric: str
+    count: int
+    mean: float | None
+    median: float | None
+    q1: float | None
+    q3: float | None
+    implied_price: float | None
+    outliers: list[str]
+
 
 FLOW = {
     "revenue",
@@ -35,22 +54,30 @@ BALANCE = {
 METRICS = FLOW | BALANCE
 
 
-def divide(a, b):
+def number(value: object) -> float:
+    if not isinstance(value, (str, SupportsFloat)):
+        raise ValueError("Financial values must be numeric scalars")
+    return float(value)
+
+
+def divide(a: float | None, b: float | None) -> float | None:
     if a is None or b is None or b <= 0:
         return None
     result = a / b
     return result if math.isfinite(result) else None
 
 
-def quarter_key(period):
+def quarter_key(period: object) -> int | None:
     match = re.fullmatch(r"(\d{4})[- ]?Q([1-4])", str(period).upper())
     return int(match[1]) * 4 + int(match[2]) - 1 if match else None
 
 
-def statements(data, frequency="ANNUAL", actual_estimate="ACTUAL"):
+def statements(
+    data: Mapping[str, object], frequency: str = "ANNUAL", actual_estimate: str = "ACTUAL"
+) -> list[dict[str, JsonValue]]:
     rows = [
-        dict(row)
-        for row in data["items"]
+        row
+        for row in STATEMENT_ROWS.validate_python(data["items"], strict=True)
         if row.get("actual_estimate", "ACTUAL") == actual_estimate
     ]
     aliases = {"ANNUAL": {"ANNUAL", "FY", "YEARLY"}, "QUARTERLY": {"QUARTERLY", "QUARTER", "Q"}}
@@ -58,25 +85,29 @@ def statements(data, frequency="ANNUAL", actual_estimate="ACTUAL"):
         selected = [row for row in rows if row.get("frequency", "ANNUAL") in aliases[frequency]]
     else:
         quarters = {
-            quarter_key(row["year"]): row
+            quarter: row
             for row in rows
-            if row.get("frequency") in aliases["QUARTERLY"] and quarter_key(row["year"]) is not None
+            if row.get("frequency") in aliases["QUARTERLY"]
+            and (quarter := quarter_key(row["year"])) is not None
         }
         selected = []
         for end in sorted(quarters):
-            window = [quarters.get(end - i) for i in reversed(range(4))]
-            if any(row is None for row in window):
+            window = [quarters[end - i] for i in reversed(range(4)) if end - i in quarters]
+            if len(window) != 4:
                 continue
-            result = {
+            result: dict[str, JsonValue] = {
                 "year": quarters[end]["year"],
                 "frequency": "TTM",
                 "actual_estimate": actual_estimate,
-                "report_date": max(row.get("report_date", "") for row in window),
+                "report_date": max(
+                    TEXT_VALUE.validate_python(row.get("report_date", ""), strict=True)
+                    for row in window
+                ),
                 "component_periods": [row["year"] for row in window],
             }
             for key in FLOW:
                 result[key] = (
-                    sum(float(row[key]) for row in window)
+                    sum(number(row[key]) for row in window)
                     if all(row.get(key) is not None for row in window)
                     else None
                 )
@@ -88,8 +119,12 @@ def statements(data, frequency="ANNUAL", actual_estimate="ACTUAL"):
     return selected
 
 
-def ratios(row, previous=None, price=None):
-    r = {key: float(row[key]) if row.get(key) is not None else None for key in METRICS}
+def ratios(
+    row: Mapping[str, object],
+    previous: Mapping[str, object] | None = None,
+    price: float | None = None,
+) -> dict[str, JsonValue]:
+    r = {key: number(row[key]) if row.get(key) is not None else None for key in METRICS}
     if r["ebitda"] is None and r["ebit"] is not None and r["depreciation"] is not None:
         r["ebitda"] = r["ebit"] + r["depreciation"]
     if (
@@ -109,24 +144,24 @@ def ratios(row, previous=None, price=None):
         else None
     )
     roe_base = (
-        (r["equity"] + float(previous["equity"])) / 2
+        (r["equity"] + number(previous["equity"])) / 2
         if previous and previous.get("equity") is not None and r["equity"] is not None
         else None
     )
     assets_base = (
-        (r["assets"] + float(previous["assets"])) / 2
+        (r["assets"] + number(previous["assets"])) / 2
         if previous and previous.get("assets") is not None and r["assets"] is not None
         else None
     )
 
-    def growth(metric):
-        old = float(previous[metric]) if previous and previous.get(metric) is not None else None
+    def growth(metric: str) -> float | None:
+        old = number(previous[metric]) if previous and previous.get(metric) is not None else None
         value = divide(r[metric], old)
         return value - 1 if value is not None else None
 
     return {
         **r,
-        "year": row["year"],
+        "year": JSON_VALUE.validate_python(row["year"], strict=True),
         "market_cap": market_cap,
         "enterprise_value": enterprise,
         "eps": divide(r["net_income"], r["shares"]),
@@ -155,17 +190,18 @@ def ratios(row, previous=None, price=None):
     }
 
 
-def comparable_statistics(peers, target):
-    result = []
+def comparable_statistics(
+    peers: Sequence[Mapping[str, object]], target: Mapping[str, object]
+) -> list[ComparableStatistics]:
+    result: list[ComparableStatistics] = []
     for multiple, denominator, ev in (
         ("pe", "net_income", False),
         ("ev_ebitda", "ebitda", True),
         ("ev_sales", "revenue", True),
         ("pb", "equity", False),
     ):
-        values = [
-            row[multiple] for row in peers if row.get(multiple) is not None and row[multiple] > 0
-        ]
+        observed = [(row, number(row[multiple])) for row in peers if row.get(multiple) is not None]
+        values = [value for _, value in observed if value > 0]
         if not values:
             result.append(
                 {
@@ -182,14 +218,11 @@ def comparable_statistics(peers, target):
             continue
         q1, med, q3 = np.quantile(values, [0.25, 0.5, 0.75])
         fence = 1.5 * (q3 - q1)
-        implied = (
-            med * target[denominator]
-            if target.get(denominator) is not None and target[denominator] > 0
-            else None
-        )
+        base = number(target[denominator]) if target.get(denominator) is not None else None
+        implied = float(med) * base if base is not None and base > 0 else None
         if ev:
             implied = (
-                implied - target["debt"] + target["cash"]
+                implied - number(target["debt"]) + number(target["cash"])
                 if implied is not None
                 and target.get("debt") is not None
                 and target.get("cash") is not None
@@ -203,12 +236,13 @@ def comparable_statistics(peers, target):
                 "median": float(med),
                 "q1": float(q1),
                 "q3": float(q3),
-                "implied_price": divide(implied, target.get("shares")),
+                "implied_price": divide(
+                    implied, number(target["shares"]) if target.get("shares") is not None else None
+                ),
                 "outliers": [
-                    row["symbol"]
-                    for row in peers
-                    if row.get(multiple) is not None
-                    and (row[multiple] < q1 - fence or row[multiple] > q3 + fence)
+                    TEXT_VALUE.validate_python(row["symbol"], strict=True)
+                    for row, value in observed
+                    if value < q1 - fence or value > q3 + fence
                 ],
             }
         )

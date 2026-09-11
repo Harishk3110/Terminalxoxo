@@ -22,7 +22,8 @@ milestone remain open unless explicitly verified below.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
 - [x] M2: shared validated DCF result consumers; existing financial assertions retained.
 - [x] M2/M9: typed alpha regression/rolling/availability contracts, verified statsmodels boundary and independent HAC/t-inference checks; 20 focused tests and 13 exact old/new result cases pass.
-- [ ] M2: align and verify Windows/Docker NumPy and SciPy versions; current dependency drift is recorded in status and evidence.
+- [x] M2: clean non-system Python environment, aligned API/quant-worker/Docker NumPy and SciPy pins, matching stubs and dependency regressions; full backend 23 passes 1,330 tests at 88.2083% coverage.
+- [x] M2/M10: statement/ratio/comparable types, malformed-row handling, preserved lineage and 1,500 exact old/new comparisons.
 - [x] M2/M7: eligible dated market/FX candidates across legacy/imported stores; preferred-source and stale/no-demo-fallback regressions.
 - [x] M2/M11: typed options rows/results, historical specification checks, finite owned-equity guard and exact 144-case chain/position baseline comparison.
 - [x] M3: explicit risk variance/correlation empty states, genuine-zero preservation and desktop/mobile browser verification.
@@ -35,6 +36,8 @@ milestone remain open unless explicitly verified below.
 - [x] M8: retired inbound dummy broker pairing/snapshot/heartbeat responses disabled and tested.
 - [x] M3: full single-run browser suite, 37 passed in run 07 with zero retries; financial/layout assertions retained.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
+- [x] M3: 19 populated 390px screenshots inspected from full browser 11.
+- [ ] M3: fix desktop Equity collapsed grid rows and preserve small alpha inference values; both new browser regressions fail against the old build.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.
 - [ ] M4: BUY/partial SELL/dividend -> downstream risk/review and restart persistence.
 - [x] M4: real isolated PostgreSQL/API/worker restart preserves BUY/partial SELL/dividend, saved NAV, session and private report hashes.
@@ -43,8 +46,8 @@ milestone remain open unless explicitly verified below.
 - [x] M5: seven fictional CSV templates, field definitions and parser/profile regression tests.
 - [ ] M6: Windows outbound watcher/pairing/revocation/credentials/logs/startup.
 - [x] M6/M8: durable archive journal, acknowledgement integrity and typed paper reader guards; 30 new focused tests and full backend 19 (1,244 tests) pass.
-- [ ] M3/M13: keep blocking database checks off the ASGI loop; two concurrency negative controls reproduce the blocked-loop behavior, browser lock closure pending.
-- [x] M2/M3: scalar price-history projection with exact 54,241-observation/18-factor parity; coalesced factor inputs and deliberate in-flight request/autosave/reload browser regression pass. Full browser 11 remains pending.
+- [x] M3/M13: keep blocking database checks off the ASGI loop; two concurrency negative controls reproduce the blocked-loop behavior. Full browser 11 passes all 40 tests with zero retries after factor request/projection corrections.
+- [x] M2/M3: scalar price-history projection with exact 54,241-observation/18-factor parity; coalesced factor inputs and deliberate in-flight request/autosave/reload browser regression pass. Full browser 11: 40 passed, zero failed/skipped/flaky, native exit 0.
 - [x] M6: bounded identity lookup for pending files older than the latest 500; ownership/revocation/hash/missing-record tests and full backend 21 pass; pushed as 667c0a6.
 - [x] M15: typed local archive manifests, duplicate/malformed-field rejection before restore, and CLI operation from unrelated working directories; 23 focused tests pass.
 - [x] M2/M15: read-only recovery inventories, source-output collision rejection, optimized-Python preservation checks, malformed health JSON handling, and typed migration configuration; 45 recovery/backup and 19 migration tests pass.
