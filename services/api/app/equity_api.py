@@ -105,7 +105,7 @@ def security_snapshot(symbol: str, session: Database):
     }
 
 
-def financial_report(session, symbol, frequency="ANNUAL", actual_estimate="ACTUAL", quote=None):
+def financial_report(session: Database, symbol: str, frequency: str = "ANNUAL", actual_estimate: str = "ACTUAL", quote: dict[str, object] | None = None) -> dict[str, object]:
     item = instrument(session, symbol)
     data = fundamentals(session, item.id)
     selected = statements(data, frequency, actual_estimate)

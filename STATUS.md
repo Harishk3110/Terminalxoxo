@@ -1,5 +1,12 @@
 # Terminal Status
 
+## Overnight Continuation, 2026-09-12
+
+Current evidence and gates are in docs/OVERNIGHT_RC_STATUS.md and
+docs/OVERNIGHT_RC_BUILD_EVIDENCE.md. Owned asynchronous XLSX/PPTX/PDF reporting and
+the report container now work, superseding the disabled-service baseline below.
+The full backend rerun passed 959 tests. This is not final release certification.
+
 ## Final Master Build, 2026-09-11
 
 The 2026-09-11 master directive supersedes prior scope. Baseline `597f346` was

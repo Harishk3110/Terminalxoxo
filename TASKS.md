@@ -1,5 +1,9 @@
 # Final Master Build Tasks
 
+Current continuation: docs/OVERNIGHT_RC_TASKS.md controls the 2026-09-12 overnight
+release gates. Report queue/service acceptance below is superseded there; full
+financial-model report content and global quality gates remain open.
+
 Controlling directive: 2026-09-11 final master build. Baseline `597f346`.
 Historical completed work below is preserved, not equivalent to final acceptance.
 

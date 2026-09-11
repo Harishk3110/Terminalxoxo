@@ -35,8 +35,12 @@ const JobsPage = dynamic(() => import("./lab-pages").then((m) => m.JobsPage));
 const ResearchPage = dynamic(() =>
   import("./lab-pages").then((m) => m.ResearchPage),
 );
-const PinePage = dynamic(() => import("./pine-page").then((m) => m.PineWorkspace));
-const ExcelPage = dynamic(() => import("./lab-pages").then((m) => m.ExcelPage));
+const PinePage = dynamic(() =>
+  import("./pine-page").then((m) => m.PineWorkspace),
+);
+const ReportsWorkspace = dynamic(() =>
+  import("./reports-page").then((m) => m.ReportsWorkspace),
+);
 const AlphaWorkspace = dynamic(() =>
   import("./alpha-page").then((m) => m.AlphaWorkspace),
 );
@@ -92,7 +96,9 @@ export function PageRouter({ route }: { route: string }) {
   if (["/research", "/thesis"].includes(route)) return <ThesisWorkspace />;
   if (route === "/ideas") return <ResearchPage />;
   if (route === "/tradingview") return <PinePage />;
-  if (route === "/excel-studio") return <ExcelPage />;
+  if (route === "/excel-studio") return <ReportsWorkspace />;
+  if (["/deck-builder", "/functions/deck"].includes(route))
+    return <ReportsWorkspace deck />;
   if (["/settings/connections", "/settings"].includes(route))
     return <ConnectionsWorkspace />;
   if (["/filings", "/functions/filings"].includes(route))

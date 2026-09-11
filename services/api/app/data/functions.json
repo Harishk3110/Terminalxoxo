@@ -1667,10 +1667,8 @@
     "supportsMultipleSecurities": false,
     "supportedAssetClasses": [],
     "route": "/functions/deck",
-    "implementationStatus": "in_development",
-    "providerRequirements": [
-      "Implementation pending"
-    ]
+    "implementationStatus": "demo_available",
+    "providerRequirements": []
   },
   {
     "mnemonic": "PDF",

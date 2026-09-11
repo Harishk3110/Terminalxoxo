@@ -21,6 +21,7 @@ NEW_TABLES = {
     "portfolio_accruals",
     "portfolio_liabilities",
     "auth_totp_states",
+    "report_jobs",
 }
 
 

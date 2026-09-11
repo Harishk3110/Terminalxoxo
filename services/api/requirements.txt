@@ -29,3 +29,5 @@ structlog==24.4.0
 tenacity==9.0.0
 uvicorn[standard]==0.34.0
 XlsxWriter==3.2.0
+python-pptx==1.0.2
+reportlab==4.4.10

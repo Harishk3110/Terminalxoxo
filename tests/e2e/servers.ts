@@ -59,6 +59,10 @@ export default async function setup() {
     const api = await request.newContext({ baseURL: 'http://127.0.0.1:3002' });
     const configured = await api.post('/backend/api/v1/auth/setup', { data: { email, password } });
     if (!configured.ok()) throw new Error('Isolated test administrator provisioning failed');
+    start(process.env.PLAYWRIGHT_PYTHON || (process.platform==='win32'?'python':'python3'), ['-m','uvicorn','app.report_engine:app','--app-dir','services/api','--host','127.0.0.1','--port','8011'], root, {
+      DATABASE_URL:`sqlite:///${path.join(root,`logs/e2e-${id}.db`).replaceAll('\\','/')}`,
+      OBJECT_STORAGE_LOCAL_DIR:path.join(root,`logs/e2e-objects-${id}`), KNK_ENV:'local-demo',
+    }, 'reports');
     const loggedIn = await api.post('/backend/api/v1/auth/login', { data: { email, password } });
     if (!loggedIn.ok()) throw new Error('Isolated test sign-in failed');
     await api.storageState({ path: 'logs/e2e-auth.json' });

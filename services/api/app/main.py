@@ -21,6 +21,7 @@ from . import models
 from .config import get_settings
 from .auth_sessions import token_digest
 from .auth_api import router as auth_router
+from .report_api import router as report_router
 from .auth_security import verify_factor, revoke_sessions
 from .telemetry import JOB_STATES, metric_path, request_id
 from .database import SessionLocal, engine, get_session
@@ -76,6 +77,7 @@ app.include_router(provider_router)
 app.include_router(attachments_router)
 app.include_router(pine_router)
 app.include_router(auth_router)
+app.include_router(report_router)
 
 app.add_middleware(
     CORSMiddleware,

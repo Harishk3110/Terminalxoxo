@@ -647,3 +647,11 @@
   font-size: 11px;
   color: #a8a8a8;
 }
+.report-workspace { align-items: start; flex: 0 0 auto; }
+.report-details dd { margin: 0 0 10px; overflow-wrap: anywhere; }
+.report-details progress { width: 100%; }
+.report-details .toolbar { display: flex; flex-wrap: wrap; gap: 16px; }
+.report-details a { display: inline-flex; align-items: center; gap: 5px; }
+.report-history { display: grid; max-height: 320px; overflow: auto; }
+.report-history button { display: grid; grid-template-columns: minmax(130px, 1fr) 100px minmax(170px, 1fr) 100px; gap: 12px; text-align: left; padding: 10px; border-bottom: 1px solid var(--border); }
+@media (max-width: 700px) { .report-history button { grid-template-columns: minmax(0, 1fr) 100px; } }

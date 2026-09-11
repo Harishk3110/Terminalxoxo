@@ -52,6 +52,19 @@ class ObjectStorage:
             return response["Body"].read()
         return (self.local_root / key).read_bytes()
 
+    def put_new_bytes(self, *, key: str, data: bytes, content_type: str) -> StoredObject:
+        """Write once. Conditional creation prevents competing workers overwriting output."""
+        self._validate_key(key)
+        if self._s3:
+            self._s3.put_object(Bucket=self.settings.object_storage_bucket, Key=key,
+                                Body=data, ContentType=content_type, IfNoneMatch="*")
+        else:
+            target = self.local_root / key
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open("xb") as stream:
+                stream.write(data)
+        return StoredObject(key, hashlib.sha256(data).hexdigest(), len(data))
+
     def local_path(self, key: str) -> Path | None:
         self._validate_key(key)
         if self._s3:

@@ -11,6 +11,7 @@ from .schema import Base as Base, IdMixin, TimestampMixin as TimestampMixin, utc
 from .ledger_models import PositionLot as PositionLot, PositionLotMatch as PositionLotMatch, TransactionRevision as TransactionRevision
 from .accounting_models import CapitalFlow as CapitalFlow, PortfolioIncome as PortfolioIncome, PortfolioFee as PortfolioFee, PortfolioAccrual as PortfolioAccrual, PortfolioLiability as PortfolioLiability
 from .auth_models import TotpState as TotpState
+from .report_models import ReportJob as ReportJob
 
 
 class User(IdMixin, Base):

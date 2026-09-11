@@ -468,7 +468,7 @@ def terminal_health(session: Session = Depends(get_session)):
     rows.append({"service": "IBKR paper agent", "state": "READ_ONLY" if broker_active else "OFFLINE", "as_of": broker.as_of.isoformat() if broker else None, "detail": "Observed paired paper snapshot" if broker else "No broker snapshot received"})
     from .backup_health import backup_state
     rows.append({"service": "Backup", **backup_state(Path(settings.backup_dir))})
-    rows.append({"service": "Report service", "state": "LIMITED", "as_of": now, "detail": "Private API XLSX exports; full model/deck/PDF rendering unavailable"})
+    rows.append({"service": "Report service", **dispatcher_state(session, "report")})
     for name in ("AI provider", "News provider", "Email alerts", "Telegram", "Sentry", "Workflow orchestrator"):
         rows.append({"service": name, "state": "NOT_VERIFIED", "as_of": now, "detail": "No current heartbeat or configured probe"})
     try:

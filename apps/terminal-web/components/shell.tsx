@@ -97,6 +97,17 @@ export default function TerminalShell({ route }: { route: string }) {
   const initialRoute = useRef(route);
   const importRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
+    const compact = window.matchMedia("(max-width: 1279px)");
+    const closeInspector = () => {
+      if (compact.matches)
+        setConfig((current) =>
+          current.inspector ? { ...current, inspector: false } : current,
+        );
+    };
+    compact.addEventListener("change", closeInspector);
+    return () => compact.removeEventListener("change", closeInspector);
+  }, []);
+  useEffect(() => {
     if (!boot.data || loaded) return;
     const data = boot.data;
     setWorkspaces(data.workspaces);
