@@ -290,12 +290,39 @@ class Agent:
         self.db.commit()
 
     def sync(self) -> None:
-        response = self.client.get("/agent/v1/files")
-        response.raise_for_status()
-        payload: object = response.json()
-        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
-            raise ValueError("Invalid remote file list")
-        items = [file_status(value) for value in payload["items"]]
+        pending = self.db.execute(
+            "SELECT DISTINCT file_id FROM files WHERE file_id IS NOT NULL AND state!='LOCAL_ARCHIVED' AND retry_at<=? ORDER BY file_id",
+            (time.time(),),
+        ).fetchall()
+        identifiers = [row[0] for row in pending]
+        items: list[FileStatus] = []
+        for start in range(0, len(identifiers), 100):
+            batch = identifiers[start : start + 100]
+            response = self.client.get(
+                "/agent/v1/files", params=[("file_id", identifier) for identifier in batch]
+            )
+            response.raise_for_status()
+            payload: object = response.json()
+            if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+                raise ValueError("Invalid remote file list")
+            statuses = [file_status(value) for value in payload["items"]]
+            returned = {item["id"] for item in statuses}
+            if len(returned) != len(statuses) or not returned.issubset(batch):
+                raise ValueError("Remote status list does not match queued file identities")
+            for identifier in set(batch) - returned:
+                for filename, digest, attempts in self.db.execute(
+                    "SELECT path,hash,attempts FROM files WHERE file_id=? AND state!='LOCAL_ARCHIVED'",
+                    (identifier,),
+                ).fetchall():
+                    self.errors += 1
+                    self.db.execute(
+                        "UPDATE files SET attempts=?,retry_at=? WHERE path=?",
+                        (attempts + 1, time.time() + min(300, 2 ** min(attempts + 1, 8)), filename),
+                    )
+                    logging.warning(
+                        "remote status missing; local file retained hash=%s", digest[:12]
+                    )
+            items.extend(statuses)
         for item in items:
             records = self.db.execute(
                 "SELECT path,state,hash,archive_path,attempts,retry_at FROM files WHERE file_id=?",
@@ -305,6 +332,8 @@ class Agent:
                 if state == "LOCAL_ARCHIVED" or retry_at > time.time():
                     continue
                 try:
+                    if item["hash"] != digest:
+                        raise ValueError("Remote file identity changed")
                     if item["state"] in TERMINAL_STATES:
                         if self.archive_processed:
                             self._archive(item, filename, digest, planned)

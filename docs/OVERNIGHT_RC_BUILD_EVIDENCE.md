@@ -602,3 +602,57 @@ overnight-coverage-19.json. These results precede the separate ASGI concurrency
 fix under investigation. Browser run 09 is still active and has exposed SQLite
 lock errors during workspace persistence and factor reads. No full browser or
 27-stage release pass is claimed for this checkpoint.
+
+## ASGI Concurrency and Scoped Status Lookup
+
+Baseline f0d92e3 plus working tree, 2026-09-12 SGT.
+
+Full browser 09 completed with 38 passed / one failed, zero retries, 20.7m.
+All five viewport sweeps passed. The quant journey's trace records a 14.18s
+factor request ending in HTTP 500, and the API log records SQLite lock failures
+in workspace commits, factor queries and authentication reads. The trace and
+failure screenshot are retained under logs/overnight-full-09-failure; the JSON
+receipt is overnight-full-09-results.json. This was not a clean browser pass.
+
+The asynchronous middleware previously performed synchronous initialization and
+authentication database work on the event loop. These checks now run in the
+thread pool, with each SQL session opened and closed within that call. The loop
+can finish other responses and release their sessions during a blocked read.
+Access checks, private cache headers and origin rejection are unchanged. A typed
+session payload preserves the existing optional email/role response fields.
+Two deterministic blocked-loop tests failed before the fix; the concurrency,
+authentication and telemetry selection then passed 29 tests, native exit 0.
+Receipts: overnight-middleware-before.log / overnight-middleware-after.log.
+No database timeout, journal mode, test timeout or financial tolerance was changed.
+
+The agent now requests pending file identities in batches of at most 100. The API
+keeps its default 500-file listing but permits bounded, ownership-scoped lookup
+of older IDs. Six status regressions failed before the fix, with two already
+passing. Additional negative controls reproduced missing-record starvation and
+acceptance of a changed hash in a nonterminal status. Missing remote records now
+retain their state and enter backoff while available records continue. Unexpected
+or duplicate response identities and changed hashes cannot advance local state.
+Revoked tokens, absent tokens and tokens without status scope remain rejected.
+
+Final focused selection: 71 passed, three warnings, 32.65s, native exit 0 in
+overnight-status-middleware-focused-03.log. This includes all 12 status tests,
+23 archive tests, seven paper-reader tests and 29 middleware/auth/telemetry tests.
+Whole Ruff and formatting pass (285 Python files). Whole strict checkpoint 14
+still fails: 1,608 distinct diagnostic lines in 117 files, API 901 in 33 files.
+Both local-agent sources and both newly added test modules have no diagnostics.
+No type ignores or untyped replacements were added.
+
+Intermediate backend 20 passed 1,251 tests in 446.23s. Status tests were added
+after that invocation collected its tests, and source line locations changed
+during the run, so its coverage is not used as final evidence. Full backend 21
+passed 1,263 tests, 13 warnings, 447.63s, native exit 0. Coverage is 10,901/12,366
+statements (88.1530%), 1,465 missing. Receipts: overnight-backend-21.log /
+overnight-backend-21.xml / overnight-coverage-21.json. Application sources were
+unchanged during that invocation. The later local-backup-tool batch has separate
+focused verification and is not claimed as part of that complete run.
+Full browser 10 is still active. Production Docker has not yet received the ASGI
+change. Overall release status remains open.
+
+Additional direct visual review: equity 1366px, portfolio and data-drop 1440px,
+and quant-dashboard 1920px. Tables, pane boundaries and toolbar controls were
+inspected; this does not certify all snapshots or replace the strict visual gate.

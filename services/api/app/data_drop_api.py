@@ -3,8 +3,9 @@
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Annotated, TypedDict
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -240,7 +241,7 @@ def claim(payload: ClaimRequest, session: Session = SESSION_DEPENDENCY):
     return {"agent_id": agent.id, "token": token, "scopes": agent.scopes}
 
 
-def agent_auth(request: Request, session: Session = SESSION_DEPENDENCY):
+def agent_auth(request: Request, session: Session = SESSION_DEPENDENCY) -> models.LocalAgent:
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(401, "Agent token required")
@@ -255,7 +256,7 @@ def agent_auth(request: Request, session: Session = SESSION_DEPENDENCY):
     return agent
 
 
-def scope(agent, permission):
+def scope(agent: models.LocalAgent, permission: str) -> None:
     if permission not in agent.scopes:
         raise HTTPException(403, "Agent scope denied")
 
@@ -296,15 +297,36 @@ async def agent_upload(
     )
 
 
+class AgentFileStatus(TypedDict):
+    id: str
+    hash: str
+    state: str
+    duplicate_of: str | None
+
+
+class AgentFileStatuses(TypedDict):
+    items: list[AgentFileStatus]
+
+
 @router.get("/agent/v1/files")
-def agent_files(agent=AGENT_DEPENDENCY, session: Session = SESSION_DEPENDENCY):
+def agent_files(
+    agent: models.LocalAgent = AGENT_DEPENDENCY,
+    session: Session = SESSION_DEPENDENCY,
+    file_id: Annotated[list[str] | None, Query(max_length=100)] = None,
+) -> AgentFileStatuses:
     scope(agent, "files:status")
-    rows = session.scalars(
+    query = (
         select(models.ExternalFile)
         .where(models.ExternalFile.agent_id == agent.id)
-        .order_by(models.ExternalFile.created_at.desc())
-        .limit(500)
-    ).all()
+        .order_by(models.ExternalFile.created_at.desc(), models.ExternalFile.id)
+    )
+    if file_id is not None:
+        if not 1 <= len(file_id) <= 100 or any(not 1 <= len(item) <= 200 for item in file_id):
+            raise HTTPException(422, "Supply one to 100 bounded file identifiers")
+        query = query.where(models.ExternalFile.id.in_(file_id))
+    else:
+        query = query.limit(500)
+    rows = session.scalars(query).all()
     return {
         "items": [
             {"id": r.id, "hash": r.content_hash, "state": r.state, "duplicate_of": r.duplicate_of}

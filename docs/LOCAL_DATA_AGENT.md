@@ -35,6 +35,13 @@ Missing or modified content is never marked LOCAL_ARCHIVED. Do not manually edit
 the queue or replace archive contents to clear a retry. Existing queue databases
 gain the nullable archive journal column without deleting their records.
 
+Status synchronization requests the pending queue's file IDs in batches of at
+most 100. It is not limited to the API's latest 500-file listing. Server ownership
+and scope checks apply to every lookup. Unknown or revoked credentials cannot
+read statuses. Missing remote records retain their local state and enter retry
+backoff without blocking other returned files. Unexpected response IDs, duplicate
+IDs and content-hash changes cannot advance a queued file's state.
+
 Commands pause/resume use a PAUSE marker. rescan performs a bounded scan.
 The watcher checks every five seconds and retries uploads with capped backoff.
 First mapping/import approval remains in the browser. Failed raw-storage writes

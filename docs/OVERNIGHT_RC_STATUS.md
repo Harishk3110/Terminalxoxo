@@ -3,10 +3,9 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: 364503e, pushed. Dated-source, typed-options, risk empty-state,
-ledger refresh and factor performance changes are committed. The local-agent
-archive/reader contract batch has passed its full backend verification. The next
-ASGI concurrency fix is being tested. Full release remains open.
+Current HEAD: f0d92e3, pushed. Dated-source/options/risk, ledger/factor and local
+archive/reader fixes are committed. ASGI concurrency and bounded agent status
+lookup are undergoing final batch verification. Full release remains open.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -20,20 +19,27 @@ subtask: complete financial model/deck content and actual rendered-artifact revi
 Verified agent batch: durable local archive journal, validated acknowledgements,
 typed reader contracts, nonzero broker client IDs and explicit derivative
 multiplier availability. Existing queue records are preserved. Current code batch:
-keep blocking database access out of the asynchronous request middleware.
+keep blocking database access out of asynchronous middleware and reconcile older
+agent uploads using bounded identity lookups with ownership/hash verification.
 Next batch: remaining engine/API contracts and source-adapter completeness.
 Dated stress/hedge selection is implemented. Historical valuations no longer rewrite
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Current focused selection: 71 passed, three warnings, 32.65s. Full backend 21:
+  1,263 passed, 13 warnings, 447.63s; 10,901/12,366 statements covered (88.1530%).
+  Browser 10 remains active with application edits paused.
+- Browser 09: 38 passed / one failed / zero retries, 20.7m. All five viewport
+  sweeps passed; quant hit SQLite lock errors. The new ASGI checks pass two
+  deterministic concurrency regressions but still require this fresh full run.
 - Agent/reader focused selection: 30 passed; both source modules and both new test
   modules pass strict types. Ruff/format/pip check pass. Full backend run 19:
   1,244 passed, 13 warnings, 447.09s; 10,875/12,341 statements covered (88.1209%).
   Whole type checkpoint 13 still fails; local-agent has no diagnostics.
 - Docker image build and health-gated refresh for 364503e passed. The full browser
-  run 09 is active on that build; the quant journey hit SQLite lock errors in
-  workspace saving and factor reads. The ASGI fix is not yet deployed.
+  run 09 finished with the quant lock failure described above. The ASGI fix is
+  not yet deployed to the persistent Docker stack.
 - Full backend run 18: 1,214 passed, 13 warnings, 469.49s; 10,871/12,341
   statements covered. This includes the final factor read/calculation changes.
 - FX/market/history/research/type-runner selection: 46 passed. Options selection:
@@ -82,11 +88,10 @@ Current evidence:
   upstream scrape failures do not restart healthy Prometheus.
 
 First-party Ruff passes. The latest format command includes services, packages,
-scripts, tests, typings, infrastructure and migrations: 276 formatted files.
-Mypy is NOT green: checkpoint 13 has 913 API errors in 33 files; the whole runner
-reports 1,619 distinct diagnostic lines in 117 files across nine distributions,
-with 262 inventoried files. Checkpoint 12 had 1,667 diagnostics; agent contracts
-removed another 48. The source-only checkpoint 09 had 1,859 diagnostics.
+scripts, tests, typings, infrastructure and migrations: 285 formatted files.
+Mypy is NOT green: checkpoint 14 has 901 API errors in 33 files; the whole runner
+reports 1,608 distinct diagnostic lines in 117 files across nine distributions.
+Checkpoint 13 had 1,619 diagnostics. The source-only checkpoint 09 had 1,859.
 The runner
 now pins PYTHONHASHSEED to keep diagnostic ordering stable. Pandas 2.2.3 stubs were
 updated to their compatible May 2025 revision; runtime pandas was not changed.
@@ -145,7 +150,9 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-backend-19.log -Tail 8`.
-Finish the agent verification/push and full browser run 09, then continue remaining
-engine/API contracts. Agent startup installation, structured logs, paging beyond
-the latest 500 statuses and separate file/broker credential profiles remain open.
+Exact next command: `Get-Content logs/overnight-browser-full-10.log -Tail 8`.
+Finish browser 10, verify and push the ASGI/status batch, then
+continue remaining engine/API contracts. Agent startup installation, structured
+logs and separate file/broker credential profiles remain open. A separate review
+move journal is still needed for a hard interruption between its rename and
+queue commit; the completed archive journal does not cover that earlier move.

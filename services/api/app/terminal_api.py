@@ -11,6 +11,7 @@ import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NotRequired, TypedDict
 from zipfile import BadZipFile, ZipFile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
@@ -978,8 +979,15 @@ def terminal_report(kind: str, session: Session = SESSION_DEPENDENCY):
     return service._write_workbook(kind, sheets, quality=data["quality"])
 
 
+class AuthSessionPayload(TypedDict):
+    authenticated: bool
+    setup_required: bool
+    email: NotRequired[str]
+    role: NotRequired[str]
+
+
 @router.get("/auth/session")
-def auth_session(request: Request, session: Session = SESSION_DEPENDENCY):
+def auth_session(request: Request, session: Session = SESSION_DEPENDENCY) -> AuthSessionPayload:
     from .auth_sessions import find_session
 
     row = find_session(session, request.cookies.get("knk_session"))

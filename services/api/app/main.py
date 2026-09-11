@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -16,6 +17,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, ge
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from . import models
 from .alpha_api import router as alpha_router
@@ -169,13 +171,9 @@ def startup() -> None:
     logger.info("api_started", environment=settings.knk_env)
 
 
-@app.middleware("http")
-async def request_middleware(request: Request, call_next):
+def request_access(request: Request) -> JSONResponse | None:
     ensure_database_ready()
     path = request.url.path
-    start = datetime.now(UTC)
-    cid = correlation_id(request)
-    denied = None
     from .auth_guards import origin_allowed
 
     if not origin_allowed(
@@ -184,24 +182,32 @@ async def request_middleware(request: Request, call_next):
         request.headers.get("sec-fetch-site"),
         settings.allowed_origins,
     ):
-        denied = JSONResponse({"detail": "Untrusted request origin"}, status_code=403)
+        return JSONResponse({"detail": "Untrusted request origin"}, status_code=403)
     session_paths = {
         "/api/v1/auth/login",
         "/api/v1/auth/setup",
         "/api/v1/auth/session",
         "/api/v1/auth/logout",
     }
-    if (
-        denied is None
-        and path.startswith("/api/")
-        and path not in session_paths
-        and request.method != "OPTIONS"
-    ):
+    if path.startswith("/api/") and path not in session_paths and request.method != "OPTIONS":
         from .terminal_api import auth_session
 
         with SessionLocal() as session:
             if not auth_session(request, session)["authenticated"]:
-                denied = JSONResponse({"detail": "Authentication required"}, status_code=401)
+                return JSONResponse({"detail": "Authentication required"}, status_code=401)
+    return None
+
+
+@app.middleware("http")
+async def request_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    path = request.url.path
+    start = datetime.now(UTC)
+    cid = correlation_id(request)
+    # Database lock waits must leave the loop free to finish other responses and
+    # release their request-scoped sessions. No session crosses thread boundaries.
+    denied = await run_in_threadpool(request_access, request)
     response = denied if denied is not None else await call_next(request)
     elapsed = (datetime.now(UTC) - start).total_seconds()
     label = metric_path(request.scope, rejected=denied is not None)
