@@ -3,10 +3,12 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: 483171e, pushed. Dated-source/options/risk, ledger/factor, local
+Current HEAD: 6edb4e2, pushed. Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
-Factor request/loading improvements pass focused verification. Full release remains open.
+Factor request/loading improvements are committed and deployed locally. Typed alpha
+statistics and the verified regression-library boundary pass focused checks.
+Full release remains open.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -28,12 +30,18 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Full backend 22: 1,300 passed, 13 warnings, 427.31s; coverage remains
+  10,901/12,366 statements (88.1530%). This precedes the typed-alpha batch.
+- Typed alpha selection: 20 passed. Nine complete and four unavailable results
+  match 6edb4e2 exactly. Four independent Bartlett HAC/t-inference checks pass.
+  Whole strict checkpoint 17: 1,535 diagnostics / 102 files / 270 sources;
+  API is 877 diagnostics. The alpha statistics source and its tests pass strict types.
 - Factor projection has exact old/new equality for 54,241 observations and 18
   complete factor results. Affected backend selection: 42 passed. Terminal unit
   suite: 270 passed. Node 22 build, TypeScript and ESLint pass. Rebuilt operating/
   quant browser selection: four passed; deliberate overlap/reload test: one passed,
   both with zero retries and no recorded database-lock or HTTP 500 failures.
-  Full browser 11 (40 tests) and backend 22 are active.
+  Full browser 11 (40 tests) remains active; its two quant journeys have passed.
 - Recovery/backup focused selection: 45 passed. Migration selection: 19 passed,
   including real isolated PostgreSQL lifecycle and three URL configuration tests.
   Whole strict checkpoint 16: 1,564 diagnostics / 104 files / 267 sources. No
@@ -43,7 +51,7 @@ Current evidence:
   1,263 passed, 13 warnings, 447.63s; 10,901/12,366 statements covered (88.1530%).
   Browser 10 finished: 37 passed / two failed / zero retries, 23.0m. All five
   viewport sweeps passed. Both failures are in quant; traces are preserved under
-  logs/overnight-full-10-failures. Backend 22 is now active.
+  logs/overnight-full-10-failures. Backend 22 has passed as recorded above.
 - Local backup manifest selection: 23 passed, native exit 0; six affected source
   and test files pass strict types. Malformed and duplicate manifest fields are
   rejected before creating the restore target. This is separate from backend 21.
@@ -145,7 +153,10 @@ release-candidate acceptance are not claimed.
 Ten long-running Docker services, including reports, are healthy; MinIO init exited
 0. Runtime carries the dated-source/options/risk-availability batch based on
 a3a5d79 and now the ledger/factor fix from 364503e. API/worker/report/UI
-builds and refresh passed. The
+builds and refresh passed. A subsequent build and health-gated refresh deployed
+6edb4e2 to API, data/quant workers, reports and terminal. All ten services and the
+MinIO initializer pass the observe-only watchdog. The later alpha typing changes
+are not part of that Docker image. The
 earlier frontend refresh returned healthy, but the PowerShell command wrapper
 reported exit 1 on Docker stderr progress. An explicit native-exit-code verification
 with --no-deps returned 0; the corrected watchdog remains active.
@@ -167,10 +178,11 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-backend-22.log -Tail 8`.
-Complete backend 22 and full browser 11, then refresh the persistent Docker stack
-with the tested changes. Full browser closure is not yet claimed. Continue remaining
-engine/API contracts, beginning with the pinned regression-library boundary.
+Exact next command: `Get-Content logs/overnight-browser-full-11.log -Tail 8`.
+Complete full browser 11 and continue engine/API contracts. Align and verify the
+scientific dependency stacks: Windows currently uses NumPy 2.2.1/SciPy 1.14.1;
+Docker uses NumPy 2.5.3/SciPy 1.18.1. Both use statsmodels 0.15.0. No cross-runtime
+numerical equivalence or dependency alignment is claimed yet.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

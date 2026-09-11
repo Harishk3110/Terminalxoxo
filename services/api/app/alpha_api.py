@@ -165,8 +165,10 @@ def analyse(session, request: AlphaRequest):
             result["reason"] = eligibility
         if basis == "GROSS" and request.backtest_run_id and gross.isna().all():
             result["reason"] = "Saved backtest does not record a separate gross counterfactual"
-        result["jensen_alpha"] = result["annualised_alpha"] if request.model == "CAPM" else None
-        results[basis] = result
+        results[basis] = {
+            **result,
+            "jensen_alpha": result["annualised_alpha"] if request.model == "CAPM" else None,
+        }
     return {
         "model": request.model,
         "source": source,

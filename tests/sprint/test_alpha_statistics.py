@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+import math
+
 import numpy as np
 import pandas as pd
 import pytest
-from app.alpha_statistics import AlphaSettings, alpha_analysis, regression
+from app.alpha_statistics import AlphaSettings, alpha_analysis, finite, regression
 
 
-def sample():
+def sample() -> tuple[pd.Series[float], pd.DataFrame]:
     rng = np.random.default_rng(3110)
     dates = pd.bdate_range("2024-01-01", periods=200)
     factors = pd.DataFrame(
@@ -14,10 +18,36 @@ def sample():
     return returns, factors
 
 
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (None, None),
+        (math.nan, None),
+        (math.inf, None),
+        (-math.inf, None),
+        (0.0, 0.0),
+        (-0.0, -0.0),
+        (-2.3, -2.3),
+    ],
+)
+def test_finite_alpha_fields_preserve_zero_and_reject_nonfinite_values(
+    value: float | None, expected: float | None
+) -> None:
+    result = finite(value)
+    assert result == expected
+    if result is not None and expected is not None:
+        assert math.copysign(1, result) == math.copysign(1, expected)
+
+
 def test_hac_regression_recovers_alpha_betas_and_intervals() -> None:
     returns, factors = sample()
     result = regression(returns, factors, AlphaSettings())
     assert result["state"] == "AVAILABLE"
+    assert result["alpha_per_period"] is not None
+    assert result["confidence_interval"] is not None
+    assert result["confidence_interval"][0] is not None
+    assert result["confidence_interval"][1] is not None
+    assert result["p_value"] is not None and result["r_squared"] is not None
     assert result["alpha_per_period"] == pytest.approx(0.001, abs=0.0002)
     assert result["annualised_alpha"] == pytest.approx(result["alpha_per_period"] * 252)
     assert result["coefficients"][1]["coefficient"] == pytest.approx(1.2, abs=0.04)
@@ -41,7 +71,7 @@ def test_rolling_alpha_does_not_see_future_and_excess_is_separate() -> None:
 
 
 @pytest.mark.parametrize("fault", ["short", "missing", "collinear"])
-def test_regression_unavailable_states(fault):
+def test_regression_unavailable_states(fault: str) -> None:
     returns, factors = sample()
     if fault == "short":
         returns, factors = returns.iloc[:20], factors.iloc[:20]

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Literal, NotRequired, SupportsFloat, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -20,11 +20,59 @@ class AlphaSettings(BaseModel):
     confidence: float = Field(default=0.95, ge=0.8, le=0.999, allow_inf_nan=False)
 
 
-def finite(value):
-    return float(value) if value is not None and np.isfinite(value) else None
+class AlphaCoefficient(TypedDict):
+    factor: str
+    coefficient: float | None
+    standard_error: float | None
+    t_statistic: float | None
+    p_value: float | None
+    lower: float | None
+    upper: float | None
 
 
-def regression(returns: pd.Series, factors: pd.DataFrame, settings: AlphaSettings) -> dict:
+class AlphaRegression(TypedDict):
+    state: Literal["INSUFFICIENT_DATA", "AVAILABLE"]
+    observations: int
+    alpha_per_period: float | None
+    annualised_alpha: float | None
+    confidence_interval: list[float | None] | None
+    annualised_confidence_interval: list[float | None] | None
+    p_value: float | None
+    r_squared: float | None
+    adjusted_r_squared: float | None
+    coefficients: list[AlphaCoefficient]
+    reason: str | None
+    settings: dict[str, int | float]
+    methodology: str
+    start: NotRequired[str]
+    end: NotRequired[str]
+
+
+class RollingAlpha(TypedDict):
+    date: str
+    alpha: float | None
+    lower: float | None
+    upper: float | None
+    p_value: float | None
+    state: Literal["INSUFFICIENT_DATA", "AVAILABLE"]
+
+
+class AlphaAnalysis(AlphaRegression):
+    raw_cumulative_excess_return: float | None
+    rolling: list[RollingAlpha]
+    warnings: list[str]
+
+
+def finite(value: SupportsFloat | None) -> float | None:
+    if value is None:
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def regression(
+    returns: pd.Series[float], factors: pd.DataFrame, settings: AlphaSettings
+) -> AlphaRegression:
     if (
         not returns.index.equals(factors.index)
         or not returns.index.is_unique
@@ -35,7 +83,7 @@ def regression(returns: pd.Series, factors: pd.DataFrame, settings: AlphaSetting
         raise ValueError("Supply one to twelve uniquely named factors, without an intercept column")
     y, x = returns.to_numpy(dtype=float), factors.to_numpy(dtype=float)
     count = len(y)
-    result = {
+    result: AlphaRegression = {
         "state": "INSUFFICIENT_DATA",
         "observations": count,
         "alpha_per_period": None,
@@ -99,12 +147,13 @@ def regression(returns: pd.Series, factors: pd.DataFrame, settings: AlphaSetting
 
 
 def alpha_analysis(
-    returns: pd.Series,
+    returns: pd.Series[float],
     factors: pd.DataFrame,
     settings: AlphaSettings,
-    risk_free: float | pd.Series = 0.0,
-    benchmark: pd.Series | None = None,
-) -> dict:
+    risk_free: float | pd.Series[float] = 0.0,
+    benchmark: pd.Series[float] | None = None,
+) -> AlphaAnalysis:
+    rf: float | pd.Series[float]
     if isinstance(risk_free, pd.Series):
         if not returns.index.equals(risk_free.index):
             raise ValueError("Risk-free observations must align exactly")
@@ -115,7 +164,7 @@ def alpha_analysis(
         rf = math.expm1(math.log1p(risk_free) / settings.annual_periods)
     excess = returns - rf
     result = regression(excess, factors, settings)
-    rolling = []
+    rolling: list[RollingAlpha] = []
     for end in range(settings.rolling_window, len(returns) + 1):
         begin = end - settings.rolling_window
         calculated = regression(excess.iloc[begin:end], factors.iloc[begin:end], settings)

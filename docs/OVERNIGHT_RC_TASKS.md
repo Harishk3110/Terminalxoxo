@@ -21,6 +21,8 @@ milestone remain open unless explicitly verified below.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
 - [x] M2: shared validated DCF result consumers; existing financial assertions retained.
+- [x] M2/M9: typed alpha regression/rolling/availability contracts, verified statsmodels boundary and independent HAC/t-inference checks; 20 focused tests and 13 exact old/new result cases pass.
+- [ ] M2: align and verify Windows/Docker NumPy and SciPy versions; current dependency drift is recorded in status and evidence.
 - [x] M2/M7: eligible dated market/FX candidates across legacy/imported stores; preferred-source and stale/no-demo-fallback regressions.
 - [x] M2/M11: typed options rows/results, historical specification checks, finite owned-equity guard and exact 144-case chain/position baseline comparison.
 - [x] M3: explicit risk variance/correlation empty states, genuine-zero preservation and desktop/mobile browser verification.

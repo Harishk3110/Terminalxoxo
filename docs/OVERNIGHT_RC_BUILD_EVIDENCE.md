@@ -765,3 +765,51 @@ was observed. This does not certify the entire terminal screenshot set.
 Full browser 11, now 40 tests, and backend 22 remain active. No complete current
 browser pass or 27-gate release pass is claimed. The persistent Docker image has
 not yet been refreshed with this batch.
+
+## Backend 22, Local Refresh and Alpha Contracts
+
+Full backend 22 completed: 1,300 passed, 13 warnings, 427.31s, native exit 0.
+Coverage is 10,901/12,366 statements (88.1530%), 1,465 missing. Receipts:
+overnight-backend-22.log / overnight-backend-22.xml / overnight-coverage-22.json.
+Application source remained unchanged during this run. Its coverage and test
+count do not include the subsequent alpha-statistics edits or added library tests.
+
+Docker build and --no-deps/--no-build health-gated refresh for 6edb4e2 both exit 0.
+API, data/quant workers, report engine and terminal were refreshed without changing
+the database or storage volumes. All ten services are HEALTHY and MinIO init is
+SUCCEEDED in overnight-factor-watchdog.log. /overview responds through the private
+sign-in route on port 3001. Receipts: overnight-factor-docker-build.log /
+overnight-factor-docker-up.log. Python image exports completed before alpha source
+edits began; the later alpha batch is not claimed in these images.
+
+The alpha-statistics boundary now has explicit regression, coefficient, interval,
+rolling and availability contracts. Scalar finite checks retain positive/negative
+zero and keep nonfinite observations unavailable. The CAPM-specific Jensen field
+is composed in the API response without changing its previous JSON output.
+Existing numeric tolerances and financial assertions were preserved; new non-null
+assertions make existing successful-result assumptions explicit.
+
+Local stubs cover the consumed NumPy surface of the installed statsmodels 0.15.0,
+verified against actual signatures and an instantiated OLS/HAC result. Runtime
+stub verification passes for the declared public surface; unrelated library APIs
+are outside these partial stubs. scipy-stubs 1.14.1.6 was added for the installed
+Windows SciPy 1.14.1, with no runtime NumPy/SciPy change. Installation and pip check
+pass. An initial test annotation lacked postponed evaluation and failed collection;
+adding the future import fixed it without weakening any test.
+
+Final alpha/statistical-library/API selection: 20 passed, one warning, 6.65s,
+native exit 0 in overnight-alpha-focused-03.log. Five source/test/stub files pass
+strict types in overnight-alpha-types-03.log. Four independent tests reconstruct
+Bartlett HAC covariance, finite-sample correction, standard errors, t statistics,
+p-values and confidence intervals using explicit matrix calculations. Runtime
+arrays are float64 with verified shapes. Nine full-analysis and four unavailable
+cases have exact old/new result equality in overnight-alpha-parity.log.
+
+Whole strict checkpoint 17 still fails: 1,535 diagnostics in 102 files, 270 source
+files inventoried. API is 877 diagnostics; alpha_statistics has none. Full browser
+11 remains active, with both formerly failing quant journeys now passed.
+
+Observed dependency gap: Windows NumPy/SciPy are 2.2.1/1.14.1, while the existing
+Docker environment is 2.5.3/1.18.1. Both carry statsmodels 0.15.0. The shared source
+tests and exact same-runtime comparisons do not establish cross-runtime parity;
+scientific dependency alignment and fresh verification remain open.
