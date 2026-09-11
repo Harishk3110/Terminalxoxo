@@ -4,14 +4,36 @@ import csv
 import io
 import json
 import re
+from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import TypedDict
 from zipfile import ZipFile
 
+from pydantic import ConfigDict, JsonValue, TypeAdapter
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
 from .portfolio_engine import decimal
+
+TABULAR_ROWS = TypeAdapter(
+    list[dict[str, JsonValue]],
+    config=ConfigDict(strict=True, allow_inf_nan=False, hide_input_in_errors=True),
+)
+PROFILE_ALIASES = TypeAdapter(dict[str, list[str]], config=ConfigDict(strict=True))
+
+
+class ValidationReport(TypedDict):
+    valid: bool
+    errors: list[str]
+    error_count: int
+    warnings: list[str]
+    rows: int
+    validated_rows: int
+    symbol_conflict: bool
+    point_in_time: str
+
 
 ALIASES = {
     "symbol": ["symbol", "ticker", "security", "instrument"],
@@ -86,11 +108,11 @@ REQUIRED = {
 }
 
 
-def header(value):
+def header(value: object) -> str:
     return re.sub(r"[\s_\-]+", " ", str(value).strip().lower())
 
 
-def seed_profiles(session):
+def seed_profiles(session: Session) -> None:
     existing = set(session.scalars(select(models.MappingProfile.code)).all())
     for code, kind in SPECS.items():
         if code not in existing:
@@ -118,21 +140,26 @@ def seed_profiles(session):
     session.flush()
 
 
-def parse_file(data, filename):
+def parse_file(data: bytes, filename: str) -> tuple[list[dict[str, JsonValue]], list[str]]:
     suffix = Path(filename).suffix.lower()
+    payload: object
     if suffix == ".xlsx":
         from openpyxl import load_workbook
+        from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 
         with ZipFile(io.BytesIO(data)) as archive:
             if sum(item.file_size for item in archive.infolist()) > 100_000_000:
                 raise ValueError("Expanded workbook exceeds 100 MB")
         workbook = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
         try:
-            iterator = iter(workbook.active.values)
-            columns = [str(v).strip() if v is not None else "" for v in next(iterator)]
-            if not all(columns) or len(set(columns)) != len(columns):
+            sheet = workbook.active
+            if not isinstance(sheet, ReadOnlyWorksheet):
+                raise ValueError("Workbook must have an active tabular worksheet")
+            iterator = iter(sheet.values)
+            columns = [str(v).strip() if v is not None else "" for v in next(iterator, ())]
+            if not columns or not all(columns) or len(set(columns)) != len(columns):
                 raise ValueError("Workbook headers must be nonempty and unique")
-            rows = [
+            payload = [
                 dict(
                     zip(
                         columns,
@@ -148,35 +175,38 @@ def parse_file(data, filename):
     elif suffix == ".xls":
         import xlrd
 
-        workbook = xlrd.open_workbook(file_contents=data, on_demand=True)
+        legacy = xlrd.open_workbook(file_contents=data, on_demand=True)
         try:
-            sheet = workbook.sheet_by_index(0)
-            if not 1 < sheet.nrows <= 100001 or sheet.ncols > 1000:
+            legacy_sheet = legacy.sheet_by_index(0)
+            if not 1 < legacy_sheet.nrows <= 100001 or legacy_sheet.ncols > 1000:
                 raise ValueError("XLS requires at most 100,000 data rows and 1,000 columns")
-            columns = [str(value).strip() for value in sheet.row_values(0)]
+            columns = [str(value).strip() for value in legacy_sheet.row_values(0)]
             if not all(columns) or len(set(columns)) != len(columns):
                 raise ValueError("XLS headers must be nonempty and unique")
-            rows = []
-            for index in range(1, sheet.nrows):
-                values = []
-                for cell in sheet.row(index):
+            legacy_rows: list[dict[str, object]] = []
+            for index in range(1, legacy_sheet.nrows):
+                values: list[object] = []
+                for cell in legacy_sheet.row(index):
                     if cell.ctype == xlrd.XL_CELL_ERROR:
                         raise ValueError("XLS contains an error cell")
-                    value = (
-                        xlrd.xldate_as_datetime(cell.value, workbook.datemode).isoformat()
-                        if cell.ctype == xlrd.XL_CELL_DATE
-                        else cell.value
-                    )
+                    value: object = cell.value
+                    if cell.ctype == xlrd.XL_CELL_DATE:
+                        if not isinstance(value, (int, float)):
+                            raise ValueError("XLS contains an invalid date cell")
+                        value = xlrd.xldate_as_datetime(value, legacy.datemode).isoformat()
                     values.append(value)
                 if any(value not in (None, "") for value in values):
-                    rows.append(dict(zip(columns, values, strict=True)))
+                    legacy_rows.append(dict(zip(columns, values, strict=True)))
+            payload = legacy_rows
         finally:
-            workbook.release_resources()
+            legacy.release_resources()
     elif suffix == ".jsonl":
-        rows = [json.loads(line) for line in data.decode("utf-8-sig").splitlines() if line.strip()]
+        payload = [
+            json.loads(line) for line in data.decode("utf-8-sig").splitlines() if line.strip()
+        ]
     elif suffix == ".json":
-        payload = json.loads(data.decode("utf-8-sig"))
-        rows = payload.get("rows") if isinstance(payload, dict) else payload
+        decoded: object = json.loads(data.decode("utf-8-sig"))
+        payload = decoded.get("rows") if isinstance(decoded, dict) else decoded
     elif suffix == ".parquet":
         from decimal import Decimal
 
@@ -205,7 +235,7 @@ def parse_file(data, filename):
                 or pa.types.is_null(field.type)
             ):
                 raise ValueError("Parquet requires scalar text, numeric or date columns")
-        rows = [
+        payload = [
             {
                 key: value.isoformat()
                 if isinstance(value, (date, datetime))
@@ -218,6 +248,7 @@ def parse_file(data, filename):
         ]
     elif suffix == ".csv":
         content = data.decode("utf-8-sig")
+        dialect: csv.Dialect | type[csv.Dialect]
         try:
             dialect = csv.Sniffer().sniff(content[:8192], delimiters=",;\t|")
         except csv.Error:
@@ -225,21 +256,27 @@ def parse_file(data, filename):
         reader = csv.DictReader(io.StringIO(content), dialect=dialect)
         if not reader.fieldnames or len(set(reader.fieldnames)) != len(reader.fieldnames):
             raise ValueError("CSV headers must be unique")
-        rows = list(reader)
+        payload = list(reader)
     else:
         raise ValueError("Supported formats: CSV, XLSX, XLS, JSON, JSONL, Parquet")
     if (
-        not isinstance(rows, list)
-        or not rows
-        or any(not isinstance(r, dict) or any(not isinstance(k, str) for k in r) for r in rows)
+        not isinstance(payload, list)
+        or not payload
+        or any(
+            not isinstance(row, dict)
+            or not row
+            or any(not isinstance(key, str) or not key.strip() for key in row)
+            for row in payload
+        )
     ):
         raise ValueError("File must contain nonempty rows with named columns")
-    if len(rows) > 100000:
+    if len(payload) > 100000:
         raise ValueError("Maximum 100,000 rows per file")
+    rows = TABULAR_ROWS.validate_python(payload)
     return rows, list(dict.fromkeys(k for r in rows for k in r))
 
 
-def filename_metadata(filename):
+def filename_metadata(filename: str) -> dict[str, str | None]:
     stem = Path(filename).stem
     match = re.match(
         r"^(?P<symbol>[A-Za-z][A-Za-z0-9.]{0,15})[_ -]+(?P<date>\d{4}[-_]?\d{2}[-_]?\d{2})(?:[_ -]+(?P<kind>.+))?$",
@@ -255,20 +292,32 @@ def filename_metadata(filename):
     return {"symbol": match["symbol"].upper(), "date": day, "type": match["kind"]}
 
 
-def suggest_mapping(columns, profile):
+def suggest_mapping(columns: Sequence[str], profile: models.MappingProfile) -> dict[str, str]:
     lookup = {header(c): c for c in columns}
+    rules = PROFILE_ALIASES.validate_python(profile.rules.get("aliases"))
     return {
         role: next((lookup[header(alias)] for alias in aliases if header(alias) in lookup), "")
-        for role, aliases in profile.rules["aliases"].items()
+        for role, aliases in rules.items()
         if any(header(alias) in lookup for alias in aliases)
     }
 
 
-def normalize(rows, mapping, profile, instruments, metadata, defaults, resolution=None):
+def normalize(
+    rows: Sequence[Mapping[str, JsonValue]],
+    mapping: Mapping[str, str],
+    profile: models.MappingProfile,
+    instruments: Sequence[models.Instrument],
+    metadata: Mapping[str, JsonValue],
+    defaults: Mapping[str, JsonValue],
+    resolution: str | None = None,
+) -> tuple[list[dict[str, JsonValue]], ValidationReport]:
     kind = profile.dataset_type
-    errors, warnings, normalized = [], [], []
+    errors: list[str] = []
+    warnings: list[str] = []
+    normalized: list[dict[str, JsonValue]] = []
     known = {i.symbol: i for i in instruments}
-    seen, dates = set(), {}
+    seen: set[tuple[JsonValue, ...]] = set()
+    dates: dict[str, list[date]] = {}
     symbols = {str(r.get(mapping.get("symbol", ""), "")).upper().strip() for r in rows} - {""}
     conflict = metadata.get("symbol") and symbols and symbols != {metadata["symbol"]}
     if conflict and resolution not in {"CONTENT", "FILENAME"}:
@@ -282,13 +331,14 @@ def normalize(rows, mapping, profile, instruments, metadata, defaults, resolutio
             row["symbol"] = metadata.get("symbol") or row.get("symbol")
         if row.get("symbol"):
             row["symbol"] = str(row["symbol"]).upper().strip()
+        symbol = str(row["symbol"]) if row.get("symbol") else None
         try:
             for field in REQUIRED[kind]:
                 if row.get(field) in (None, ""):
                     raise ValueError(f"Missing {field}")
-            if row.get("symbol") and row["symbol"] not in known:
+            if symbol and symbol not in known:
                 raise ValueError(f"Unknown security {row['symbol']}")
-            item = known.get(row.get("symbol"))
+            item = known.get(symbol) if symbol else None
             if item:
                 if row.get("currency") and str(row["currency"]).upper() != item.currency:
                     raise ValueError("Currency differs from security master")
@@ -299,6 +349,7 @@ def normalize(rows, mapping, profile, instruments, metadata, defaults, resolutio
                     if day > datetime.now(UTC).date():
                         raise ValueError(f"Future {field}")
                     row[field] = day.isoformat()
+            key: tuple[JsonValue, ...]
             if kind == "options_chain":
                 from .option_contracts import normalize_option
 
@@ -324,16 +375,16 @@ def normalize(rows, mapping, profile, instruments, metadata, defaults, resolutio
                         "Incomplete OHLC: close-only prices can value NAV but cannot run OHLC backtests"
                     )
                 key = (row["symbol"], row["date"])
-                dates.setdefault(row["symbol"], []).append(date.fromisoformat(row["date"]))
+                dates.setdefault(str(row["symbol"]), []).append(
+                    date.fromisoformat(str(row["date"]))
+                )
             elif kind == "fx":
-                row["base_currency"], row["quote_currency"] = (
+                currencies = (
                     str(row["base_currency"]).upper(),
                     str(row["quote_currency"]).upper(),
                 )
-                if any(
-                    len(row[k]) != 3 or not row[k].isalpha()
-                    for k in ("base_currency", "quote_currency")
-                ):
+                row["base_currency"], row["quote_currency"] = currencies
+                if any(len(code) != 3 or not code.isalpha() for code in currencies):
                     raise ValueError("FX currencies must be three-letter codes")
                 row["rate"] = str(decimal(row["rate"], "rate", positive=True))
                 if row["base_currency"] == row["quote_currency"] and decimal(row["rate"]) != 1:
@@ -357,7 +408,7 @@ def normalize(rows, mapping, profile, instruments, metadata, defaults, resolutio
                     }
                     if not metrics:
                         raise ValueError("No numeric fundamental metrics")
-                    row["metrics"] = metrics
+                    row["metrics"] = {**metrics}
                 key = (row["symbol"], str(row["period"]), row.get("metric"), row["actual_estimate"])
             elif kind == "transactions":
                 from .portfolio_engine import TRANSACTION_TYPES

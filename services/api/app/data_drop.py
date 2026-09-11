@@ -160,7 +160,7 @@ class DataDropService:
             meta = filename_metadata(filename)
             row.metadata_json = {
                 **meta,
-                "columns": columns,
+                "columns": [*columns],
                 "preview": jsonable(rows[:30]),
                 "row_count": len(rows),
                 "licence": None,
@@ -374,8 +374,11 @@ class DataDropService:
                 for index, record in enumerate(normalized):
                     if profile.dataset_type in {"ohlcv", "snapshot"}:
                         item = instruments[record["symbol"]]
+                        observed_date = record["date"]
+                        if not isinstance(observed_date, str):
+                            raise ValueError("Normalized observation date must be text")
                         at = datetime.combine(
-                            datetime.fromisoformat(record["date"]).date(), time(20), UTC
+                            datetime.fromisoformat(observed_date).date(), time(20), UTC
                         )
                         self.session.add(
                             models.MarketObservation(
@@ -393,8 +396,11 @@ class DataDropService:
                             )
                         )
                     elif profile.dataset_type == "fx":
+                        observed_date = record["date"]
+                        if not isinstance(observed_date, str):
+                            raise ValueError("Normalized observation date must be text")
                         at = datetime.combine(
-                            datetime.fromisoformat(record["date"]).date(), time(0), UTC
+                            datetime.fromisoformat(observed_date).date(), time(0), UTC
                         )
                         self.session.add(
                             models.FxObservation(

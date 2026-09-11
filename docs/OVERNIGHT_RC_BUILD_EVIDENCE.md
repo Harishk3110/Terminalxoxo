@@ -1272,3 +1272,42 @@ The next uncommitted parser regression batch has an intentional negative control
 17 failures and three preservation passes in overnight-tabular-negative-01.log.
 Non-finite JSON (including nested values), blank headers and empty XLSX error
 semantics are not yet corrected. Those tests are not part of the report commit.
+
+## Typed Tabular Import Boundaries
+
+2026-09-12, 33d423d plus parser/import-consumer worktree. Runtime libraries remain
+unchanged (PyArrow 24.0.0, xlrd 2.0.2). Development-only published stubs are pinned:
+[types-xlrd 2.0.0.20260518](https://pypi.org/project/types-xlrd/) targets xlrd 2.0;
+[pyarrow-stubs 20.0.0.20260819](https://pypi.org/project/pyarrow-stubs/) types the
+Parquet APIs used here, verified against the pinned runtime by real parser tests.
+No missing-import ignore or broad untyped-call exemption was added. Installation
+used --no-deps, and pip check passes without changing runtime versions.
+
+The parser validates finite recursive JSON, retains valid zero/null/boolean and
+nested metadata, rejects blank headers, and makes empty/non-tabular workbooks a
+validation error. XLS and Parquet date/decimal conversion retain existing valid
+semantics. Profile aliases are validated as named lists of strings. Normalization
+has explicit row/instrument/date/key/report contracts; financial rules and
+tolerances are unchanged. Three importer consumers handle the explicit types.
+
+| Check | Exit | Evidence |
+| --- | --- | --- |
+| Old-parser negative control | 1 | overnight-tabular-negative-01.log: 17 expected failures, three preservation passes |
+| Corrected parser/templates | 0 | overnight-tabular-positive-01.log: 30 passed, one warning, 3.32s |
+| Normalizer/import consumers | 0 | overnight-tabular-positive-02.log: 40 passed, three warnings, 10.86s |
+| Expanded parser/Parquet/options/quarantine suite | 0 | overnight-tabular-positive-03.log: 55 passed, three warnings, 12.08s |
+| Final importer consumer suite | 0 | overnight-tabular-positive-04.log: 55 passed, three warnings, 11.60s |
+| Parser/new tests strict | 0 | overnight-tabular-types-03.log: two modules; imports-silent scope does not certify dependencies |
+| Whole strict 31 | 1 | overnight-whole-types-31/: 1,060 distinct diagnostics, 89 files, 278 sources; API 599 / 26 files |
+| DataDrop consumer follow-up strict | 1 | overnight-tabular-types-04.log: only 38 untyped DataDrop definitions/calls remain across three checked modules |
+| Exact valid parser parity | 0 | overnight-tabular-parity.log: 120 CSV/XLSX/XLS/JSON/JSONL/Parquet files, same values/types/order |
+| Exact mapping/normalization parity | 0 | same log: seven registered template families, complete results/reports |
+| Ruff / final formatting | 0 each | four changed Python files; initial formatting needed two mechanical corrections |
+| Dependencies | 0 | pip check: no broken requirements |
+
+Three integration regressions prove invalid previews are quarantined while raw
+bytes/hash remain intact, no dataset is created and mapping is rejected. The
+strict release gate is still red; the next source batch is DataDrop service types.
+The observe-only watchdog returned 0 at 2026-09-11T23:50:16Z: ten healthy services,
+successful init and no restart action. A documentation patch initially failed
+to match its final line; it made no changes and was reapplied with the exact line.

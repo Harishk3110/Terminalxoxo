@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the report-history commit: 72d634a, pushed.
+Current HEAD before the parser commit: 33d423d, pushed.
 Docker runtime is 0699ab0. Full backend 26 and browser 14 passed.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -32,6 +32,13 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Typed tabular parsing/normalization: 55 affected import/options/portfolio tests
+  pass, including immutable raw bytes after quarantine. Twenty-seven new parser
+  cases and both focused strict modules pass. Exactly 120 valid parser fixtures
+  and seven full normalization families equal 33d423d, including types/order.
+  Whole checkpoint 31: 1,060 diagnostics / 89 files / 278 sources; API 599 / 26.
+  Three exposed importer date/list consumers were corrected afterward; its 38
+  remaining focused diagnostics are untyped DataDrop definitions/calls.
 - Full backend 26: 1,455 passed, 123 warnings, 497.56s, native exit 0;
   coverage 11,200 / 12,605 statements (88.8536%). Source is 72d634a;
   application source remains 0699ab0. No application or backend test edits were

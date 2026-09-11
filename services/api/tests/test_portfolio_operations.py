@@ -38,6 +38,31 @@ def profile(session: Session, code: str = "KOYFIN_PRICE_HISTORY") -> models.Mapp
     return selected
 
 
+@pytest.mark.parametrize(
+    "filename,content",
+    [
+        ("invalid.json", b'[{"close":NaN}]'),
+        ("invalid.jsonl", b'{"metadata":{"close":Infinity}}'),
+        ("blank.csv", b",close\nAAA,12\n"),
+    ],
+)
+def test_invalid_preview_is_quarantined_with_immutable_raw_bytes(
+    drop: DataDropService, accounting_session: Session, filename: str, content: bytes
+) -> None:
+    received = drop.receive(filename, content)
+    assert received["state"] == "QUARANTINED"
+    assert received["validation"]["valid"] is False
+    assert received["validation"]["errors"]
+    external = drop.get(received["id"])
+    uploaded = accounting_session.get(models.UploadedFile, external.uploaded_file_id)
+    assert uploaded is not None
+    assert drop.storage.get_bytes(uploaded.object_key) == content
+    assert uploaded.content_hash == hashlib.sha256(content).hexdigest()
+    assert accounting_session.scalars(select(models.DatasetVersion)).all() == []
+    with pytest.raises(ValueError, match="mapped"):
+        drop.map_validate(received["id"], profile(accounting_session).id)
+
+
 def test_file_preview_approval_immutable_and_duplicate(
     drop: DataDropService, accounting_session: Session
 ) -> None:

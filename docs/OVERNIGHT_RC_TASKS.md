@@ -45,6 +45,7 @@ milestone remain open unless explicitly verified below.
 - [x] M4: fresh demo daily seed avoids per-row existence queries; exact history, source lineage, uniqueness and idempotency tested.
 - [ ] M5: all formats/profiles/types, immutable raw/curated versions and consumers.
 - [x] M5: seven fictional CSV templates, field definitions and parser/profile regression tests.
+- [x] M2/M5: typed six-format parser/normalizer, finite previews, nonempty headers, validated aliases and immutable quarantined raw bytes; 55 affected tests and 127 exact valid-result parity cases pass.
 - [ ] M6: Windows outbound watcher/pairing/revocation/credentials/logs/startup.
 - [x] M6/M8: durable archive journal, acknowledgement integrity and typed paper reader guards; 30 new focused tests and full backend 19 (1,244 tests) pass.
 - [x] M3/M13: keep blocking database checks off the ASGI loop; two concurrency negative controls reproduce the blocked-loop behavior. Full browser 11 passes all 40 tests with zero retries after factor request/projection corrections.
