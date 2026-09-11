@@ -28,6 +28,13 @@ from .domain import (
     sortino_ratio,
     twr_from_returns,
 )
+from .macro_contracts import (
+    MAX_OBSERVATIONS,
+    MacroDashboardItem,
+    MacroDashboardPayload,
+    MacroHistoryPayload,
+    MacroSeriesPayload,
+)
 from .object_storage import ObjectStorage
 from .providers.fred import (
     FredObservationsResponse,
@@ -1523,74 +1530,72 @@ class MacroService:
         self.session = session
         self.repo = MacroRepository(session)
 
-    def dashboard(self) -> dict:
-        items = []
+    def dashboard(self) -> MacroDashboardPayload:
+        items: list[MacroDashboardItem] = []
         for series in self.repo.list_series():
             latest, previous = self.repo.latest_pair(series.series_id)
             change = None
             if latest and previous and latest.value is not None and previous.value is not None:
                 change = Decimal(latest.value) - Decimal(previous.value)
             items.append(
-                to_jsonable(
-                    {
-                        "series_id": series.series_id,
-                        "title": series.title,
-                        "latest_value": latest.value if latest else None,
-                        "latest_observation_date": latest.observation_date if latest else None,
-                        "previous_value": previous.value if previous else None,
-                        "change": change,
-                        "unit": series.units,
-                        "frequency": series.frequency,
-                        "source": series.provider,
-                        "quality": latest.quality if latest else series.quality,
-                        "ingestion_timestamp": latest.ingestion_timestamp if latest else None,
-                        "revision_state": "CURRENT" if latest else "UNAVAILABLE",
-                    }
-                )
+                {
+                    "series_id": series.series_id,
+                    "title": series.title,
+                    "latest_value": str(latest.value)
+                    if latest and latest.value is not None
+                    else None,
+                    "latest_observation_date": latest.observation_date.isoformat()
+                    if latest
+                    else None,
+                    "previous_value": str(previous.value)
+                    if previous and previous.value is not None
+                    else None,
+                    "change": str(change) if change is not None else None,
+                    "unit": series.units,
+                    "frequency": series.frequency,
+                    "source": latest.provider if latest else series.provider,
+                    "quality": latest.quality if latest else series.quality,
+                    "ingestion_timestamp": latest.ingestion_timestamp.isoformat()
+                    if latest
+                    else None,
+                    "revision_state": "CURRENT" if latest else "UNAVAILABLE",
+                }
             )
         return {"items": items}
 
-    def series(self, query: str | None = None) -> list[dict]:
-        return [
-            to_jsonable(
-                {
-                    "series_id": item.series_id,
-                    "title": item.title,
-                    "units": item.units,
-                    "frequency": item.frequency,
-                    "provider": item.provider,
-                    "quality": item.quality,
-                }
-            )
-            for item in self.repo.list_series(query)
-        ]
+    @staticmethod
+    def _series_payload(item: models.MacroSeries) -> MacroSeriesPayload:
+        return {
+            "series_id": item.series_id,
+            "title": item.title,
+            "units": item.units,
+            "frequency": item.frequency,
+            "provider": item.provider,
+            "quality": item.quality,
+        }
 
-    def observations(self, series_id: str, limit: int = 1000) -> dict:
+    def series(self, query: str | None = None) -> list[MacroSeriesPayload]:
+        return [self._series_payload(item) for item in self.repo.list_series(query)]
+
+    def observations(self, series_id: str, limit: int = 1000) -> MacroHistoryPayload:
+        if not 1 <= limit <= MAX_OBSERVATIONS:
+            raise ValueError(f"Observation limit must be between 1 and {MAX_OBSERVATIONS}")
         series = self.repo.get_series(series_id)
         if not series:
             raise ValueError("Macro series unavailable")
         return {
-            "series": to_jsonable(
-                {
-                    "series_id": series.series_id,
-                    "title": series.title,
-                    "units": series.units,
-                    "frequency": series.frequency,
-                    "provider": series.provider,
-                    "quality": series.quality,
-                }
-            ),
+            "series": self._series_payload(series),
             "observations": [
-                to_jsonable(
-                    {
-                        "date": item.observation_date,
-                        "value": item.value,
-                        "provider": item.provider,
-                        "quality": item.quality,
-                        "realtime_start": item.realtime_start,
-                        "realtime_end": item.realtime_end,
-                    }
-                )
+                {
+                    "date": item.observation_date.isoformat(),
+                    "value": str(item.value) if item.value is not None else None,
+                    "provider": item.provider,
+                    "quality": item.quality,
+                    "realtime_start": item.realtime_start.isoformat()
+                    if item.realtime_start
+                    else None,
+                    "realtime_end": item.realtime_end.isoformat() if item.realtime_end else None,
+                }
                 for item in self.repo.observations(series_id, limit)
             ],
         }
@@ -2339,7 +2344,9 @@ class ReportService:
 
     def macro_xlsx(self) -> dict:
         dashboard = MacroService(self.session).dashboard()
-        observation_rows: list[list[Any]] = [["Series", "Date", "Value", "Source", "Quality"]]
+        observation_rows: list[list[str | None]] = [
+            ["Series", "Date", "Value", "Source", "Quality"]
+        ]
         for item in dashboard["items"][:12]:
             for obs in MacroService(self.session).observations(item["series_id"], limit=24)[
                 "observations"
@@ -2347,7 +2354,7 @@ class ReportService:
                 observation_rows.append(
                     [item["series_id"], obs["date"], obs["value"], obs["provider"], obs["quality"]]
                 )
-        sheets = {
+        sheets: dict[str, list[list[str | None]]] = {
             "Macro Dashboard": [
                 [
                     "Series",

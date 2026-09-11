@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the macro/options visual commit: 50c1b60, pushed.
+Current HEAD before the macro API commit: 804ec29, pushed.
 Docker remains on cbb2cf1. Full backend 25 and browser 13 have finished successfully.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -32,6 +32,13 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Macro API contracts: 110 affected backend tests pass, followed by 18 final
+  consumer tests. Seventy-three complete populated responses match 804ec29;
+  mixed-provider source and invalid-limit corrections have explicit regressions.
+  Macro schemas/new tests pass focused strict types. OpenAPI verifies 170 paths,
+  85 component schemas, nullable decimal strings and history limits 1..10,000.
+  Stable whole strict checkpoint 27 remains red: 1,252 diagnostics / 94 files /
+  276 sources; API 622 / 27 files. No suppression was added.
 - Macro/options visual corrections: 317 terminal unit tests pass, TypeScript,
   ESLint and Node 22 production build pass. Three focused browser tests pass
   with zero retries (40.4s). Desktop/mobile screenshots were inspected: observed
@@ -246,12 +253,13 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `.venv-release/Scripts/python.exe -m pytest tests/sprint/test_macro_contracts.py -q` after adding the macro API regressions.
-Continue remaining engine/API contracts, then run the full 47-test browser suite
-against one source checkpoint and refresh Docker. The clean
+Exact next command: `docker compose --env-file .env.compose.local -p knk-final-local build api worker-data worker-quant report-engine terminal-web` with KNK_COMPOSE_ENV_FILE set to .env.compose.local.
+Refresh Docker only after the image build exits successfully. Run the full
+47-test browser suite against this source checkpoint, then continue strict types.
+The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 24 remains red at 1,260 errors.
+in the clean environment. Whole strict checkpoint 27 remains red at 1,252 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

@@ -6,11 +6,11 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import structlog
 from argon2 import PasswordHasher
-from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
@@ -31,6 +31,13 @@ from .data_drop_api import router as data_drop_router
 from .database import SessionLocal, engine, get_session
 from .desks_api import router as desks_router
 from .equity_api import router as equity_router
+from .macro_contracts import (
+    MAX_OBSERVATIONS,
+    MacroDashboardPayload,
+    MacroHistoryPayload,
+    MacroSeriesList,
+    MacroSeriesPayload,
+)
 from .options_api import router as options_router
 from .performance_api import router as performance_router
 from .pine_api import router as pine_router
@@ -633,17 +640,19 @@ def fred_status(session: Session = SESSION_DEPENDENCY):
 
 
 @app.get("/api/v1/macro/series")
-def macro_series(q: str | None = None, session: Session = SESSION_DEPENDENCY):
+def macro_series(q: str | None = None, session: Session = SESSION_DEPENDENCY) -> MacroSeriesList:
     return {"items": MacroService(session).series(q)}
 
 
 @app.get("/api/v1/macro/series/search")
-def macro_series_search(q: str, session: Session = SESSION_DEPENDENCY):
+def macro_series_search(q: str, session: Session = SESSION_DEPENDENCY) -> MacroSeriesList:
     return {"items": MacroService(session).series(q)}
 
 
 @app.get("/api/v1/macro/series/{series_id}")
-def macro_series_detail(series_id: str, session: Session = SESSION_DEPENDENCY):
+def macro_series_detail(
+    series_id: str, session: Session = SESSION_DEPENDENCY
+) -> MacroSeriesPayload:
     try:
         return MacroService(session).observations(series_id, limit=5)["series"]
     except ValueError as exc:
@@ -651,7 +660,11 @@ def macro_series_detail(series_id: str, session: Session = SESSION_DEPENDENCY):
 
 
 @app.get("/api/v1/macro/series/{series_id}/observations")
-def macro_observations(series_id: str, limit: int = 1000, session: Session = SESSION_DEPENDENCY):
+def macro_observations(
+    series_id: str,
+    limit: Annotated[int, Query(ge=1, le=MAX_OBSERVATIONS)] = 1000,
+    session: Session = SESSION_DEPENDENCY,
+) -> MacroHistoryPayload:
     try:
         return MacroService(session).observations(series_id, limit)
     except ValueError as exc:
@@ -756,7 +769,7 @@ def macro_backfill_job(job_id: str, session: Session = SESSION_DEPENDENCY):
 
 
 @app.get("/api/v1/macro/dashboard")
-def macro_dashboard(session: Session = SESSION_DEPENDENCY):
+def macro_dashboard(session: Session = SESSION_DEPENDENCY) -> MacroDashboardPayload:
     return MacroService(session).dashboard()
 
 

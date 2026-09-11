@@ -1086,3 +1086,32 @@ Additional 1920px route reviews included alpha, backtests, macro, portfolio,
 data drop/catalogue, quant, hedge, Excel, Deck, stress and risk/trade. The old
 portfolio-command-centre-1920.png (6e707d3, SGD70K) is stale and excluded from
 current evidence. Full visual matrix and 27-gate release remain open.
+
+## Macro API Contracts
+
+2026-09-12 07:15-07:22 SGT, 804ec29 plus macro API worktree. Observation-level
+provider now accompanies the displayed value rather than series metadata.
+History limits are 1..10,000 at HTTP and service boundaries. Return contracts
+document nullable decimal strings, calendar dates and separate ingestion times.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| New macro regression negative control | 1 | overnight-macro-contracts-negative.log: five failed, seven passed; four product defects (provider and three limits), plus incorrect new-test zero spelling (0.00000000 instead of existing Decimal str 0E-8) |
+| Corrected contract tests | 0 | overnight-macro-contracts-positive.log: 15 passed, three warnings, 6.34s; zero spelling matches the existing wire contract, not changed arithmetic |
+| Macro/provider/FRED/report/API affected selection | 0 | overnight-macro-affected.log: 110 passed, three warnings, 25.84s |
+| Final macro/report consumer selection | 0 | overnight-macro-final-consumers.log: 18 passed, three warnings, 6.92s |
+| Read-only prior/current response comparison | 0 | overnight-macro-parity.log: 73 complete responses equal 804ec29 on an in-memory copy of populated SQLite data; source database untouched |
+| Focused strict contracts/new tests | 0 | overnight-macro-focused-types.log: two files, imported dependencies silent only in this focused command |
+| OpenAPI generation and contract assertions | 0 | overnight-macro-openapi.log: 170 paths, 85 schemas; bounds/default and nullable string values verified |
+| Whole strict 25 | 1 | overnight-whole-types-25/: 1,254 distinct diagnostics, 94 files, 276 sources; API 623 in 27 files |
+| Whole strict 26 | 1 | overnight-whole-types-26/: API 622 after workbook consumer correction; formatter ran during distribution checks, so aggregate 1,260 includes mixed line locations and is not a stable count |
+| Stable whole strict 27 | 1 | overnight-whole-types-27/: 1,252 distinct diagnostics, 94 files, 276 sources; API 622 in 27 files; source unchanged throughout the check |
+| Changed-source Ruff | 0 | all four files pass |
+| Changed-source format | 1 then 0 | long workbook row annotation required formatting; corrected, four files pass |
+| Secret / no-execution scans | 0 each | overnight-macro-api-secrets.log / overnight-macro-api-no-execution.log |
+| Observe-only Docker watchdog | 0 | overnight-macro-watchdog.log, 2026-09-11T23:17:25Z: ten healthy services, successful initializer, no restart actions |
+
+The remaining whole strict check is still red. Macro vintage-selection semantics
+are unchanged by this batch; revision preservation/current-vintage presentation
+still requires separate certification. No live-provider or release-completion
+claim is made. Docker is still cbb2cf1 until the forthcoming completed refresh.
