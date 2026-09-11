@@ -55,9 +55,11 @@ const EChart = dynamic(() => import("echarts-for-react"), {
 });
 export const utcDate = (v: string) =>
   new Date(v.includes("T") && !/(Z|[+-]\d\d:\d\d)$/.test(v) ? `${v}Z` : v);
-export const timestamp = (v?: string | null) =>
-  v
-    ? utcDate(v).toLocaleString("en-SG", {
+export const timestamp = (v?: unknown) => {
+  if (typeof v !== "string" || !v.trim()) return "Not observed";
+  const date = utcDate(v);
+  return Number.isFinite(date.getTime())
+    ? date.toLocaleString("en-SG", {
         timeZone: "Asia/Singapore",
         day: "2-digit",
         month: "short",
@@ -67,6 +69,7 @@ export const timestamp = (v?: string | null) =>
         hour12: false,
       })
     : "Not observed";
+};
 
 export function download(name: string, content: string, type = "text/plain") {
   const url = URL.createObjectURL(new Blob([content], { type }));

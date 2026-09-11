@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --keepAliveTimeout 70000",
     "lint": "eslint app components config --ext .ts,.tsx,.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run tests"

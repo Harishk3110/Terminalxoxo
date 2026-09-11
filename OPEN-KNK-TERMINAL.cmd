@@ -24,7 +24,7 @@ echo Keep this window open while using the terminal.
 echo After the Ready message, paste this address into Firefox:
 echo http://127.0.0.1:3001/overview
 echo.
-node "node_modules\next\dist\bin\next" start --hostname 127.0.0.1 --port 3001
+node "node_modules\next\dist\bin\next" start --hostname 127.0.0.1 --port 3001 --keepAliveTimeout 70000
 if errorlevel 1 goto failed
 exit /b 0
 

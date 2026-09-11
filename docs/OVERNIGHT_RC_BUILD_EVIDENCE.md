@@ -1011,3 +1011,12 @@ reports an existing services.py PriceProvenance default error. That diagnostic i
 retained; the whole gate remains red. The rebuilt focused browser selection is
 active, not yet a pass. No financial tolerance, security assertion or retry count
 was weakened. Persistent Docker remains on 68698d8 with all data preserved.
+
+2026-09-12 06:45-06:46 SGT: rebuilt Node 22 focused Playwright selection returned
+native 0, three passed, zero retries, 41.3s. Ledger correction 10.7s, production
+idle-boundary 6.1s, missing health times 3.9s. Evidence:
+overnight-health-positive-01.log / overnight-health-positive-01-results.json.
+Both corrected health screenshots (1366px and 390px) were inspected from
+logs/health-screenshots; table content remains horizontally scrollable on mobile,
+with no document overflow. Research contracts were pushed as 74fe9e5.
+The complete browser suite and later strict/deployment gates remain open.

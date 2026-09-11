@@ -56,7 +56,7 @@ export function HealthPage() {
               key: "as_of",
               label: "Checked / SGT",
               size: 170,
-              format: (v) => timestamp(String(v)),
+              format: (v) => timestamp(v),
             },
             { key: "detail", label: "Evidence", size: 410 },
           ]}

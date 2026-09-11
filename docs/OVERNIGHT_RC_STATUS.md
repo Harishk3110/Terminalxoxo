@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: c906ef0, pushed. The persistent Docker stack carries 68698d8;
-the research-desk/connection-lifetime/health timestamp batch is in progress.
+Current HEAD before the health commit: 74fe9e5, pushed. The persistent Docker
+stack carries 68698d8; the verified connection-lifetime/health batch is next.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -47,7 +47,8 @@ Current evidence:
 - System Health screenshot review found missing times rendered as Invalid Date.
   Its browser negative control fails on the old build. The formatter fix passes
   12 unit tests; all 303 terminal unit tests, TypeScript, ESLint and Node 22 build
-  pass. Rebuilt browser evidence is active. Full backend 24 passed 1,396 tests,
+  pass. Rebuilt browser selection: three passed, zero retries, 41.3s; desktop and
+  mobile screenshots inspected. Full backend 24 passed 1,396 tests,
   122 warnings, 487.64s, native exit 0; coverage 11,080/12,509 (88.5762%).
 - Broker snapshot/fill contracts: 62 affected tests pass, three focused modules
   pass strict types, and 200 broker views match the prior implementation exactly.
@@ -225,9 +226,9 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-health-positive-01.log -Tail 12`.
-Finish the rebuilt connection-lifetime, correction and missing-health-time
-selection, then run the full browser suite without retries.
+Exact next command: `corepack pnpm dlx node@22 node_modules/@playwright/test/cli.js test tests/e2e --workers=1 --retries=0`.
+Use a fresh PLAYWRIGHT_RUN_ID and the clean Python environment; refresh persistent
+Docker with the verified backend and health commits, without resetting volumes.
 Continue remaining engine/API contracts after that checkpoint. The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
