@@ -7,11 +7,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from argon2 import PasswordHasher
-from sqlalchemy import select
-
 from app import models
 from app.database import SessionLocal
+from argon2 import PasswordHasher
+from sqlalchemy import select
 
 
 def main() -> None:
@@ -27,7 +26,14 @@ def main() -> None:
         user = models.User(email=email, password_hash=PasswordHasher().hash(password), role="ADMIN")
         session.add(user)
         session.flush()
-        session.add(models.AuditLog(action="auth.console_setup", resource_type="user", resource_id=user.id, correlation_id=str(uuid.uuid4())))
+        session.add(
+            models.AuditLog(
+                action="auth.console_setup",
+                resource_type="user",
+                resource_id=user.id,
+                correlation_id=str(uuid.uuid4()),
+            )
+        )
         session.commit()
     print("Administrator created. No credential was written to a file.")
 

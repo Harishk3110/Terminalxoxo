@@ -1,9 +1,16 @@
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal, TypedDict
 
 
-def backup_state(root: Path):
+class BackupState(TypedDict):
+    state: Literal["NOT_VERIFIED", "VERIFIED", "STALE", "FAILED"]
+    as_of: str | None
+    detail: str
+
+
+def backup_state(root: Path) -> BackupState:
     receipt = root / "latest-backup.json"
     if not receipt.is_file():
         return {

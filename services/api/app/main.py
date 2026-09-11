@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import uuid
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -11,36 +10,55 @@ import structlog
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from . import models
-from .config import get_settings
-from .auth_sessions import token_digest
-from .auth_api import router as auth_router
-from .report_api import router as report_router
-from .auth_security import verify_factor, revoke_sessions
-from .telemetry import JOB_STATES, metric_path, request_id
-from .database import SessionLocal, engine, get_session
-from .providers.fred import FredProvider
-from .repositories import InstrumentRepository, JobRepository, ProviderRepository, StrategyRepository, SystemRepository
-from .services import BacktestService, DatasetService, DemoIngestionService, FredIngestionService, MacroService, PerformanceService, PineService, PortfolioService, ReportService, RiskService, to_jsonable
-from .terminal_api import router as terminal_router
-from .portfolio_api import router as portfolio_router
-from .data_drop_api import router as data_drop_router
-from .desks_api import router as desks_router
-from .broker_api import router as broker_router
-from .risk_api import router as risk_router
 from .alpha_api import router as alpha_router
+from .attachments_api import router as attachments_router
+from .auth_api import router as auth_router
+from .auth_security import revoke_sessions, verify_factor
+from .auth_sessions import token_digest
+from .broker_api import router as broker_router
+from .config import get_settings
+from .data_drop_api import router as data_drop_router
+from .database import SessionLocal, engine, get_session
+from .desks_api import router as desks_router
 from .equity_api import router as equity_router
 from .options_api import router as options_router
-from .provider_api import router as provider_router
-from .attachments_api import router as attachments_router
+from .performance_api import router as performance_router
 from .pine_api import router as pine_router
+from .portfolio_api import router as portfolio_router
+from .portfolio_resource_api import router as portfolio_resource_router
+from .provider_api import router as provider_router
+from .providers.fred import FredProvider
+from .report_api import router as report_router
+from .repositories import (
+    InstrumentRepository,
+    JobRepository,
+    ProviderRepository,
+    StrategyRepository,
+    SystemRepository,
+)
+from .risk_api import router as risk_router
+from .services import (
+    BacktestService,
+    DatasetService,
+    DemoIngestionService,
+    FredIngestionService,
+    MacroService,
+    PineService,
+    PortfolioService,
+    ReportService,
+    RiskService,
+    to_jsonable,
+)
+from .telemetry import JOB_STATES, metric_path, request_id
 from .terminal_analytics import FUNCTIONS, portfolio_analytics
+from .terminal_api import router as terminal_router
 
 try:
     import redis
@@ -48,14 +66,22 @@ except Exception:  # pragma: no cover
     redis = None
 
 
+# Named defaults preserve direct-call signatures as well as FastAPI injection.
+SESSION_DEPENDENCY = Depends(get_session)
+UPLOAD_DEPENDENCY = File(...)
+
 settings = get_settings()
 logger = structlog.get_logger()
 hasher = PasswordHasher()
 
-REQUEST_COUNT = Counter("knk_api_requests_total", "Total API requests", ["method", "path", "status"])
+REQUEST_COUNT = Counter(
+    "knk_api_requests_total", "Total API requests", ["method", "path", "status"]
+)
 REQUEST_LATENCY = Histogram("knk_api_request_seconds", "API request latency", ["method", "path"])
 JOB_COUNT = Gauge("knk_jobs_by_state", "Jobs by state", ["state"])
-DATA_RECORDS_INGESTED = Counter("knk_data_records_ingested_total", "Data records ingested", ["provider", "dataset"])
+DATA_RECORDS_INGESTED = Counter(
+    "knk_data_records_ingested_total", "Data records ingested", ["provider", "dataset"]
+)
 AUTH_FAILURES = Counter("knk_auth_failures_total", "Authentication failures")
 
 app = FastAPI(
@@ -121,7 +147,11 @@ class TransactionRequest(BaseModel):
 
 
 class BackfillRequest(BaseModel):
-    series_ids: list[str] = Field(default_factory=lambda: ["FEDFUNDS", "DGS2", "DGS10", "CPIAUCSL", "UNRATE"], min_length=1, max_length=25)
+    series_ids: list[str] = Field(
+        default_factory=lambda: ["FEDFUNDS", "DGS2", "DGS10", "CPIAUCSL", "UNRATE"],
+        min_length=1,
+        max_length=25,
+    )
     observation_start: str | None = "2016-01-01"
 
 
@@ -139,20 +169,37 @@ def startup() -> None:
 async def request_middleware(request: Request, call_next):
     ensure_database_ready()
     path = request.url.path
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
     cid = correlation_id(request)
     denied = None
     from .auth_guards import origin_allowed
-    if not origin_allowed(request.method, request.headers.get("origin"), request.headers.get("sec-fetch-site"), settings.allowed_origins):
+
+    if not origin_allowed(
+        request.method,
+        request.headers.get("origin"),
+        request.headers.get("sec-fetch-site"),
+        settings.allowed_origins,
+    ):
         denied = JSONResponse({"detail": "Untrusted request origin"}, status_code=403)
-    session_paths = {"/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/session", "/api/v1/auth/logout"}
-    if denied is None and path.startswith("/api/") and path not in session_paths and request.method != "OPTIONS":
+    session_paths = {
+        "/api/v1/auth/login",
+        "/api/v1/auth/setup",
+        "/api/v1/auth/session",
+        "/api/v1/auth/logout",
+    }
+    if (
+        denied is None
+        and path.startswith("/api/")
+        and path not in session_paths
+        and request.method != "OPTIONS"
+    ):
         from .terminal_api import auth_session
+
         with SessionLocal() as session:
             if not auth_session(request, session)["authenticated"]:
                 denied = JSONResponse({"detail": "Authentication required"}, status_code=401)
     response = denied if denied is not None else await call_next(request)
-    elapsed = (datetime.now(timezone.utc) - start).total_seconds()
+    elapsed = (datetime.now(UTC) - start).total_seconds()
     label = metric_path(request.scope, rejected=denied is not None)
     REQUEST_COUNT.labels(request.method, label, str(response.status_code)).inc()
     REQUEST_LATENCY.labels(request.method, label).observe(elapsed)
@@ -178,6 +225,7 @@ def ensure_database_ready() -> None:
         if not session.execute(select(models.Instrument.id).limit(1)).first():
             DemoIngestionService(session).seed(reset=False)
         from .portfolio_seed import ensure_main
+
         ensure_main(session)
     _DB_READY = True
 
@@ -218,25 +266,45 @@ def readiness_checks(session: Session) -> dict[str, Any]:
         except Exception as exc:  # noqa: BLE001
             checks["redis"] = f"failed: {exc.__class__.__name__}"
     from .object_storage import ObjectStorage
+
     try:
         storage = ObjectStorage()
         storage.put_bytes(key="health/readiness.txt", data=b"knk-ready", content_type="text/plain")
-        checks["object_storage"] = "ready" if storage.get_bytes("health/readiness.txt") == b"knk-ready" else "failed"
+        checks["object_storage"] = (
+            "ready" if storage.get_bytes("health/readiness.txt") == b"knk-ready" else "failed"
+        )
     except Exception:
         checks["object_storage"] = "failed"
     return checks
 
 
 @app.get("/health/ready")
-def ready(session: Session = Depends(get_session)):
+def ready(session: Session = SESSION_DEPENDENCY):
     checks = readiness_checks(session)
-    status = "ready" if checks.get("database") == checks.get("object_storage") == "ready" else "not-ready"
-    return JSONResponse({"status": status, "checks": checks}, status_code=200 if status == "ready" else 503)
+    status = (
+        "ready"
+        if checks.get("database") == checks.get("object_storage") == "ready"
+        else "not-ready"
+    )
+    return JSONResponse(
+        {"status": status, "checks": checks}, status_code=200 if status == "ready" else 503
+    )
 
 
 @app.get("/metrics")
-def metrics(session: Session = Depends(get_session)):
-    counts = {row[0]: row[1] for row in session.execute(select(models.IngestionJob.status, func.count()).group_by(models.IngestionJob.status)).all()} if session.bind else {}
+def metrics(session: Session = SESSION_DEPENDENCY):
+    counts = (
+        {
+            row[0]: row[1]
+            for row in session.execute(
+                select(models.IngestionJob.status, func.count()).group_by(
+                    models.IngestionJob.status
+                )
+            ).all()
+        }
+        if session.bind
+        else {}
+    )
     for state in JOB_STATES:
         JOB_COUNT.labels(state).set(counts.get(state, 0))
     return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
@@ -258,113 +326,309 @@ def environment():
 
 
 @app.post("/api/v1/auth/setup")
-def setup_admin(payload: AdminSetupRequest, response: Response, request: Request, session: Session = Depends(get_session)):
+def setup_admin(
+    payload: AdminSetupRequest,
+    response: Response,
+    request: Request,
+    session: Session = SESSION_DEPENDENCY,
+):
     if settings.knk_env != "local-demo":
         raise HTTPException(403, "Administrator provisioning is local-only")
     existing = session.execute(select(models.User).limit(1)).scalars().first()
     if existing:
         raise HTTPException(status_code=409, detail="Administrator already configured")
-    user = models.User(email=payload.email, password_hash=hasher.hash(payload.password), role="ADMIN")
+    user = models.User(
+        email=payload.email, password_hash=hasher.hash(payload.password), role="ADMIN"
+    )
     session.add(user)
     session.flush()
-    session.add(models.AuditLog(actor_user_id=user.id, action="auth.setup", resource_type="user", resource_id=user.id, correlation_id=correlation_id(request), metadata_json={"email": payload.email}))
+    session.add(
+        models.AuditLog(
+            actor_user_id=user.id,
+            action="auth.setup",
+            resource_type="user",
+            resource_id=user.id,
+            correlation_id=correlation_id(request),
+            metadata_json={"email": payload.email},
+        )
+    )
     session.commit()
-    response.set_cookie("knk_setup", "complete", httponly=True, samesite="strict", secure=settings.knk_env == "production-paper")
+    response.set_cookie(
+        "knk_setup",
+        "complete",
+        httponly=True,
+        samesite="strict",
+        secure=settings.knk_env == "production-paper",
+    )
     return {"status": "configured"}
 
 
 @app.post("/api/v1/auth/login")
-def login(payload: LoginRequest, response: Response, request: Request, session: Session = Depends(get_session)):
+def login(
+    payload: LoginRequest,
+    response: Response,
+    request: Request,
+    session: Session = SESSION_DEPENDENCY,
+):
     from .auth_guards import check_login_limit
+
     check_login_limit(session, payload.email, request.client.host if request.client else None)
-    user = session.execute(select(models.User).where(models.User.email == payload.email)).scalars().first()
+    user = (
+        session.execute(select(models.User).where(models.User.email == payload.email))
+        .scalars()
+        .first()
+    )
     if not user or not user.is_active:
         AUTH_FAILURES.inc()
-        session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="unknown_user", ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
+        session.add(
+            models.LoginAttempt(
+                email=payload.email,
+                success=False,
+                failure_reason="unknown_user",
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("User-Agent"),
+            )
+        )
         session.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials")
     try:
         hasher.verify(user.password_hash, payload.password)
     except Exception as exc:  # noqa: BLE001
         AUTH_FAILURES.inc()
-        session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="password", ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
+        session.add(
+            models.LoginAttempt(
+                email=payload.email,
+                success=False,
+                failure_reason="password",
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("User-Agent"),
+            )
+        )
         session.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials") from exc
     if not verify_factor(session, user.id, payload.totp_code, payload.recovery_code):
         AUTH_FAILURES.inc()
-        session.add(models.LoginAttempt(email=payload.email, success=False, failure_reason="one_time_proof", ip_address=request.client.host if request.client else None))
+        session.add(
+            models.LoginAttempt(
+                email=payload.email,
+                success=False,
+                failure_reason="one_time_proof",
+                ip_address=request.client.host if request.client else None,
+            )
+        )
         session.commit()
-        raise HTTPException(status_code=401, detail="Authenticator code or unused recovery code required")
+        raise HTTPException(
+            status_code=401, detail="Authenticator code or unused recovery code required"
+        )
     if payload.recovery_code:
         revoke_sessions(session, user.id)
-        session.add(models.AuditLog(actor_user_id=user.id, action="AUTH_RECOVERY_LOGIN", resource_type="user", resource_id=user.id, correlation_id=correlation_id(request), metadata_json={}))
+        session.add(
+            models.AuditLog(
+                actor_user_id=user.id,
+                action="AUTH_RECOVERY_LOGIN",
+                resource_type="user",
+                resource_id=user.id,
+                correlation_id=correlation_id(request),
+                metadata_json={},
+            )
+        )
     session_id = secrets.token_urlsafe(32)
-    session.add(models.UserSession(user_id=user.id, session_hash=token_digest(session_id), expires_at=datetime.now(timezone.utc) + timedelta(hours=8)))
-    session.add(models.LoginAttempt(email=payload.email, success=True, ip_address=request.client.host if request.client else None, user_agent=request.headers.get("User-Agent")))
+    session.add(
+        models.UserSession(
+            user_id=user.id,
+            session_hash=token_digest(session_id),
+            expires_at=datetime.now(UTC) + timedelta(hours=8),
+        )
+    )
+    session.add(
+        models.LoginAttempt(
+            email=payload.email,
+            success=True,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
     session.commit()
-    response.set_cookie("knk_session", session_id, httponly=True, samesite="strict", secure=settings.knk_env != "local-demo", max_age=28800)
+    response.set_cookie(
+        "knk_session",
+        session_id,
+        httponly=True,
+        samesite="strict",
+        secure=settings.knk_env != "local-demo",
+        max_age=28800,
+    )
     return {"status": "authenticated", "expires_in_seconds": 28800}
 
 
 @app.get("/api/v1/functions")
 def functions():
-    return {"items": [{**item, "code": item["mnemonic"], "title": item["name"], "status": item["implementationStatus"].upper()} for item in FUNCTIONS]}
+    return {
+        "items": [
+            {
+                **item,
+                "code": item["mnemonic"],
+                "title": item["name"],
+                "status": item["implementationStatus"].upper(),
+            }
+            for item in FUNCTIONS
+        ]
+    }
 
 
 @app.get("/api/v1/search")
-def search(q: str = "", session: Session = Depends(get_session)):
+def search(q: str = "", session: Session = SESSION_DEPENDENCY):
     instruments = InstrumentRepository(session).list(query=q, limit=20)
-    function_items = [item for item in functions()["items"] if q.lower() in (item["code"] + item["title"]).lower()]
-    return {"instruments": [to_jsonable({"id": item.id, "symbol": item.symbol, "name": item.name, "asset_class": item.asset_class, "currency": item.currency}) for item in instruments], "functions": function_items}
+    function_items = [
+        item for item in functions()["items"] if q.lower() in (item["code"] + item["title"]).lower()
+    ]
+    return {
+        "instruments": [
+            to_jsonable(
+                {
+                    "id": item.id,
+                    "symbol": item.symbol,
+                    "name": item.name,
+                    "asset_class": item.asset_class,
+                    "currency": item.currency,
+                }
+            )
+            for item in instruments
+        ],
+        "functions": function_items,
+    }
 
 
 @app.get("/api/v1/instruments")
-def instruments(q: str | None = None, limit: int = 100, offset: int = 0, session: Session = Depends(get_session)):
+def instruments(
+    q: str | None = None, limit: int = 100, offset: int = 0, session: Session = SESSION_DEPENDENCY
+):
     require_seeded(session)
-    return {"items": [to_jsonable({"id": item.id, "symbol": item.symbol, "name": item.name, "exchange_id": item.exchange_id, "country": item.country, "currency": item.currency, "asset_class": item.asset_class, "security_type": item.security_type, "sector": item.sector, "industry": item.industry, "is_active": item.is_active}) for item in InstrumentRepository(session).list(limit=limit, offset=offset, query=q)]}
+    return {
+        "items": [
+            to_jsonable(
+                {
+                    "id": item.id,
+                    "symbol": item.symbol,
+                    "name": item.name,
+                    "exchange_id": item.exchange_id,
+                    "country": item.country,
+                    "currency": item.currency,
+                    "asset_class": item.asset_class,
+                    "security_type": item.security_type,
+                    "sector": item.sector,
+                    "industry": item.industry,
+                    "is_active": item.is_active,
+                }
+            )
+            for item in InstrumentRepository(session).list(limit=limit, offset=offset, query=q)
+        ]
+    }
 
 
 @app.get("/api/v1/instruments/{instrument_id}")
-def instrument_detail(instrument_id: str, session: Session = Depends(get_session)):
+def instrument_detail(instrument_id: str, session: Session = SESSION_DEPENDENCY):
     item = InstrumentRepository(session).get(instrument_id)
     if not item:
         raise HTTPException(status_code=404, detail="Instrument not found")
-    return to_jsonable({"id": item.id, "symbol": item.symbol, "name": item.name, "country": item.country, "currency": item.currency, "asset_class": item.asset_class, "security_type": item.security_type, "sector": item.sector, "industry": item.industry, "quality": "DEMO DATA"})
+    return to_jsonable(
+        {
+            "id": item.id,
+            "symbol": item.symbol,
+            "name": item.name,
+            "country": item.country,
+            "currency": item.currency,
+            "asset_class": item.asset_class,
+            "security_type": item.security_type,
+            "sector": item.sector,
+            "industry": item.industry,
+            "quality": "DEMO DATA",
+        }
+    )
 
 
 @app.get("/api/v1/providers")
-def providers(session: Session = Depends(get_session)):
-    return {"items": [to_jsonable({"name": item.provider_name, "type": item.provider_type, "enabled": item.enabled, "configured": item.configured, "connection_state": item.connection_state, "capabilities": item.capabilities, "masked_identifier": item.masked_identifier, "last_success": item.last_success, "last_failure": item.last_failure, "last_error": item.last_error, "last_data_sync": item.last_data_sync, "data_freshness": item.data_freshness}) for item in ProviderRepository(session).list_connections()]}
+def providers(session: Session = SESSION_DEPENDENCY):
+    return {
+        "items": [
+            to_jsonable(
+                {
+                    "name": item.provider_name,
+                    "type": item.provider_type,
+                    "enabled": item.enabled,
+                    "configured": item.configured,
+                    "connection_state": item.connection_state,
+                    "capabilities": item.capabilities,
+                    "masked_identifier": item.masked_identifier,
+                    "last_success": item.last_success,
+                    "last_failure": item.last_failure,
+                    "last_error": item.last_error,
+                    "last_data_sync": item.last_data_sync,
+                    "data_freshness": item.data_freshness,
+                }
+            )
+            for item in ProviderRepository(session).list_connections()
+        ]
+    }
 
 
 @app.post("/api/v1/providers/fred/test")
-async def fred_test(request: Request, session: Session = Depends(get_session)):
+async def fred_test(request: Request, session: Session = SESSION_DEPENDENCY):
     from .provider_api import test_connection
+
     result = await test_connection("fred", request, session)
     session.commit()
     return result
 
 
 @app.get("/api/v1/providers/fred/status")
-def fred_status(session: Session = Depends(get_session)):
-    provider = session.execute(select(models.ProviderConnection).where(models.ProviderConnection.provider_name == "FRED")).scalars().first()
+def fred_status(session: Session = SESSION_DEPENDENCY):
+    provider = (
+        session.execute(
+            select(models.ProviderConnection).where(
+                models.ProviderConnection.provider_name == "FRED"
+            )
+        )
+        .scalars()
+        .first()
+    )
     if not provider:
-        return {"provider_name": "FRED", "configured": False, "enabled": settings.fred_enabled, "connection_state": "NOT_CONFIGURED", "capabilities": FredProvider(settings).capabilities}
-    return to_jsonable({"name": provider.provider_name, "type": provider.provider_type, "enabled": provider.enabled, "configured": provider.configured, "connection_state": provider.connection_state, "capabilities": provider.capabilities, "masked_identifier": provider.masked_identifier, "last_success": provider.last_success, "last_failure": provider.last_failure, "last_error": provider.last_error, "last_data_sync": provider.last_data_sync, "data_freshness": provider.data_freshness})
+        return {
+            "provider_name": "FRED",
+            "configured": False,
+            "enabled": settings.fred_enabled,
+            "connection_state": "NOT_CONFIGURED",
+            "capabilities": FredProvider(settings).capabilities,
+        }
+    return to_jsonable(
+        {
+            "name": provider.provider_name,
+            "type": provider.provider_type,
+            "enabled": provider.enabled,
+            "configured": provider.configured,
+            "connection_state": provider.connection_state,
+            "capabilities": provider.capabilities,
+            "masked_identifier": provider.masked_identifier,
+            "last_success": provider.last_success,
+            "last_failure": provider.last_failure,
+            "last_error": provider.last_error,
+            "last_data_sync": provider.last_data_sync,
+            "data_freshness": provider.data_freshness,
+        }
+    )
 
 
 @app.get("/api/v1/macro/series")
-def macro_series(q: str | None = None, session: Session = Depends(get_session)):
+def macro_series(q: str | None = None, session: Session = SESSION_DEPENDENCY):
     return {"items": MacroService(session).series(q)}
 
 
 @app.get("/api/v1/macro/series/search")
-def macro_series_search(q: str, session: Session = Depends(get_session)):
+def macro_series_search(q: str, session: Session = SESSION_DEPENDENCY):
     return {"items": MacroService(session).series(q)}
 
 
 @app.get("/api/v1/macro/series/{series_id}")
-def macro_series_detail(series_id: str, session: Session = Depends(get_session)):
+def macro_series_detail(series_id: str, session: Session = SESSION_DEPENDENCY):
     try:
         return MacroService(session).observations(series_id, limit=5)["series"]
     except ValueError as exc:
@@ -372,7 +636,7 @@ def macro_series_detail(series_id: str, session: Session = Depends(get_session))
 
 
 @app.get("/api/v1/macro/series/{series_id}/observations")
-def macro_observations(series_id: str, limit: int = 1000, session: Session = Depends(get_session)):
+def macro_observations(series_id: str, limit: int = 1000, session: Session = SESSION_DEPENDENCY):
     try:
         return MacroService(session).observations(series_id, limit)
     except ValueError as exc:
@@ -380,60 +644,114 @@ def macro_observations(series_id: str, limit: int = 1000, session: Session = Dep
 
 
 @app.post("/api/v1/macro/series/{series_id}/refresh")
-async def macro_refresh(series_id: str, request: Request, session: Session = Depends(get_session)):
+async def macro_refresh(series_id: str, request: Request, session: Session = SESSION_DEPENDENCY):
     cid = correlation_id(request)
-    job = JobRepository(session).create(job_type="fred_refresh_series", provider="FRED", parameters={"series_id": series_id}, correlation_id=cid)
+    job = JobRepository(session).create(
+        job_type="fred_refresh_series",
+        provider="FRED",
+        parameters={"series_id": series_id},
+        correlation_id=cid,
+    )
     session.commit()
-    result = await FredIngestionService(session, FredProvider(settings)).refresh_series(series_id, cid)
+    result = await FredIngestionService(session, FredProvider(settings)).refresh_series(
+        series_id, cid
+    )
     job = JobRepository(session).get(job.id)
     if job:
-        JobRepository(session).update(job, status="SUCCEEDED" if result["state"] == "SUCCEEDED" else "FAILED", progress=Decimal("1"), records_received=result["records_received"], records_accepted=result["records_accepted"], finished_at=datetime.now(timezone.utc), error_category=None if result["state"] == "SUCCEEDED" else result["state"])
+        JobRepository(session).update(
+            job,
+            status="SUCCEEDED" if result["state"] == "SUCCEEDED" else "FAILED",
+            progress=Decimal("1"),
+            records_received=result["records_received"],
+            records_accepted=result["records_accepted"],
+            finished_at=datetime.now(UTC),
+            error_category=None if result["state"] == "SUCCEEDED" else result["state"],
+        )
         session.commit()
     DATA_RECORDS_INGESTED.labels("FRED", series_id).inc(result["records_accepted"])
     return {"job_id": job.id if job else None, **result}
 
 
 @app.post("/api/v1/macro/backfills")
-async def macro_backfill(payload: BackfillRequest, request: Request, session: Session = Depends(get_session)):
+async def macro_backfill(
+    payload: BackfillRequest, request: Request, session: Session = SESSION_DEPENDENCY
+):
     cid = correlation_id(request)
-    job = JobRepository(session).create(job_type="fred_backfill_series", provider="FRED", parameters=payload.model_dump(), correlation_id=cid)
+    job = JobRepository(session).create(
+        job_type="fred_backfill_series",
+        provider="FRED",
+        parameters=payload.model_dump(),
+        correlation_id=cid,
+    )
     session.commit()
     accepted = 0
     received = 0
     states = []
     for series_id in payload.series_ids:
-        result = await FredIngestionService(session, FredProvider(settings)).refresh_series(series_id, cid, payload.observation_start)
+        result = await FredIngestionService(session, FredProvider(settings)).refresh_series(
+            series_id, cid, payload.observation_start
+        )
         states.append({series_id: result["state"]})
         accepted += result["records_accepted"]
         received += result["records_received"]
     job = JobRepository(session).get(job.id)
     if job:
-        state = "SUCCEEDED" if states and all(next(iter(item.values())) == "SUCCEEDED" for item in states) else "FAILED"
-        JobRepository(session).update(job, status=state, progress=Decimal("1"), records_received=received, records_accepted=accepted, finished_at=datetime.now(timezone.utc), error_category=None if accepted else "PROVIDER_NOT_CONFIGURED")
+        state = (
+            "SUCCEEDED"
+            if states and all(next(iter(item.values())) == "SUCCEEDED" for item in states)
+            else "FAILED"
+        )
+        JobRepository(session).update(
+            job,
+            status=state,
+            progress=Decimal("1"),
+            records_received=received,
+            records_accepted=accepted,
+            finished_at=datetime.now(UTC),
+            error_category=None if accepted else "PROVIDER_NOT_CONFIGURED",
+        )
         session.commit()
-    return {"job_id": job.id if job else None, "records_received": received, "records_accepted": accepted, "series_states": states}
+    return {
+        "job_id": job.id if job else None,
+        "records_received": received,
+        "records_accepted": accepted,
+        "series_states": states,
+    }
 
 
 @app.get("/api/v1/macro/backfills/{job_id}")
-def macro_backfill_job(job_id: str, session: Session = Depends(get_session)):
+def macro_backfill_job(job_id: str, session: Session = SESSION_DEPENDENCY):
     job = JobRepository(session).get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return to_jsonable({"id": job.id, "type": job.job_type, "provider": job.provider, "status": job.status, "progress": job.progress, "records_received": job.records_received, "records_accepted": job.records_accepted, "records_rejected": job.records_rejected, "error_category": job.error_category, "error_message": job.error_message})
+    return to_jsonable(
+        {
+            "id": job.id,
+            "type": job.job_type,
+            "provider": job.provider,
+            "status": job.status,
+            "progress": job.progress,
+            "records_received": job.records_received,
+            "records_accepted": job.records_accepted,
+            "records_rejected": job.records_rejected,
+            "error_category": job.error_category,
+            "error_message": job.error_message,
+        }
+    )
 
 
 @app.get("/api/v1/macro/dashboard")
-def macro_dashboard(session: Session = Depends(get_session)):
+def macro_dashboard(session: Session = SESSION_DEPENDENCY):
     return MacroService(session).dashboard()
 
 
 @app.get("/api/v1/portfolios/default")
-def portfolio(session: Session = Depends(get_session)):
+def portfolio(session: Session = SESSION_DEPENDENCY):
     return PortfolioService(session).default_snapshot()
 
 
 @app.post("/api/v1/portfolios/default/transactions")
-def add_transaction(payload: TransactionRequest, session: Session = Depends(get_session)):
+def add_transaction(payload: TransactionRequest, session: Session = SESSION_DEPENDENCY):
     try:
         return PortfolioService(session).add_manual_transaction(payload.model_dump())
     except ValueError as exc:
@@ -441,8 +759,12 @@ def add_transaction(payload: TransactionRequest, session: Session = Depends(get_
 
 
 @app.post("/api/v1/portfolios/default/recalculate")
-def recalculate_portfolio(session: Session = Depends(get_session)):
-    portfolio_model = session.execute(select(models.Portfolio).where(models.Portfolio.is_default.is_(True))).scalars().first()
+def recalculate_portfolio(session: Session = SESSION_DEPENDENCY):
+    portfolio_model = (
+        session.execute(select(models.Portfolio).where(models.Portfolio.is_default.is_(True)))
+        .scalars()
+        .first()
+    )
     if not portfolio_model:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     result = PortfolioService(session).recalculate(portfolio_model.id)
@@ -451,44 +773,57 @@ def recalculate_portfolio(session: Session = Depends(get_session)):
 
 
 @app.get("/api/v1/performance/default")
-def performance(session: Session = Depends(get_session)):
+def performance(session: Session = SESSION_DEPENDENCY):
     return portfolio_analytics(session)["performance"]
 
 
 @app.get("/api/v1/risk/default")
-def risk(session: Session = Depends(get_session)):
+def risk(session: Session = SESSION_DEPENDENCY):
     return portfolio_analytics(session)["risk"]
 
 
 @app.get("/api/v1/stress/default")
-def stress(session: Session = Depends(get_session)):
+def stress(session: Session = SESSION_DEPENDENCY):
     return {"items": RiskService(session).stress()}
 
 
 @app.get("/api/v1/hedge/default")
-def hedge(session: Session = Depends(get_session)):
+def hedge(session: Session = SESSION_DEPENDENCY):
     return RiskService(session).hedge()
 
 
 @app.get("/api/v1/strategies")
-def strategies(session: Session = Depends(get_session)):
-    return {"items": [to_jsonable({"id": item.id, "name": item.name, "strategy_type": item.strategy_type, "description": item.description, "status": item.status}) for item in StrategyRepository(session).list_strategies()]}
+def strategies(session: Session = SESSION_DEPENDENCY):
+    return {
+        "items": [
+            to_jsonable(
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "strategy_type": item.strategy_type,
+                    "description": item.description,
+                    "status": item.status,
+                }
+            )
+            for item in StrategyRepository(session).list_strategies()
+        ]
+    }
 
 
 @app.get("/api/v1/backtests")
-def backtests(session: Session = Depends(get_session)):
+def backtests(session: Session = SESSION_DEPENDENCY):
     return {"items": BacktestService(session).list_runs()}
 
 
 @app.post("/api/v1/backtests/demo-run")
-def run_backtest(session: Session = Depends(get_session)):
+def run_backtest(session: Session = SESSION_DEPENDENCY):
     result = BacktestService(session).run_demo_backtest()
     session.commit()
     return result
 
 
 @app.get("/api/v1/backtests/{run_id}")
-def backtest_detail(run_id: str, session: Session = Depends(get_session)):
+def backtest_detail(run_id: str, session: Session = SESSION_DEPENDENCY):
     try:
         return BacktestService(session).run_payload(run_id)
     except ValueError as exc:
@@ -496,36 +831,73 @@ def backtest_detail(run_id: str, session: Session = Depends(get_session)):
 
 
 @app.post("/api/v1/uploads")
-async def upload_dataset(file: UploadFile = File(...), dataset_type: str = "price_bars", session: Session = Depends(get_session)):
+async def upload_dataset(
+    file: UploadFile = UPLOAD_DEPENDENCY,
+    dataset_type: str = "price_bars",
+    session: Session = SESSION_DEPENDENCY,
+):
     data = await file.read()
     try:
-        return DatasetService(session).ingest_bytes(filename=file.filename or "upload.csv", data=data, content_type=file.content_type or "application/octet-stream", dataset_type=dataset_type)
+        return DatasetService(session).ingest_bytes(
+            filename=file.filename or "upload.csv",
+            data=data,
+            content_type=file.content_type or "application/octet-stream",
+            dataset_type=dataset_type,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/v1/datasets")
-def datasets(session: Session = Depends(get_session)):
+def datasets(session: Session = SESSION_DEPENDENCY):
     return {"items": DatasetService(session).list()}
 
 
 @app.get("/api/v1/jobs")
-def jobs(status: str | None = None, session: Session = Depends(get_session)):
-    return {"items": [to_jsonable({"id": item.id, "type": item.job_type, "provider": item.provider, "status": item.status, "progress": item.progress, "records_received": item.records_received, "records_accepted": item.records_accepted, "records_rejected": item.records_rejected, "retry_count": item.retry_count, "error_category": item.error_category, "error_message": item.error_message, "created_at": item.created_at, "started_at": item.started_at, "finished_at": item.finished_at}) for item in JobRepository(session).list(status)]}
+def jobs(status: str | None = None, session: Session = SESSION_DEPENDENCY):
+    return {
+        "items": [
+            to_jsonable(
+                {
+                    "id": item.id,
+                    "type": item.job_type,
+                    "provider": item.provider,
+                    "status": item.status,
+                    "progress": item.progress,
+                    "records_received": item.records_received,
+                    "records_accepted": item.records_accepted,
+                    "records_rejected": item.records_rejected,
+                    "retry_count": item.retry_count,
+                    "error_category": item.error_category,
+                    "error_message": item.error_message,
+                    "created_at": item.created_at,
+                    "started_at": item.started_at,
+                    "finished_at": item.finished_at,
+                }
+            )
+            for item in JobRepository(session).list(status)
+        ]
+    }
 
 
 @app.post("/api/v1/jobs/provider-health-check")
-def provider_health_job(request: Request, session: Session = Depends(get_session)):
+def provider_health_job(request: Request, session: Session = SESSION_DEPENDENCY):
     from .portfolio_api import identity
+
     actor = identity(request, session, admin=True)
-    job = JobRepository(session).create(job_type="provider_health_check", provider="SYSTEM", parameters={"actor_id": actor}, correlation_id=correlation_id(request))
+    job = JobRepository(session).create(
+        job_type="provider_health_check",
+        provider="SYSTEM",
+        parameters={"actor_id": actor},
+        correlation_id=correlation_id(request),
+    )
     job.status = "QUEUED"
     session.commit()
     return {"job_id": job.id, "status": job.status, "queue": "DATABASE", "redis_enqueued": False}
 
 
 @app.post("/api/v1/reports/portfolio-xlsx")
-def portfolio_report(session: Session = Depends(get_session)):
+def portfolio_report(session: Session = SESSION_DEPENDENCY):
     try:
         return ReportService(session).portfolio_xlsx()
     except Exception as exc:  # noqa: BLE001
@@ -533,7 +905,7 @@ def portfolio_report(session: Session = Depends(get_session)):
 
 
 @app.post("/api/v1/reports/risk-xlsx")
-def risk_report(session: Session = Depends(get_session)):
+def risk_report(session: Session = SESSION_DEPENDENCY):
     try:
         return ReportService(session).risk_xlsx()
     except Exception as exc:  # noqa: BLE001
@@ -541,7 +913,7 @@ def risk_report(session: Session = Depends(get_session)):
 
 
 @app.post("/api/v1/reports/backtest-xlsx")
-def backtest_report(session: Session = Depends(get_session)):
+def backtest_report(session: Session = SESSION_DEPENDENCY):
     try:
         return ReportService(session).backtest_xlsx()
     except Exception as exc:  # noqa: BLE001
@@ -549,7 +921,7 @@ def backtest_report(session: Session = Depends(get_session)):
 
 
 @app.post("/api/v1/reports/macro-xlsx")
-def macro_report(session: Session = Depends(get_session)):
+def macro_report(session: Session = SESSION_DEPENDENCY):
     try:
         return ReportService(session).macro_xlsx()
     except Exception as exc:  # noqa: BLE001
@@ -557,7 +929,7 @@ def macro_report(session: Session = Depends(get_session)):
 
 
 @app.get("/api/v1/reports/{report_id}")
-def report_status(report_id: str, session: Session = Depends(get_session)):
+def report_status(report_id: str, session: Session = SESSION_DEPENDENCY):
     report = ReportService(session).get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -565,16 +937,23 @@ def report_status(report_id: str, session: Session = Depends(get_session)):
 
 
 @app.get("/api/v1/reports/{report_id}/download")
-def report_download(report_id: str, session: Session = Depends(get_session)):
+def report_download(report_id: str, session: Session = SESSION_DEPENDENCY):
     report = ReportService(session).get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     local_path = report.get("local_path")
     if not local_path:
         data = ReportService(session).storage.get_bytes(report["object_key"])
-        if report.get("content_hash") and hashlib.sha256(data).hexdigest() != report["content_hash"]:
+        if (
+            report.get("content_hash")
+            and hashlib.sha256(data).hexdigest() != report["content_hash"]
+        ):
             raise HTTPException(409, "Report failed integrity verification")
-        return Response(data, media_type=report["content_type"], headers={"Content-Disposition": f'attachment; filename="{report["filename"]}"'})
+        return Response(
+            data,
+            media_type=report["content_type"],
+            headers={"Content-Disposition": f'attachment; filename="{report["filename"]}"'},
+        )
     return FileResponse(local_path, filename=report["filename"], media_type=report["content_type"])
 
 
@@ -587,24 +966,42 @@ def pine_export(strategy_type: str = "moving_average_crossover"):
 
 
 @app.get("/api/v1/alerts")
-def alerts(session: Session = Depends(get_session)):
-    rows = session.execute(select(models.Alert).order_by(models.Alert.created_at.desc())).scalars().all()
-    return {"items": [to_jsonable({"id": row.id, "severity": row.severity, "title": row.title, "message": row.message, "state": row.state, "acknowledged_at": row.acknowledged_at}) for row in rows]}
+def alerts(session: Session = SESSION_DEPENDENCY):
+    rows = (
+        session.execute(select(models.Alert).order_by(models.Alert.created_at.desc()))
+        .scalars()
+        .all()
+    )
+    return {
+        "items": [
+            to_jsonable(
+                {
+                    "id": row.id,
+                    "severity": row.severity,
+                    "title": row.title,
+                    "message": row.message,
+                    "state": row.state,
+                    "acknowledged_at": row.acknowledged_at,
+                }
+            )
+            for row in rows
+        ]
+    }
 
 
 @app.post("/api/v1/alerts/{alert_id}/acknowledge")
-def acknowledge_alert(alert_id: str, session: Session = Depends(get_session)):
+def acknowledge_alert(alert_id: str, session: Session = SESSION_DEPENDENCY):
     alert = session.get(models.Alert, alert_id)
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     alert.state = "RESOLVED"
-    alert.acknowledged_at = datetime.now(timezone.utc)
+    alert.acknowledged_at = datetime.now(UTC)
     session.commit()
     return {"status": "acknowledged", "alert_id": alert_id}
 
 
 @app.get("/api/v1/system/health")
-def system_health(session: Session = Depends(get_session)):
+def system_health(session: Session = SESSION_DEPENDENCY):
     checks = readiness_checks(session)
     counts = SystemRepository(session).counts()
     return {
@@ -615,7 +1012,15 @@ def system_health(session: Session = Depends(get_session)):
         "provider_state": providers(session)["items"],
         "counts": counts,
         "last_backup": None,
-        "last_successful_data_ingestion": to_jsonable(session.execute(select(models.IngestionJob.finished_at).where(models.IngestionJob.status == "SUCCEEDED").order_by(models.IngestionJob.finished_at.desc())).scalars().first()),
+        "last_successful_data_ingestion": to_jsonable(
+            session.execute(
+                select(models.IngestionJob.finished_at)
+                .where(models.IngestionJob.status == "SUCCEEDED")
+                .order_by(models.IngestionJob.finished_at.desc())
+            )
+            .scalars()
+            .first()
+        ),
     }
 
 
@@ -626,20 +1031,15 @@ def old_environment():
 
 
 @app.get("/api/portfolio")
-def old_portfolio(session: Session = Depends(get_session)):
+def old_portfolio(session: Session = SESSION_DEPENDENCY):
     return portfolio(session)
 
 
 @app.get("/api/risk")
-def old_risk(session: Session = Depends(get_session)):
+def old_risk(session: Session = SESSION_DEPENDENCY):
     return risk(session)
 
 
 # Keep the literal legacy /portfolios/default routes ahead of resource IDs.
-from .portfolio_resource_api import router as portfolio_resource_router
-
 app.include_router(portfolio_resource_router)
-
-from .performance_api import router as performance_router
-
 app.include_router(performance_router)

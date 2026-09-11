@@ -15,8 +15,14 @@ from app.services import DemoIngestionService  # noqa: E402
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed deterministic KnK Capital demo data through the real ingestion pipeline.")
-    parser.add_argument("--reset", action="store_true", help="Clear existing records before loading deterministic demo data.")
+    parser = argparse.ArgumentParser(
+        description="Seed deterministic KnK Capital demo data through the real ingestion pipeline."
+    )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Clear existing records before loading deterministic demo data.",
+    )
     args = parser.parse_args()
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as session:

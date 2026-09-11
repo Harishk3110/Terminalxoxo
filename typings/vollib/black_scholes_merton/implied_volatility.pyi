@@ -1,0 +1,3 @@
+def implied_volatility(
+    price: float, S: float, K: float, t: float, r: float, q: float, flag: str
+) -> float: ...

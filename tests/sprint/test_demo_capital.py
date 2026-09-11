@@ -3,11 +3,10 @@
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import func, select
-
 from app import models
 from app.portfolio_seed import REFERENCE_CAPITAL, upgrade_demo_capital
 from app.portfolio_valuation import load_entries
+from sqlalchemy import func, select
 
 
 def old_demo(session):
@@ -34,10 +33,16 @@ def test_opening_capital_revision_preserves_original_and_is_idempotent(ledger_se
     assert payloads[0]["audit_version"] == 2
     assert not upgrade_demo_capital(ledger_session, portfolio, profile)
     assert ledger_session.scalar(select(func.count(models.TransactionRevision.id))) == 1
-    assert ledger_session.scalar(select(models.AuditLog).where(models.AuditLog.action == "DEMO_CAPITAL_SPECIFICATION_CORRECTED"))
+    assert ledger_session.scalar(
+        select(models.AuditLog).where(
+            models.AuditLog.action == "DEMO_CAPITAL_SPECIFICATION_CORRECTED"
+        )
+    )
 
 
-@pytest.mark.parametrize("change", ["real", "renamed", "custom_capital", "manual_contribution", "revised_contribution"])
+@pytest.mark.parametrize(
+    "change", ["real", "renamed", "custom_capital", "manual_contribution", "revised_contribution"]
+)
 def test_capital_upgrade_never_overwrites_user_portfolios(ledger_session, change):
     portfolio, profile, detail = old_demo(ledger_session)
     if change == "real":

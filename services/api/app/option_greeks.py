@@ -1,12 +1,24 @@
 """European BSM via vollib; numerical higher sensitivities retain explicit units."""
 
 import math
+from collections.abc import Callable
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from vollib.black_scholes_merton import black_scholes_merton
 from vollib.black_scholes_merton.greeks import analytical
 from vollib.black_scholes_merton.implied_volatility import implied_volatility
+
+type GreekMetric = Literal["delta", "gamma", "theta", "vega", "rho"]
+type BsmArguments = tuple[Literal["c", "p"], float, float, float, float, float, float]
+type GreekFunction = Callable[[str, float, float, float, float, float, float], float]
+GREEK_FUNCTIONS: dict[GreekMetric, GreekFunction] = {
+    "delta": analytical.delta,
+    "gamma": analytical.gamma,
+    "theta": analytical.theta,
+    "vega": analytical.vega,
+    "rho": analytical.rho,
+}
 
 
 class PricingInputs(BaseModel):
@@ -20,7 +32,7 @@ class PricingInputs(BaseModel):
     volatility: float = Field(gt=0, le=5)
 
 
-def _args(inputs):
+def _args(inputs: PricingInputs) -> BsmArguments:
     return (
         "c" if inputs.right == "CALL" else "p",
         inputs.spot,
@@ -32,11 +44,10 @@ def _args(inputs):
     )
 
 
-def greeks(inputs: PricingInputs, advanced=True):
+def greeks(inputs: PricingInputs, advanced: bool = True) -> dict[str, float | None]:
     arguments = _args(inputs)
-    result = {
-        key: float(getattr(analytical, key)(*arguments))
-        for key in ("delta", "gamma", "theta", "vega", "rho")
+    result: dict[str, float] = {
+        key: float(function(*arguments)) for key, function in GREEK_FUNCTIONS.items()
     }
     result["theoretical_price"] = float(black_scholes_merton(*arguments))
     if advanced:
@@ -44,8 +55,8 @@ def greeks(inputs: PricingInputs, advanced=True):
         vol_step = min(1e-3, inputs.volatility / 10)
         time_step = min(1 / 3650, inputs.years / 4)
 
-        def value(metric, **changes):
-            return float(getattr(analytical, metric)(*_args(inputs.model_copy(update=changes))))
+        def value(metric: GreekMetric, **changes: float) -> float:
+            return float(GREEK_FUNCTIONS[metric](*_args(inputs.model_copy(update=changes))))
 
         plus, minus = inputs.volatility + vol_step, inputs.volatility - vol_step
         result.update(
@@ -87,7 +98,7 @@ def greeks(inputs: PricingInputs, advanced=True):
     return {key: value if math.isfinite(value) else None for key, value in result.items()}
 
 
-def implied_iv(price: float, inputs: PricingInputs):
+def implied_iv(price: float, inputs: PricingInputs) -> float:
     if not math.isfinite(price) or price <= 0:
         raise ValueError("Positive finite option price required for implied volatility")
     lower = max(

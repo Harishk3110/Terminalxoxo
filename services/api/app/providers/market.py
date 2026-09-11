@@ -1,14 +1,16 @@
 """Read-only, vendor-neutral JSON market/options adapter contract."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Self
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+import httpx
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
+from ..config import Settings
 from ..option_contracts import ChainContract
-from .http import ProviderError, fetch
+from .http import ProviderError, Response, fetch
 
 
 class PriceObservation(BaseModel):
@@ -25,7 +27,7 @@ class PriceObservation(BaseModel):
     adjustment_state: Literal["UNADJUSTED", "ADJUSTED"]
 
     @model_validator(mode="after")
-    def validate_bar(self):
+    def validate_bar(self) -> Self:
         if self.timestamp.tzinfo is None or self.timestamp > datetime.now(UTC):
             raise ValueError("Price timestamp must be timezone-aware and not future")
         values = [self.close] + ([self.open] if self.open is not None else [])
@@ -39,7 +41,12 @@ class PriceObservation(BaseModel):
 
 
 class JsonMarketProvider:
-    def __init__(self, settings, kind="market", transport=None):
+    def __init__(
+        self,
+        settings: Settings,
+        kind: Literal["market", "options"] = "market",
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.kind, self.transport = kind, transport
         self.provider_name = "Market provider" if kind == "market" else "Options provider"
         self.base_url = settings.market_base_url if kind == "market" else settings.options_base_url
@@ -47,7 +54,7 @@ class JsonMarketProvider:
         self.capabilities = ["test", "backfill", "prices" if kind == "market" else "chain"]
 
     @property
-    def configured(self):
+    def configured(self) -> bool:
         url = urlsplit(self.base_url or "")
         return bool(
             url.scheme == "https"
@@ -58,8 +65,10 @@ class JsonMarketProvider:
             and not url.fragment
         )
 
-    async def read(self, symbol, start=None, end=None):
-        if not self.configured:
+    async def read(
+        self, symbol: str, start: str | date | None = None, end: str | date | None = None
+    ) -> tuple[Response, list[dict[str, JsonValue]]]:
+        if not self.configured or self.base_url is None:
             raise ProviderError(
                 "Server-side HTTPS JSON adapter URL is not configured", "NOT_CONFIGURED"
             )
@@ -82,13 +91,16 @@ class JsonMarketProvider:
         ):
             raise ProviderError("Provider response requires a bounded nonempty rows array")
         validator = PriceObservation if self.kind == "market" else ChainContract
-        normalized = []
-        seen = set()
+        normalized: list[dict[str, JsonValue]] = []
+        seen: set[tuple[str, datetime]] = set()
         for row in rows:
             item = validator.model_validate(row)
             if item.symbol != symbol or item.timestamp > datetime.now(UTC):
                 raise ProviderError("Provider row has the wrong symbol or a future timestamp")
-            key = (getattr(item, "option_symbol", symbol), item.timestamp)
+            key = (
+                item.option_symbol if isinstance(item, ChainContract) else symbol,
+                item.timestamp,
+            )
             if key in seen:
                 raise ProviderError("Provider returned duplicate observation timestamps")
             seen.add(key)
@@ -100,6 +112,6 @@ class JsonMarketProvider:
             )
         return response, normalized
 
-    async def test(self):
+    async def test(self) -> Response:
         response, _ = await self.read("SPY")
         return response

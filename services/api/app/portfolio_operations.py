@@ -1,30 +1,48 @@
 """Application services for ledger writes, trade review and reference/broker reconciliation."""
+
 from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from . import models
-from .portfolio_domain.types import AccountingPolicy
+from .ledger_storage import validate_storage
 from .portfolio_domain.money import money, stored_decimal
-from .portfolio_engine import LedgerState, TRANSACTION_TYPES, decimal
+from .portfolio_domain.transaction_cash import enrich_cash_effects
+from .portfolio_domain.types import AccountingPolicy
+from .portfolio_engine import TRANSACTION_TYPES, LedgerState, decimal
 from .portfolio_valuation import PortfolioValuationService, jsonable, load_entries
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .transaction_context import record_context
-from .portfolio_domain.transaction_cash import enrich_cash_effects
 from .transaction_views import transaction_views
-from .ledger_storage import validate_storage
 
 CURRENCIES = {"SGD", "USD", "EUR", "GBP", "JPY", "HKD", "AUD", "CAD", "CHF", "CNH", "CNY", "NZD"}
 
 
-def audit(session: Session, action: str, resource_type: str, resource_id: str, metadata: dict[str, Any], actor: str | None = None) -> None:
-    session.add(models.AuditLog(action=action, resource_type=resource_type, resource_id=resource_id, actor_user_id=actor, correlation_id=str(uuid.uuid4()), metadata_json=jsonable(metadata)))
+def audit(
+    session: Session,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    metadata: dict[str, Any],
+    actor: str | None = None,
+) -> None:
+    session.add(
+        models.AuditLog(
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            actor_user_id=actor,
+            correlation_id=str(uuid.uuid4()),
+            metadata_json=jsonable(metadata),
+        )
+    )
 
 
 class PortfolioLedgerService:
@@ -32,23 +50,38 @@ class PortfolioLedgerService:
         self.session = session
         self.valuation = PortfolioValuationService(session)
 
-    def add(self, payload: dict[str, Any], portfolio_key: str | None = None, *, source: str = "MANUAL", source_file_id: str | None = None, actor: str | None = None) -> dict[str, Any]:
+    def add(
+        self,
+        payload: dict[str, Any],
+        portfolio_key: str | None = None,
+        *,
+        source: str = "MANUAL",
+        source_file_id: str | None = None,
+        actor: str | None = None,
+    ) -> dict[str, Any]:
         portfolio, profile = self.valuation.portfolio(portfolio_key)
         kind = str(payload.get("transaction_type", "")).upper()
         if kind not in TRANSACTION_TYPES:
             raise ValueError("Unknown transaction type")
         day = date.fromisoformat(str(payload.get("trade_date", ""))[:10])
-        if day > datetime.now(timezone.utc).date():
+        if day > datetime.now(UTC).date():
             raise ValueError("Future-dated ledger transactions are not accepted")
         settle = date.fromisoformat(str(payload.get("settle_date") or day.isoformat())[:10])
         if settle < day:
             raise ValueError("Settlement date cannot precede trade date")
         instrument = None
         if payload.get("symbol"):
-            instrument = self.session.scalar(select(models.Instrument).where(models.Instrument.symbol == str(payload["symbol"]).upper()))
+            instrument = self.session.scalar(
+                select(models.Instrument).where(
+                    models.Instrument.symbol == str(payload["symbol"]).upper()
+                )
+            )
             if not instrument:
                 raise ValueError("Unknown security; map the instrument before import")
-        currency = str(payload.get("currency") or (instrument.currency if instrument else portfolio.base_currency)).upper()
+        currency = str(
+            payload.get("currency")
+            or (instrument.currency if instrument else portfolio.base_currency)
+        ).upper()
         if currency not in CURRENCIES or instrument and currency != instrument.currency:
             raise ValueError("Unsupported currency or currency does not match instrument")
         if kind == "SHORT" and not profile.configuration.get("allow_short", False):
@@ -58,38 +91,79 @@ class PortfolioLedgerService:
         fee = stored_decimal(payload.get("fee", 0), "fee", nonnegative=True)
         commission = stored_decimal(payload.get("commission", 0), "commission", nonnegative=True)
         tax = stored_decimal(payload.get("tax", 0), "tax", nonnegative=True)
-        multiplier = stored_decimal(payload.get("contract_multiplier", 1), "multiplier", positive=True)
-        amount = stored_decimal(payload.get("amount") or payload.get("gross_amount") or quantity * price * multiplier, "gross amount", nonnegative=True)
+        multiplier = stored_decimal(
+            payload.get("contract_multiplier", 1), "multiplier", positive=True
+        )
+        amount = stored_decimal(
+            payload.get("amount") or payload.get("gross_amount") or quantity * price * multiplier,
+            "gross amount",
+            nonnegative=True,
+        )
         if kind in {"BUY", "SELL", "SHORT", "COVER"} and amount != quantity * price * multiplier:
             raise ValueError("Gross amount must equal quantity times price times multiplier")
         if kind in {"COMMISSION", "FEE", "TAX"} and amount and fee + commission + tax:
             raise ValueError("Supply one expense amount, not both amount and charge fields")
         if currency == portfolio.base_currency:
             fx = Decimal("1")
-            if payload.get("fx_rate_to_base") is not None and decimal(payload["fx_rate_to_base"]) != 1:
+            if (
+                payload.get("fx_rate_to_base") is not None
+                and decimal(payload["fx_rate_to_base"]) != 1
+            ):
                 raise ValueError("Base-currency FX must equal one")
             fx_source = "IDENTITY"
         elif payload.get("fx_rate_to_base") is not None:
             fx = stored_decimal(payload["fx_rate_to_base"], "transaction FX", positive=True)
             fx_source = "USER PROVIDED TRANSACTION FX"
         else:
-            fx, provenance = FxRateResolver(self.session).resolve(currency, portfolio.base_currency, close_of_day(day))
+            fx, provenance = FxRateResolver(self.session).resolve(
+                currency, portfolio.base_currency, close_of_day(day)
+            )
             if fx is None:
-                raise ValueError("Missing transaction FX; supply an explicit recorded exchange rate")
+                raise ValueError(
+                    "Missing transaction FX; supply an explicit recorded exchange rate"
+                )
             fx_source = provenance["source"]
         metadata = dict(payload.get("metadata") or {})
         metadata.pop("fx_recording", None)
         if currency != portfolio.base_currency and payload.get("fx_rate_to_base") is None:
             observed_fx = fx
             fx = stored_decimal(money(fx, 8), "recorded transaction FX", positive=True)
-            metadata["fx_recording"] = {"observed_rate": str(observed_fx), "recorded_rate": str(fx),
-                                        "rounding": "ROUND_HALF_EVEN", "decimal_places": 8}
+            metadata["fx_recording"] = {
+                "observed_rate": str(observed_fx),
+                "recorded_rate": str(fx),
+                "rounding": "ROUND_HALF_EVEN",
+                "decimal_places": 8,
+            }
         stored_base_value = money(amount * fx, 8)
         stored_decimal(stored_base_value, "stored base value", nonnegative=True)
-        validate_storage(self.session, {"quantity": quantity, "price": price, "fee": fee,
-                         "commission": commission, "tax": tax, "multiplier": multiplier,
-                         "gross amount": amount, "transaction FX": fx, "stored base value": stored_base_value})
-        for key in ("to_currency", "to_amount", "ratio", "cost_allocation", "exchange_ratio", "cash_per_share", "cash_cost_allocation", "reason", "direction", "thesis_id", "strategy_id", "rationale"):
+        validate_storage(
+            self.session,
+            {
+                "quantity": quantity,
+                "price": price,
+                "fee": fee,
+                "commission": commission,
+                "tax": tax,
+                "multiplier": multiplier,
+                "gross amount": amount,
+                "transaction FX": fx,
+                "stored base value": stored_base_value,
+            },
+        )
+        for key in (
+            "to_currency",
+            "to_amount",
+            "ratio",
+            "cost_allocation",
+            "exchange_ratio",
+            "cash_per_share",
+            "cash_cost_allocation",
+            "reason",
+            "direction",
+            "thesis_id",
+            "strategy_id",
+            "rationale",
+        ):
             if payload.get(key) is not None:
                 metadata[key] = payload[key]
         context = record_context(payload, metadata, day)
@@ -98,18 +172,35 @@ class PortfolioLedgerService:
                 raise ValueError("FX destination currency is unknown")
             metadata["to_currency"] = str(metadata["to_currency"]).upper()
         if kind in {"SPINOFF", "MERGER"}:
-            child = self.session.scalar(select(models.Instrument).where(models.Instrument.symbol == str(payload.get("child_symbol", "")).upper()))
+            child = self.session.scalar(
+                select(models.Instrument).where(
+                    models.Instrument.symbol == str(payload.get("child_symbol", "")).upper()
+                )
+            )
             if not child or not instrument or child.currency != instrument.currency:
-                raise ValueError("Corporate action requires a known child security in the parent currency")
+                raise ValueError(
+                    "Corporate action requires a known child security in the parent currency"
+                )
             metadata["child_instrument_id"] = child.id
-        for link, model in (("thesis_id", models.InvestmentThesis), ("strategy_id", models.StrategyDefinition)):
+        for link, model in (
+            ("thesis_id", models.InvestmentThesis),
+            ("strategy_id", models.StrategyDefinition),
+        ):
             if metadata.get(link) and self.session.get(model, metadata[link]) is None:
                 raise ValueError(f"Unknown {link}")
         metadata["fx_source"] = fx_source
         reference = context.external_reference
-        external_key = hashlib.sha256(f"{portfolio.id}|{source}|{reference}".encode()).hexdigest() if reference else None
+        external_key = (
+            hashlib.sha256(f"{portfolio.id}|{source}|{reference}".encode()).hexdigest()
+            if reference
+            else None
+        )
         if external_key:
-            old = self.session.scalar(select(models.TransactionDetail).where(models.TransactionDetail.external_key == external_key))
+            old = self.session.scalar(
+                select(models.TransactionDetail).where(
+                    models.TransactionDetail.external_key == external_key
+                )
+            )
             if old:
                 return {"duplicate": True, "id": old.transaction_id}
         account_id = payload.get("account_id")
@@ -118,24 +209,42 @@ class PortfolioLedgerService:
             if not account or account.portfolio_id != portfolio.id:
                 raise ValueError("Account does not belong to portfolio")
         else:
-            account_id = self.session.scalar(select(models.PortfolioAccount.id).where(models.PortfolioAccount.portfolio_id == portfolio.id).limit(1))
+            account_id = self.session.scalar(
+                select(models.PortfolioAccount.id)
+                .where(models.PortfolioAccount.portfolio_id == portfolio.id)
+                .limit(1)
+            )
         existing, _ = load_entries(self.session, portfolio.id)
         start = min((e.day for e in existing), default=day)
         before = self.valuation.calculate(portfolio.id, day) if existing and day >= start else None
         txn = models.PortfolioTransaction(
-            portfolio_id=portfolio.id, account_id=account_id,
+            portfolio_id=portfolio.id,
+            account_id=account_id,
             instrument_id=instrument.id if instrument else None,
-            transaction_type=kind, trade_date=day, settle_date=settle,
-            quantity=quantity, price=price, currency=currency, fx_rate_to_base=fx,
-            fee=fee, source=source, quality="USER PROVIDED" if source_file_id else "INTERNAL LEDGER",
+            transaction_type=kind,
+            trade_date=day,
+            settle_date=settle,
+            quantity=quantity,
+            price=price,
+            currency=currency,
+            fx_rate_to_base=fx,
+            fee=fee,
+            source=source,
+            quality="USER PROVIDED" if source_file_id else "INTERNAL LEDGER",
             notes=payload.get("notes"),
         )
         self.session.add(txn)
         self.session.flush()
         detail = models.TransactionDetail(
-            transaction_id=txn.id, gross_amount=amount, commission=commission, tax=tax,
-            contract_multiplier=multiplier, base_value=stored_base_value, external_key=external_key,
-            source_file_id=source_file_id, metadata_json=jsonable({**metadata, "external_reference": reference}),
+            transaction_id=txn.id,
+            gross_amount=amount,
+            commission=commission,
+            tax=tax,
+            contract_multiplier=multiplier,
+            base_value=stored_base_value,
+            external_key=external_key,
+            source_file_id=source_file_id,
+            metadata_json=jsonable({**metadata, "external_reference": reference}),
             reconciliation_state="MATCHED" if source == "IBKR PAPER" else "INTERNAL_ONLY",
         )
         self.session.add(detail)
@@ -147,23 +256,75 @@ class PortfolioLedgerService:
             state.apply(entry)
         after = self.valuation.calculate(portfolio.id, day)
         event = models.TradeEvent(
-            portfolio_id=portfolio.id, transaction_id=txn.id, event_type=kind, source=source,
+            portfolio_id=portfolio.id,
+            transaction_id=txn.id,
+            event_type=kind,
+            source=source,
             review_state="REQUIRES_REVIEW",
-            payload=jsonable({"symbol": instrument.symbol if instrument else None, "external_reference": reference, "source_file_id": source_file_id, "thesis_id": metadata.get("thesis_id"), "strategy_id": metadata.get("strategy_id"), "rationale": metadata.get("rationale") or payload.get("notes"), "risk_method": "Trade-date close counterfactual, not a pre-execution live risk measurement"}),
+            payload=jsonable(
+                {
+                    "symbol": instrument.symbol if instrument else None,
+                    "external_reference": reference,
+                    "source_file_id": source_file_id,
+                    "thesis_id": metadata.get("thesis_id"),
+                    "strategy_id": metadata.get("strategy_id"),
+                    "rationale": metadata.get("rationale") or payload.get("notes"),
+                    "risk_method": "Trade-date close counterfactual, not a pre-execution live risk measurement",
+                }
+            ),
         )
         self.session.add(event)
         self.session.flush()
+
         def snapshot(data):
             if not data:
                 return {"nav": "0", "beta": None, "positions": [], "exposures": {}}
-            return {"nav": data["portfolio"]["nav"], "cash": data["portfolio"]["cash"], "beta": data["risk"].get("beta"), "gross_exposure": data["risk"].get("gross_exposure"), "positions": [{"symbol": p["symbol"], "weight": p["weight"]} for p in data["positions"]], "exposures": data["exposures"], "as_of": data["as_of"]}
+            return {
+                "nav": data["portfolio"]["nav"],
+                "cash": data["portfolio"]["cash"],
+                "beta": data["risk"].get("beta"),
+                "gross_exposure": data["risk"].get("gross_exposure"),
+                "positions": [
+                    {"symbol": p["symbol"], "weight": p["weight"]} for p in data["positions"]
+                ],
+                "exposures": data["exposures"],
+                "as_of": data["as_of"],
+            }
+
         breaches = list(after["breaches"])
         if instrument and kind in {"BUY", "SHORT"} and not metadata.get("thesis_id"):
-            breaches.append({"metric": "MISSING_THESIS", "severity": "WARN", "state": "OPEN", "symbol": instrument.symbol})
+            breaches.append(
+                {
+                    "metric": "MISSING_THESIS",
+                    "severity": "WARN",
+                    "state": "OPEN",
+                    "symbol": instrument.symbol,
+                }
+            )
         if any(Decimal(c["amount"]) < 0 for c in after["cash"]):
             breaches.append({"metric": "NEGATIVE_CASH", "severity": "WARN", "state": "OPEN"})
-        self.session.add(models.TradeRiskSnapshot(trade_id=event.id, before=snapshot(before), after=snapshot(after), breaches=breaches))
-        audit(self.session, "LEDGER_TRANSACTION_CREATED", "portfolio_transaction", txn.id, {"portfolio_id": portfolio.id, "type": kind, "amount": amount, "currency": currency, "fx": fx, "source": source, "source_file_id": source_file_id, "context": context.model_dump(mode="json")}, actor)
+        self.session.add(
+            models.TradeRiskSnapshot(
+                trade_id=event.id, before=snapshot(before), after=snapshot(after), breaches=breaches
+            )
+        )
+        audit(
+            self.session,
+            "LEDGER_TRANSACTION_CREATED",
+            "portfolio_transaction",
+            txn.id,
+            {
+                "portfolio_id": portfolio.id,
+                "type": kind,
+                "amount": amount,
+                "currency": currency,
+                "fx": fx,
+                "source": source,
+                "source_file_id": source_file_id,
+                "context": context.model_dump(mode="json"),
+            },
+            actor,
+        )
         self.session.flush()
         payloads = load_entries(self.session, portfolio.id)[1]
         enrich_cash_effects(payloads, entries, state.cash_service.movements)
@@ -178,24 +339,74 @@ class TradeMonitorService:
         portfolio, _ = PortfolioValuationService(self.session).portfolio(portfolio_key)
         transactions = transaction_views(self.session, portfolio.id)
         txns = {t["id"]: t for t in transactions}
-        risks = {r.trade_id: r for r in self.session.scalars(select(models.TradeRiskSnapshot).join(models.TradeEvent, models.TradeEvent.id == models.TradeRiskSnapshot.trade_id).where(models.TradeEvent.portfolio_id == portfolio.id)).all()}
-        rows = self.session.scalars(select(models.TradeEvent).where(models.TradeEvent.portfolio_id == portfolio.id).order_by(models.TradeEvent.created_at.desc()).limit(500)).all()
+        risks = {
+            r.trade_id: r
+            for r in self.session.scalars(
+                select(models.TradeRiskSnapshot)
+                .join(models.TradeEvent, models.TradeEvent.id == models.TradeRiskSnapshot.trade_id)
+                .where(models.TradeEvent.portfolio_id == portfolio.id)
+            ).all()
+        }
+        rows = self.session.scalars(
+            select(models.TradeEvent)
+            .where(models.TradeEvent.portfolio_id == portfolio.id)
+            .order_by(models.TradeEvent.created_at.desc())
+            .limit(500)
+        ).all()
         result = []
         instruments = {r.symbol: r for r in self.session.scalars(select(models.Instrument)).all()}
         marks = MarketPriceResolver(self.session, [r.id for r in instruments.values()])
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for row in rows:
             risk = risks.get(row.id)
             txn = txns.get(row.transaction_id, {})
             symbol = txn.get("symbol") or row.payload.get("symbol")
             mark = marks.resolve(instruments[symbol].id, now) if symbol in instruments else None
             sector = instruments[symbol].sector if symbol in instruments else None
+
             def exposure(snapshot, key, value):
                 if not snapshot or snapshot.get("nav") is None:
                     return None
-                items = snapshot.get("positions", []) if key == "symbol" else snapshot.get("exposures", {}).get("sector", [])
-                return next((r.get("weight") for r in items if r.get(key if key == "symbol" else "name") == value), 0)
-            result.append({**txn, "id": row.id, "transaction_id": row.transaction_id, "detected_at": row.created_at.isoformat(), "review_state": row.review_state, "pre_beta": risk.before.get("beta") if risk else None, "post_beta": risk.after.get("beta") if risk else None, "weight_before": exposure(risk.before, "symbol", symbol) if risk else None, "weight_after": exposure(risk.after, "symbol", symbol) if risk else None, "sector_weight_before": exposure(risk.before, "sector", sector) if risk and sector else None, "sector_weight_after": exposure(risk.after, "sector", sector) if risk and sector else None, "risk_as_of": risk.after.get("as_of") if risk else None, "current_price": str(mark.value) if mark else None, "current_price_provenance": marks.describe(instruments[symbol].id, now) if symbol in instruments else None, "breaches": risk.breaches if risk else [], **row.payload})
+                items = (
+                    snapshot.get("positions", [])
+                    if key == "symbol"
+                    else snapshot.get("exposures", {}).get("sector", [])
+                )
+                return next(
+                    (
+                        r.get("weight")
+                        for r in items
+                        if r.get(key if key == "symbol" else "name") == value
+                    ),
+                    0,
+                )
+
+            result.append(
+                {
+                    **txn,
+                    "id": row.id,
+                    "transaction_id": row.transaction_id,
+                    "detected_at": row.created_at.isoformat(),
+                    "review_state": row.review_state,
+                    "pre_beta": risk.before.get("beta") if risk else None,
+                    "post_beta": risk.after.get("beta") if risk else None,
+                    "weight_before": exposure(risk.before, "symbol", symbol) if risk else None,
+                    "weight_after": exposure(risk.after, "symbol", symbol) if risk else None,
+                    "sector_weight_before": exposure(risk.before, "sector", sector)
+                    if risk and sector
+                    else None,
+                    "sector_weight_after": exposure(risk.after, "sector", sector)
+                    if risk and sector
+                    else None,
+                    "risk_as_of": risk.after.get("as_of") if risk else None,
+                    "current_price": str(mark.value) if mark else None,
+                    "current_price_provenance": marks.describe(instruments[symbol].id, now)
+                    if symbol in instruments
+                    else None,
+                    "breaches": risk.breaches if risk else [],
+                    **row.payload,
+                }
+            )
         return result
 
     def review(self, trade_id, state, note, actor=None):
@@ -207,7 +418,14 @@ class TradeMonitorService:
         row.review_state = state
         review = models.TradeReview(trade_id=trade_id, actor_user_id=actor, state=state, note=note)
         self.session.add(review)
-        audit(self.session, "TRADE_REVIEWED", "trade_event", trade_id, {"state": state, "note": note}, actor)
+        audit(
+            self.session,
+            "TRADE_REVIEWED",
+            "trade_event",
+            trade_id,
+            {"state": state, "note": note},
+            actor,
+        )
         self.session.commit()
         return {"id": trade_id, "state": state, "note": note}
 
@@ -219,58 +437,198 @@ class PortfolioReconciliationService:
     def reconcile(self, portfolio_key=None):
         data = PortfolioValuationService(self.session).latest(portfolio_key)
         portfolio_id = data["portfolio"]["id"]
-        broker = self.session.scalar(select(models.BrokerAccountSnapshot).where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id).order_by(models.BrokerAccountSnapshot.as_of.desc()).limit(1))
+        broker = self.session.scalar(
+            select(models.BrokerAccountSnapshot)
+            .where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id)
+            .order_by(models.BrokerAccountSnapshot.as_of.desc())
+            .limit(1)
+        )
         if broker is None:
-            return {"state": "BROKER_NOT_CONNECTED", "source": "INTERNAL LEDGER", "as_of": data["as_of"], "internal_nav": data["portfolio"]["nav"], "items": [], "warnings": ["No broker snapshot available; reference values are not broker balances"]}
+            return {
+                "state": "BROKER_NOT_CONNECTED",
+                "source": "INTERNAL LEDGER",
+                "as_of": data["as_of"],
+                "internal_nav": data["portfolio"]["nav"],
+                "items": [],
+                "warnings": [
+                    "No broker snapshot available; reference values are not broker balances"
+                ],
+            }
         observations = []
+
         def compare(kind, key, internal, external, tolerance=Decimal(".01")):
             if internal is None or external is None:
-                observations.append({"type": kind, "key": key, "internal": internal, "external": external, "difference": None, "severity": "WARN"})
+                observations.append(
+                    {
+                        "type": kind,
+                        "key": key,
+                        "internal": internal,
+                        "external": external,
+                        "difference": None,
+                        "severity": "WARN",
+                    }
+                )
             else:
                 difference = decimal(internal) - decimal(external)
                 if abs(difference) > tolerance:
-                    observations.append({"type": kind, "key": key, "internal": str(internal), "external": str(external), "difference": str(difference), "severity": "WARN"})
+                    observations.append(
+                        {
+                            "type": kind,
+                            "key": key,
+                            "internal": str(internal),
+                            "external": str(external),
+                            "difference": str(difference),
+                            "severity": "WARN",
+                        }
+                    )
+
         compare("NAV_MISMATCH", "NAV", data["portfolio"]["nav"], broker.nav)
         internal_cash = {r["currency"]: r["amount"] for r in data["cash"]}
         external_cash = {r["currency"]: r["amount"] for r in broker.payload.get("cash", [])}
         for currency in internal_cash.keys() | external_cash.keys():
-            compare("CASH_MISMATCH", currency, internal_cash.get(currency, "0"), external_cash.get(currency, "0"))
+            compare(
+                "CASH_MISMATCH",
+                currency,
+                internal_cash.get(currency, "0"),
+                external_cash.get(currency, "0"),
+            )
         internal_positions = {r["symbol"]: r for r in data["positions"]}
         external_positions = {r["symbol"]: r for r in broker.payload.get("positions", [])}
         for symbol in internal_positions.keys() | external_positions.keys():
             left, right = internal_positions.get(symbol, {}), external_positions.get(symbol, {})
-            compare("QUANTITY_MISMATCH", symbol, left.get("quantity", "0"), right.get("quantity", "0"), Decimal(".00000001"))
-            compare("COST_BASIS_MISMATCH", symbol, left.get("average_cost"), right.get("average_cost"))
-        details = self.session.execute(select(models.TransactionDetail, models.PortfolioTransaction).join(models.PortfolioTransaction, models.PortfolioTransaction.id == models.TransactionDetail.transaction_id).where(models.PortfolioTransaction.portfolio_id == portfolio_id)).all()
+            compare(
+                "QUANTITY_MISMATCH",
+                symbol,
+                left.get("quantity", "0"),
+                right.get("quantity", "0"),
+                Decimal(".00000001"),
+            )
+            compare(
+                "COST_BASIS_MISMATCH", symbol, left.get("average_cost"), right.get("average_cost")
+            )
+        details = self.session.execute(
+            select(models.TransactionDetail, models.PortfolioTransaction)
+            .join(
+                models.PortfolioTransaction,
+                models.PortfolioTransaction.id == models.TransactionDetail.transaction_id,
+            )
+            .where(models.PortfolioTransaction.portfolio_id == portfolio_id)
+        ).all()
         effective = {t["id"]: t for t in data["transactions"] if t.get("ledger_state") != "VOID"}
-        linked = {d.metadata_json.get("execution_id"): effective[t.id] for d, t in details if d.metadata_json.get("execution_id") and t.id in effective}
-        snapshots = self.session.scalars(select(models.BrokerAccountSnapshot).where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id).order_by(models.BrokerAccountSnapshot.as_of)).all()
-        fills = {f["execution_id"]: f for s in snapshots if s.payload.get("account_fingerprint") == broker.payload.get("account_fingerprint") for f in s.payload.get("fills", [])}
+        linked = {
+            d.metadata_json.get("execution_id"): effective[t.id]
+            for d, t in details
+            if d.metadata_json.get("execution_id") and t.id in effective
+        }
+        snapshots = self.session.scalars(
+            select(models.BrokerAccountSnapshot)
+            .where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id)
+            .order_by(models.BrokerAccountSnapshot.as_of)
+        ).all()
+        fills = {
+            f["execution_id"]: f
+            for s in snapshots
+            if s.payload.get("account_fingerprint") == broker.payload.get("account_fingerprint")
+            for f in s.payload.get("fills", [])
+        }
         for fill in fills.values():
             pair = linked.get(fill["execution_id"])
             if pair is None:
-                observations.append({"type": "UNMATCHED_BROKER_FILL", "key": fill["execution_id"], "internal": None, "external": fill, "difference": None, "severity": "WARN", "snapshot_id": broker.id})
+                observations.append(
+                    {
+                        "type": "UNMATCHED_BROKER_FILL",
+                        "key": fill["execution_id"],
+                        "internal": None,
+                        "external": fill,
+                        "difference": None,
+                        "severity": "WARN",
+                        "snapshot_id": broker.id,
+                    }
+                )
             else:
-                compare("FILL_QUANTITY_MISMATCH", fill["execution_id"], pair.get("quantity"), fill["quantity"], Decimal(".00000001"))
-                compare("FILL_PRICE_MISMATCH", fill["execution_id"], pair.get("price"), fill["price"], Decimal(".00000001"))
-                compare("COMMISSION_MISMATCH", fill["execution_id"], pair.get("commission"), fill.get("commission"))
-        existing = self.session.scalars(select(models.PortfolioReconciliationBreak).where(models.PortfolioReconciliationBreak.portfolio_id == portfolio_id, models.PortfolioReconciliationBreak.state == "OPEN")).all()
+                compare(
+                    "FILL_QUANTITY_MISMATCH",
+                    fill["execution_id"],
+                    pair.get("quantity"),
+                    fill["quantity"],
+                    Decimal(".00000001"),
+                )
+                compare(
+                    "FILL_PRICE_MISMATCH",
+                    fill["execution_id"],
+                    pair.get("price"),
+                    fill["price"],
+                    Decimal(".00000001"),
+                )
+                compare(
+                    "COMMISSION_MISMATCH",
+                    fill["execution_id"],
+                    pair.get("commission"),
+                    fill.get("commission"),
+                )
+        existing = self.session.scalars(
+            select(models.PortfolioReconciliationBreak).where(
+                models.PortfolioReconciliationBreak.portfolio_id == portfolio_id,
+                models.PortfolioReconciliationBreak.state == "OPEN",
+            )
+        ).all()
         current_keys = {(o["type"], o["key"]) for o in observations}
         for row in existing:
             if (row.break_type, row.payload.get("key")) not in current_keys:
                 row.state = "RESOLVED"
-                audit(self.session, "RECONCILIATION_BREAK_CLEARED", "reconciliation_break", row.id, {"snapshot_id": broker.id})
+                audit(
+                    self.session,
+                    "RECONCILIATION_BREAK_CLEARED",
+                    "reconciliation_break",
+                    row.id,
+                    {"snapshot_id": broker.id},
+                )
         for observation in observations:
-            row = next((r for r in existing if r.break_type == observation["type"] and r.payload.get("key") == observation["key"]), None)
+            row = next(
+                (
+                    r
+                    for r in existing
+                    if r.break_type == observation["type"]
+                    and r.payload.get("key") == observation["key"]
+                ),
+                None,
+            )
             if row is None:
-                row = models.PortfolioReconciliationBreak(portfolio_id=portfolio_id, external_snapshot_id=broker.id, break_type=observation["type"], severity=observation["severity"], payload=dict(observation))
+                row = models.PortfolioReconciliationBreak(
+                    portfolio_id=portfolio_id,
+                    external_snapshot_id=broker.id,
+                    break_type=observation["type"],
+                    severity=observation["severity"],
+                    payload=dict(observation),
+                )
                 self.session.add(row)
                 self.session.flush()
             elif row.payload != observation:
-                audit(self.session, "RECONCILIATION_BREAK_UPDATED", "reconciliation_break", row.id, {"before": row.payload, "after": observation})
+                audit(
+                    self.session,
+                    "RECONCILIATION_BREAK_UPDATED",
+                    "reconciliation_break",
+                    row.id,
+                    {"before": row.payload, "after": observation},
+                )
                 row.payload = dict(observation)
                 row.external_snapshot_id = broker.id
             observation["id"] = row.id
-        audit(self.session, "PORTFOLIO_RECONCILED", "portfolio", portfolio_id, {"snapshot_id": broker.id, "breaks": len(observations)})
+        audit(
+            self.session,
+            "PORTFOLIO_RECONCILED",
+            "portfolio",
+            portfolio_id,
+            {"snapshot_id": broker.id, "breaks": len(observations)},
+        )
         self.session.commit()
-        return {"state": "BREAKS" if observations else "MATCHED", "items": observations, "source": broker.source, "broker_as_of": broker.as_of.isoformat(), "internal_as_of": data["as_of"], "warnings": ["Comparison uses independently timestamped snapshots; timing differences may explain breaks"]}
+        return {
+            "state": "BREAKS" if observations else "MATCHED",
+            "items": observations,
+            "source": broker.source,
+            "broker_as_of": broker.as_of.isoformat(),
+            "internal_as_of": data["as_of"],
+            "warnings": [
+                "Comparison uses independently timestamped snapshots; timing differences may explain breaks"
+            ],
+        }

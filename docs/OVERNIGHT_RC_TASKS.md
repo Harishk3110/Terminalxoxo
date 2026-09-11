@@ -13,6 +13,9 @@ milestone remain open unless explicitly verified below.
 - [x] M1: source metadata, hashes, owned downloads, worker-exit persistence and anonymous tests.
 - [x] M1: Excel Studio / Deck Builder, health, metrics, browser generation.
 - [ ] M2: whole first-party formatting/Ruff/mypy, TypeScript, ESLint, OpenAPI.
+- [x] M2: first-party Ruff and formatting, OpenAPI generation (170 paths).
+- [x] M2: typed provider transport, JSON validation, SEC filing shapes, option-pricing and storage boundaries.
+- [ ] M2: persisted model/repository contracts and remaining engine/API types.
 - [ ] M3: full single-run browser suite, zero retries masking failures.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.
@@ -31,6 +34,7 @@ milestone remain open unless explicitly verified below.
 - [ ] M16: production images/environment/admin/CORS/cookies/rollback smoke.
 - [ ] CI: every critical test/build/security/report/backup gate blocks deployment.
 - [x] Operations: bounded watchdog code, three tests and live observe-only check.
+- [x] Operations: hidden background watchdog started and healthy observations verified.
 - [ ] Operations: background watchdog startup and one-pass release scripts.
 - [ ] Release: make release-candidate and PowerShell command pass all 27 stages.
 - [ ] Handoff: seven fictional import templates and onboarding/deploy/smoke scripts.

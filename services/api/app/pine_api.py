@@ -30,7 +30,9 @@ def create_template(payload: PineSettings, request: Request, session: Database):
 
 
 @router.post("/{run_id}/compare", status_code=201)
-async def compare(run_id: str, request: Request, session: Database, file: Annotated[UploadFile, File()]):
+async def compare(
+    run_id: str, request: Request, session: Database, file: Annotated[UploadFile, File()]
+):
     template = session.get(models.AnalysisRun, run_id)
     if not template or template.kind != "pine" or template.status != "SUCCEEDED":
         raise ValueError("Saved Pine template not found")

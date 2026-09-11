@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 
 from ..config import Settings
 from .base import MacroDataProvider, ProviderState, ProviderStatus
-from .http import ProviderError, fetch
+from .http import ProviderError, QueryParams, fetch
 
 
 class FredProviderError(ProviderError):
@@ -92,7 +91,9 @@ class FredProvider(MacroDataProvider):
         "refresh",
     ]
 
-    def __init__(self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None):
+    def __init__(
+        self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         self.settings = settings
         self.transport = transport
         self._last_success: datetime | None = None
@@ -137,27 +138,31 @@ class FredProvider(MacroDataProvider):
     async def health_check(self, correlation_id: str) -> ProviderStatus:
         return await self.test_connection(correlation_id) if self.configured else self.status()
 
-    async def search_series(self, query: str, correlation_id: str) -> dict:
+    async def search_series(self, query: str, correlation_id: str) -> dict[str, JsonValue]:
         return await self._request(
             "series/search", {"search_text": query, "limit": 25}, correlation_id
         )
 
-    async def series_metadata(self, series_id: str, correlation_id: str) -> dict:
+    async def series_metadata(self, series_id: str, correlation_id: str) -> dict[str, JsonValue]:
         payload = await self._request("series", {"series_id": series_id}, correlation_id)
         FredSeriesResponse.model_validate(payload)
         return payload
 
     async def observations(
         self, series_id: str, correlation_id: str, observation_start: str | None = None
-    ) -> dict:
-        params: dict[str, Any] = {"series_id": series_id, "sort_order": "asc", "limit": 100000}
+    ) -> dict[str, JsonValue]:
+        params: dict[str, str | int] = {
+            "series_id": series_id,
+            "sort_order": "asc",
+            "limit": 100000,
+        }
         if observation_start:
             params["observation_start"] = observation_start
         payload = await self._request("series/observations", params, correlation_id)
         FredObservationsResponse.model_validate(payload)
         return payload
 
-    async def vintage_dates(self, series_id: str, correlation_id: str) -> dict:
+    async def vintage_dates(self, series_id: str, correlation_id: str) -> dict[str, JsonValue]:
         payload = await self._request(
             "series/vintagedates",
             {"series_id": series_id, "sort_order": "asc", "limit": 10000},
@@ -166,7 +171,9 @@ class FredProvider(MacroDataProvider):
         FredVintageDatesResponse.model_validate(payload)
         return payload
 
-    async def _request(self, path: str, params: dict[str, Any], correlation_id: str) -> dict:
+    async def _request(
+        self, path: str, params: QueryParams, correlation_id: str
+    ) -> dict[str, JsonValue]:
         if not self.settings.fred_api_key:
             raise FredProviderError("FRED_API_KEY is required")
         request_params = {**params, "api_key": self.settings.fred_api_key, "file_type": "json"}

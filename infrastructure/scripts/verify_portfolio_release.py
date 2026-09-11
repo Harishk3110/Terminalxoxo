@@ -1,15 +1,24 @@
 """Local release measurements. Does not create ledger transactions or external files."""
+
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sqlite3
 import statistics
 import time
-from urllib.request import urlopen, Request
+from pathlib import Path
+from urllib.request import Request, urlopen
 
-TABLES = ["portfolio_transactions", "transaction_details", "uploaded_files", "external_files",
-          "datasets", "dataset_versions", "analysis_runs", "portfolio_valuation_runs"]
+TABLES = [
+    "portfolio_transactions",
+    "transaction_details",
+    "uploaded_files",
+    "external_files",
+    "datasets",
+    "dataset_versions",
+    "analysis_runs",
+    "portfolio_valuation_runs",
+]
 
 
 def inventory(path):
@@ -21,7 +30,12 @@ def inventory(path):
                 continue
             columns = [r[1] for r in db.execute(f'PRAGMA table_info("{table}")')]
             rows = db.execute(f'SELECT * FROM "{table}" ORDER BY id').fetchall()
-            result[table] = {str(row[columns.index("id")]): hashlib.sha256(json.dumps(row, default=str).encode()).hexdigest() for row in rows}
+            result[table] = {
+                str(row[columns.index("id")]): hashlib.sha256(
+                    json.dumps(row, default=str).encode()
+                ).hexdigest()
+                for row in rows
+            }
         return result
 
 
@@ -47,7 +61,9 @@ def main():
         if args.command == "compare":
             old = json.loads(Path(args.before).read_text())
             for table, rows in old.items():
-                assert all(result.get(table, {}).get(key) == digest for key, digest in rows.items()), table + " changed or lost existing records"
+                assert all(
+                    result.get(table, {}).get(key) == digest for key, digest in rows.items()
+                ), table + " changed or lost existing records"
             print("All captured immutable records retained.")
     else:
         result = {}
@@ -60,17 +76,34 @@ def main():
             timings = []
             for _ in range(6):
                 start = time.perf_counter()
-                with urlopen(Request(args.url + route, data=b"{}" if method == "POST" else None, headers={"Content-Type":"application/json"}, method=method), timeout=60) as response:
+                with urlopen(
+                    Request(
+                        args.url + route,
+                        data=b"{}" if method == "POST" else None,
+                        headers={"Content-Type": "application/json"},
+                        method=method,
+                    ),
+                    timeout=60,
+                ) as response:
                     payload = json.load(response)
                 timings.append(round((time.perf_counter() - start) * 1000, 2))
-            result[name] = {"first_ms":timings[0], "warm_median_ms":statistics.median(timings[1:]), "samples_ms":timings}
+            result[name] = {
+                "first_ms": timings[0],
+                "warm_median_ms": statistics.median(timings[1:]),
+                "samples_ms": timings,
+            }
             if name == "warm_summary":
                 result["portfolio"] = payload["portfolio"]
                 result["reconciliation"] = payload["reconciliation"]
         with urlopen(args.url + "/api/v1/terminal/health", timeout=30) as response:
             result["health"] = json.load(response)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    print(json.dumps(result if args.command == "benchmark" else {k:len(v) for k,v in result.items()}, indent=2))
+    print(
+        json.dumps(
+            result if args.command == "benchmark" else {k: len(v) for k, v in result.items()},
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

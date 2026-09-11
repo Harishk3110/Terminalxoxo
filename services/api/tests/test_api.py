@@ -1,8 +1,6 @@
-from fastapi.testclient import TestClient
 import pytest
-
 from app.main import app
-
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 pytestmark = pytest.mark.usefixtures("seeded_market_clock")

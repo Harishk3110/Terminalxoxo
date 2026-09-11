@@ -20,7 +20,9 @@ from app.domain import (
 def test_performance_calculations():
     returns = [Decimal("0.01"), Decimal("-0.02"), Decimal("0.03")]
     assert twr_from_returns(returns).quantize(Decimal("0.0001")) == Decimal("0.0195")
-    assert cagr(Decimal("100"), Decimal("121"), Decimal("2")).quantize(Decimal("0.01")) == Decimal("0.10")
+    assert cagr(Decimal("100"), Decimal("121"), Decimal("2")).quantize(Decimal("0.01")) == Decimal(
+        "0.10"
+    )
     assert annualized_volatility(returns) > 0
     assert sharpe_ratio(returns) != 0
     assert sortino_ratio(returns) != 0
@@ -31,13 +33,17 @@ def test_risk_calculations():
     assert historical_var(returns, Decimal("100000")) < 0
     assert historical_cvar(returns, Decimal("100000")) < 0
     assert max_drawdown([Decimal("100"), Decimal("120"), Decimal("90")]) == Decimal("-0.25")
-    assert correlation([Decimal("1"), Decimal("2"), Decimal("3")], [Decimal("1"), Decimal("2"), Decimal("3")]).quantize(Decimal("0.01")) == Decimal("1.00")
+    assert correlation(
+        [Decimal("1"), Decimal("2"), Decimal("3")], [Decimal("1"), Decimal("2"), Decimal("3")]
+    ).quantize(Decimal("0.01")) == Decimal("1.00")
 
 
 def test_hedge_calculations():
     units = hedge_units(Decimal("250000"), Decimal("558.72"), Decimal("1"))
     assert units == Decimal("447")
-    assert residual_notional(Decimal("250000"), units, Decimal("558.72"), Decimal("1")) == Decimal("252.16")
+    assert residual_notional(Decimal("250000"), units, Decimal("558.72"), Decimal("1")) == Decimal(
+        "252.16"
+    )
 
 
 def test_moving_average_signal_uses_only_prior_window():

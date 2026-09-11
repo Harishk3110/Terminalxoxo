@@ -6,7 +6,7 @@ from app import models, provider_api
 from app.config import Settings, get_settings
 from app.database import get_session
 from app.provider_data import adapters
-from app.providers.http import ProviderError
+from app.providers.http import ProviderError, fetch
 from app.providers.market import JsonMarketProvider, PriceObservation
 from app.providers.reference import OpenFigiProvider, SecProvider, cik_value, filing_rows
 from app.quant_data import dataset_rows
@@ -346,3 +346,37 @@ def test_storage_failure_rolls_back_import_but_records_failure(
         ).state
         == "FAILED"
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "body",
+    [
+        b'{"value":NaN}',
+        b'{"value":Infinity}',
+        b'{"value":-Infinity}',
+        b'{"value":1e400}',
+        b'{"rows": [',
+    ],
+)
+async def test_transport_rejects_malformed_or_nonfinite_json(body):
+    with pytest.raises(ProviderError, match="invalid JSON"):
+        await fetch(
+            "fixture",
+            "https://fixture.example.test",
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, content=body)),
+        )
+
+
+@pytest.mark.parametrize("payload", [None, [], {"filings": []}, {"filings": {"recent": None}}])
+def test_sec_rejects_malformed_containers(payload):
+    with pytest.raises(ProviderError):
+        filing_rows(payload)
+
+
+@pytest.mark.parametrize("key", ["accessionNumber", "filingDate", "form", "primaryDocument"])
+def test_sec_rejects_nonstring_column_cells(key):
+    payload = submissions()
+    payload["filings"]["recent"][key] = [123]
+    with pytest.raises(ProviderError, match="must contain strings"):
+        filing_rows(payload)

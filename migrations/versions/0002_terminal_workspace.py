@@ -1,4 +1,5 @@
 """Persist terminal layouts, analytic jobs and labelled demo fundamentals."""
+
 from alembic import op
 from app.models import AnalysisRun, FundamentalSnapshot, WorkspaceState
 

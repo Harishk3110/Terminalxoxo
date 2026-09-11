@@ -128,14 +128,23 @@ def ledger_session() -> Iterator[Session]:
 def session_token(ledger_session: Session) -> str:
     import secrets
     from datetime import UTC, datetime, timedelta
+
     from app import models
     from app.auth_sessions import token_digest
 
     token = secrets.token_urlsafe(32)
-    user = models.User(email="ledger-tests@example.test", password_hash="test-session-only", role="ADMIN")
+    user = models.User(
+        email="ledger-tests@example.test", password_hash="test-session-only", role="ADMIN"
+    )
     ledger_session.add(user)
     ledger_session.flush()
-    ledger_session.add(models.UserSession(user_id=user.id, session_hash=token_digest(token), expires_at=datetime.now(UTC) + timedelta(hours=1)))
+    ledger_session.add(
+        models.UserSession(
+            user_id=user.id,
+            session_hash=token_digest(token),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+        )
+    )
     ledger_session.commit()
     return token
 

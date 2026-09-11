@@ -1,15 +1,15 @@
 """Outbound-only data-drop agent. Tokens are stored in the OS credential vault."""
+
 import argparse
 import getpass
 import hashlib
-import json
 import logging
 import os
-from pathlib import Path
 import sqlite3
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
@@ -17,7 +17,23 @@ import keyring
 
 VERSION = "1.0.0"
 SERVICE = "KnK Capital Data Drop"
-FOLDERS = ["inbox/koyfin", "inbox/prices", "inbox/fundamentals", "inbox/macro", "inbox/portfolio", "inbox/positions", "inbox/transactions", "inbox/options", "inbox/custom", "processing", "review", "processed", "rejected", "quarantine", "logs"]
+FOLDERS = [
+    "inbox/koyfin",
+    "inbox/prices",
+    "inbox/fundamentals",
+    "inbox/macro",
+    "inbox/portfolio",
+    "inbox/positions",
+    "inbox/transactions",
+    "inbox/options",
+    "inbox/custom",
+    "processing",
+    "review",
+    "processed",
+    "rejected",
+    "quarantine",
+    "logs",
+]
 
 
 def safe_path(root, value):
@@ -29,9 +45,19 @@ def safe_path(root, value):
 
 def validate_endpoint(url, allow_local):
     parsed = urlparse(url)
-    if parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {"", "/"}:
+    if (
+        parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in {"", "/"}
+    ):
         raise ValueError("API URL must be a server origin without credentials or path")
-    if parsed.scheme != "https" and not (allow_local and parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"}):
+    if parsed.scheme != "https" and not (
+        allow_local
+        and parsed.scheme == "http"
+        and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+    ):
         raise ValueError("HTTPS required except explicitly enabled loopback development")
     return url.rstrip("/")
 
@@ -39,6 +65,7 @@ def validate_endpoint(url, allow_local):
 def credential_backend():
     if sys.platform == "win32":
         from keyring.backends.Windows import WinVaultKeyring
+
         backend = WinVaultKeyring()
     else:
         backend = keyring.get_keyring()
@@ -53,18 +80,36 @@ class Agent:
         for folder in FOLDERS:
             safe_path(self.root, self.root / folder).mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(self.root / "logs" / "queue.sqlite3")
-        self.db.execute("CREATE TABLE IF NOT EXISTS files (path TEXT PRIMARY KEY, hash TEXT NOT NULL, file_id TEXT, state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, retry_at REAL NOT NULL DEFAULT 0)")
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS files (path TEXT PRIMARY KEY, hash TEXT NOT NULL, file_id TEXT, state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, retry_at REAL NOT NULL DEFAULT 0)"
+        )
         self.db.commit()
-        self.client = httpx.Client(base_url=url, headers={"Authorization": f"Bearer {token}"}, timeout=30, follow_redirects=False)
+        self.client = httpx.Client(
+            base_url=url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+            follow_redirects=False,
+        )
         self.observed = {}
         self.errors = 0
         self.auto_upload = os.environ.get("KNK_DATA_DROP_AUTO_UPLOAD", "true").lower() == "true"
-        self.archive_processed = os.environ.get("KNK_DATA_DROP_ARCHIVE_PROCESSED", "true").lower() == "true"
-        logging.basicConfig(filename=self.root / "logs" / "agent.log", level=logging.INFO, format="%(asctime)s %(message)s")
+        self.archive_processed = (
+            os.environ.get("KNK_DATA_DROP_ARCHIVE_PROCESSED", "true").lower() == "true"
+        )
+        logging.basicConfig(
+            filename=self.root / "logs" / "agent.log",
+            level=logging.INFO,
+            format="%(asctime)s %(message)s",
+        )
 
     def scan(self):
         for path in (self.root / "inbox").rglob("*"):
-            if path.is_symlink() or not path.is_file() or path.suffix.lower() not in {".csv", ".json", ".jsonl", ".xlsx", ".xls", ".parquet"}:
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or path.suffix.lower()
+                not in {".csv", ".json", ".jsonl", ".xlsx", ".xls", ".parquet"}
+            ):
                 continue
             path = safe_path(self.root, path)
             stat = path.stat()
@@ -86,20 +131,30 @@ class Agent:
                     self.errors += 1
                     continue
                 # Keep both sources until server-side deduplication confirms identity.
-                target = safe_path(self.root, self.root / "processing" / f"{time.time_ns()}-{path.name}")
+                target = safe_path(
+                    self.root, self.root / "processing" / f"{time.time_ns()}-{path.name}"
+                )
             path.rename(target)
-            self.db.execute("INSERT INTO files(path,hash,state) VALUES(?,?,?)", (str(target), digest, "QUEUED"))
+            self.db.execute(
+                "INSERT INTO files(path,hash,state) VALUES(?,?,?)", (str(target), digest, "QUEUED")
+            )
             self.db.commit()
         # Recover files moved immediately before an interrupted queue commit.
         for path in (self.root / "processing").glob("*"):
             if path.is_file() and not path.is_symlink():
                 safe_path(self.root, path)
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
-                self.db.execute("INSERT OR IGNORE INTO files(path,hash,state) VALUES(?,?,?)", (str(path), digest, "QUEUED"))
+                self.db.execute(
+                    "INSERT OR IGNORE INTO files(path,hash,state) VALUES(?,?,?)",
+                    (str(path), digest, "QUEUED"),
+                )
         self.db.commit()
 
     def upload(self):
-        rows = self.db.execute("SELECT path,hash,attempts FROM files WHERE state='QUEUED' AND retry_at<=?", (time.time(),)).fetchall()
+        rows = self.db.execute(
+            "SELECT path,hash,attempts FROM files WHERE state='QUEUED' AND retry_at<=?",
+            (time.time(),),
+        ).fetchall()
         for filename, digest, attempts in rows:
             path = safe_path(self.root, filename)
             try:
@@ -114,16 +169,30 @@ class Agent:
                     raise ValueError("Upload acknowledgement hash mismatch")
                 if payload["state"] == "UPLOAD_FAILED":
                     raise ValueError("Server raw storage unavailable")
-                self.db.execute("UPDATE files SET file_id=?,state=? WHERE path=?", (payload["id"], payload["state"], filename))
-                if payload["state"] not in {"IMPORTED", "ARCHIVED", "DUPLICATE", "REJECTED", "QUARANTINED"}:
+                self.db.execute(
+                    "UPDATE files SET file_id=?,state=? WHERE path=?",
+                    (payload["id"], payload["state"], filename),
+                )
+                if payload["state"] not in {
+                    "IMPORTED",
+                    "ARCHIVED",
+                    "DUPLICATE",
+                    "REJECTED",
+                    "QUARANTINED",
+                }:
                     destination = safe_path(self.root, self.root / "review" / path.name)
                     if not destination.exists():
                         path.rename(destination)
-                        self.db.execute("UPDATE files SET path=? WHERE path=?", (str(destination), filename))
+                        self.db.execute(
+                            "UPDATE files SET path=? WHERE path=?", (str(destination), filename)
+                        )
                 logging.info("upload acknowledged hash=%s state=%s", digest[:12], payload["state"])
             except (httpx.HTTPError, OSError, ValueError, KeyError):
                 self.errors += 1
-                self.db.execute("UPDATE files SET attempts=?,retry_at=? WHERE path=?", (attempts + 1, time.time() + min(300, 2 ** min(attempts + 1, 8)), filename))
+                self.db.execute(
+                    "UPDATE files SET attempts=?,retry_at=? WHERE path=?",
+                    (attempts + 1, time.time() + min(300, 2 ** min(attempts + 1, 8)), filename),
+                )
                 logging.warning("upload retry hash=%s attempt=%s", digest[:12], attempts + 1)
             self.db.commit()
 
@@ -131,7 +200,9 @@ class Agent:
         response = self.client.get("/agent/v1/files")
         response.raise_for_status()
         for item in response.json()["items"]:
-            record = self.db.execute("SELECT path,state FROM files WHERE file_id=?", (item["id"],)).fetchone()
+            record = self.db.execute(
+                "SELECT path,state FROM files WHERE file_id=?", (item["id"],)
+            ).fetchone()
             if not record:
                 continue
             filename, state = record
@@ -142,17 +213,28 @@ class Agent:
                 if not self.archive_processed:
                     continue
                 path = safe_path(self.root, filename)
-                folder = "quarantine" if remote == "QUARANTINED" else "rejected" if remote == "REJECTED" else datetime.now().strftime("processed/%Y/%m")
+                folder = (
+                    "quarantine"
+                    if remote == "QUARANTINED"
+                    else "rejected"
+                    if remote == "REJECTED"
+                    else datetime.now().strftime("processed/%Y/%m")
+                )
                 target = safe_path(self.root, self.root / folder / path.name)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 if path.exists() and not target.exists():
                     path.rename(target)
                 elif path.exists():
-                    target = safe_path(self.root, target.with_name(f"{time.time_ns()}-{target.name}"))
+                    target = safe_path(
+                        self.root, target.with_name(f"{time.time_ns()}-{target.name}")
+                    )
                     path.rename(target)
                 if remote == "IMPORTED":
                     self.client.post(f"/agent/v1/files/{item['id']}/archived").raise_for_status()
-                self.db.execute("UPDATE files SET path=?,state='LOCAL_ARCHIVED' WHERE file_id=?", (str(target), item["id"]))
+                self.db.execute(
+                    "UPDATE files SET path=?,state='LOCAL_ARCHIVED' WHERE file_id=?",
+                    (str(target), item["id"]),
+                )
             else:
                 self.db.execute("UPDATE files SET state=? WHERE file_id=?", (remote, item["id"]))
         self.db.commit()
@@ -160,7 +242,10 @@ class Agent:
     def tick(self):
         paused = (self.root / "PAUSE").exists()
         queued = self.db.execute("SELECT COUNT(*) FROM files WHERE state='QUEUED'").fetchone()[0]
-        self.client.post("/agent/v1/heartbeat", json={"paused": paused, "queued": queued, "errors": self.errors, "version": VERSION}).raise_for_status()
+        self.client.post(
+            "/agent/v1/heartbeat",
+            json={"paused": paused, "queued": queued, "errors": self.errors, "version": VERSION},
+        ).raise_for_status()
         if not paused:
             self.scan()
             if self.auto_upload:

@@ -2,15 +2,41 @@
 
 import asyncio
 import json
+import math
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Never
 
 import httpx
+from pydantic import ConfigDict, JsonValue, TypeAdapter, ValidationError
+
+type QueryParams = Mapping[str, str | int | float | bool | None]
+JSON_RESPONSE = TypeAdapter[JsonValue](
+    JsonValue, config=ConfigDict(strict=True, allow_inf_nan=False)
+)
+
+
+def _reject_constant(value: str) -> Never:
+    raise ValueError("Non-finite JSON constant")
+
+
+def _finite_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("JSON number exceeds finite range")
+    return number
 
 
 class ProviderError(ValueError):
-    def __init__(self, message, state="FAILED", status_code=None, retry_after=None):
+    def __init__(
+        self,
+        message: str,
+        state: str = "FAILED",
+        status_code: int | None = None,
+        retry_after: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.state = state
         self.status_code = status_code
@@ -19,7 +45,7 @@ class ProviderError(ValueError):
 
 @dataclass
 class Response:
-    payload: dict | list
+    payload: dict[str, JsonValue] | list[JsonValue]
     content: bytes
     url: str
     latency_ms: int
@@ -30,7 +56,7 @@ _lock = threading.Lock()
 _next_request: dict[str, float] = {}
 
 
-async def pace(name, interval):
+async def pace(name: str, interval: float) -> None:
     # Reserve globally across adapter instances in this API process.
     with _lock:
         now = time.monotonic()
@@ -40,17 +66,17 @@ async def pace(name, interval):
 
 
 async def fetch(
-    name,
-    url,
+    name: str,
+    url: str,
     *,
-    headers=None,
-    params=None,
-    body=None,
-    interval=0.25,
-    transport=None,
-    timeout=20,
-    attempts=3,
-):
+    headers: Mapping[str, str] | None = None,
+    params: QueryParams | None = None,
+    body: JsonValue = None,
+    interval: float = 0.25,
+    transport: httpx.AsyncBaseTransport | None = None,
+    timeout: float = 20,
+    attempts: int = 3,
+) -> Response:
     headers = headers or {}
     for attempt in range(attempts):
         await pace(name, interval)
@@ -87,8 +113,13 @@ async def fetch(
                         chunks.append(chunk)
                     content = b"".join(chunks)
                     try:
-                        payload = json.loads(content)
-                    except (ValueError, UnicodeDecodeError) as exc:
+                        # JsonValue itself accepts NaN; reject constants and exponent overflow.
+                        payload = JSON_RESPONSE.validate_python(
+                            json.loads(
+                                content, parse_constant=_reject_constant, parse_float=_finite_float
+                            )
+                        )
+                    except (ValidationError, ValueError, UnicodeDecodeError, RecursionError) as exc:
                         raise ProviderError(f"{name} invalid JSON") from exc
                     if not isinstance(payload, (dict, list)):
                         raise ProviderError(f"{name} invalid response shape")

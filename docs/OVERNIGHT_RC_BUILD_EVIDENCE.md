@@ -45,3 +45,44 @@ No active database was restored over. Private logs retain hashes and failure
 evidence. The full 959-test run preceded the final native-chart test addition;
 its 34-test report follow-up passed. Full report-model content, artifact rendering,
 global types and the full browser suite are not certified by this checkpoint.
+
+## M2 Static Cleanup, First Batch
+
+Based on c1abce4 + worktree. Ruff safe fixes and formatting covered first-party
+services, scripts, infrastructure, migrations and tests. Named FastAPI dependency
+defaults preserve direct positional callers and route registration order.
+
+| Check | Result |
+| --- | --- |
+| Ruff baseline, all first-party Python | 276 findings before fixes |
+| Ruff / format after fixes, including five local stubs | Exit 0 / exit 0; 230 files formatted |
+| Targeted report/auth/migration regression | 69 passed, 3 warnings, 41.40s |
+| Provider baseline contracts | 18 passed, 3 warnings, 6.13s |
+| New transport non-finite regressions, first attempt | 3 failed / 78 passed; Pydantic JsonValue accepts non-finite floats despite configuration |
+| Corrected explicit JSON constant/exponent rejection | 82 passed; logs/overnight-boundaries-tests-03.log |
+| Strict mypy on 11 boundary modules | Exit 0; logs/overnight-mypy-boundaries-03.log |
+| Runtime stubtest for used vollib signatures | Exit 0, 7 modules; no missing-stub requirement for unused third-party API |
+| Full API mypy | Still fails: 1,140 errors in 46 files; logs/overnight-mypy-m2b.log |
+| OpenAPI generation | Exit 0; 170 paths, 69 schemas; report body resolves to ReportRequest |
+| Execution-method scan / diff check | Exit 0 each |
+| Secret scan after formatting | One dummy FRED fixture key flagged; replaced with explicit mock-fred-key, scanner unchanged |
+
+The original full mypy baseline was 1,260 errors / 56 files. No first-party module
+was excluded or globally silenced. Added development-only boto3 S3 stubs pinned to
+the existing boto3 version, and five narrow vollib signature files checked against
+the installed library. Provider JSON and SEC filing columns now reject malformed
+values explicitly. The first M2 full run (overnight-backend-03.log) ended with
+959 passes and 14 fixture-setup errors: Ruff removed imports used by pytest's
+fixture discovery. Explicit fixture re-exports restored that registration without
+disabling any lint rule. The affected selection then passed all 17 tests in 39.33s.
+The corrected full rerun passed: 973 tests, zero failures, 13 warnings, 265.59s,
+in overnight-backend-04.log. Coverage: 9,950/11,456 statements, 1,506 missing,
+25 existing exclusions; statement coverage, not branch coverage.
+The four API/data/quant/report Docker images rebuilt successfully using the
+production dependency set (overnight-m2-docker-build.log).
+The post-fixture-fix Ruff and format checks passed. The secret scanner examined
+531 eligible text files with zero findings; the existing scanner was unchanged.
+
+Bounded watchdog started hidden with launcher PID 10020; persistent JSONL receipts
+show all ten daemons healthy and successful MinIO init. Runtime images still carry
+the preceding report checkpoint while this source batch is verified.

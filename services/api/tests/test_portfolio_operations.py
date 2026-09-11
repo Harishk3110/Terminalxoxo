@@ -1,25 +1,25 @@
 import hashlib
-from datetime import datetime, timezone
 
 import pytest
-from sqlalchemy import select
-
 from app import models
 from app.data_drop import DataDropService
 from app.data_mapping import seed_profiles
 from app.object_storage import ObjectStorage
 from app.portfolio_operations import PortfolioLedgerService, TradeMonitorService
 from app.portfolio_valuation import PortfolioValuationService
-from test_portfolio_accounting import accounting_session
+from sqlalchemy import select
+from test_portfolio_accounting import accounting_session as accounting_session
 
 
 @pytest.fixture
 def drop(accounting_session, tmp_path, monkeypatch):
     original = ObjectStorage.__init__
+
     def initialize(self):
         original(self)
         self.local_root = tmp_path
         self._s3 = None
+
     monkeypatch.setattr(ObjectStorage, "__init__", initialize)
     seed_profiles(accounting_session)
     accounting_session.commit()
@@ -36,10 +36,14 @@ def test_file_preview_approval_immutable_and_duplicate(drop, accounting_session)
     assert uploaded["state"] == "MAPPING_REQUIRED"
     assert uploaded["hash"] == hashlib.sha256(raw).hexdigest()
     with pytest.raises(ValueError, match="approval"):
-        drop.import_file(uploaded["id"], name="Apple prices", licence="Private exported file", approve=False)
+        drop.import_file(
+            uploaded["id"], name="Apple prices", licence="Private exported file", approve=False
+        )
     mapped = drop.map_validate(uploaded["id"], profile(accounting_session).id)
     assert mapped["state"] == "AWAITING_APPROVAL", mapped
-    result = drop.import_file(uploaded["id"], name="Apple prices", licence="Private exported file", approve=True)
+    result = drop.import_file(
+        uploaded["id"], name="Apple prices", licence="Private exported file", approve=True
+    )
     assert result["state"] == "IMPORTED", result
     assert drop.raw_rows(drop.get(result["id"]))[0][0]["Close"] == "217"
     nav = PortfolioValuationService(accounting_session).latest(force=True)
@@ -70,7 +74,9 @@ def test_file_versions_and_lineage(drop, accounting_session):
     second = drop.receive("AAPL_2026-09-04_prices.csv", b"Date,Close\n2026-09-04,217\n")
     drop.map_validate(second["id"], profile(accounting_session).id)
     drop.import_file(second["id"], name="AAPL EOD", licence="Private file", approve=True)
-    versions = accounting_session.scalars(select(models.DatasetVersion).order_by(models.DatasetVersion.version)).all()
+    versions = accounting_session.scalars(
+        select(models.DatasetVersion).order_by(models.DatasetVersion.version)
+    ).all()
     assert [v.version for v in versions] == [1, 2]
     assert versions[0].dataset_id == versions[1].dataset_id
     assert len(accounting_session.scalars(select(models.DatasetLineage)).all()) == 2
@@ -78,7 +84,16 @@ def test_file_versions_and_lineage(drop, accounting_session):
 
 def test_manual_trade_review_and_duplicate(accounting_session):
     service = PortfolioLedgerService(accounting_session)
-    data = {"transaction_type": "BUY", "trade_date": "2026-09-04", "symbol": "AAPL", "quantity": "1", "price": "217", "currency": "USD", "commission": "1", "external_reference": "MANUAL-001"}
+    data = {
+        "transaction_type": "BUY",
+        "trade_date": "2026-09-04",
+        "symbol": "AAPL",
+        "quantity": "1",
+        "price": "217",
+        "currency": "USD",
+        "commission": "1",
+        "external_reference": "MANUAL-001",
+    }
     result = service.add(data)
     accounting_session.commit()
     assert result["fx_rate_to_base"] != "1"
@@ -90,35 +105,52 @@ def test_manual_trade_review_and_duplicate(accounting_session):
     assert float(trade["weight_after"]) > float(trade["weight_before"])
     assert float(trade["sector_weight_after"]) > float(trade["sector_weight_before"])
     assert trade["risk_as_of"]
-    TradeMonitorService(accounting_session).review(trade["id"], "REVIEWED", "Reviewed recorded fill and cash.")
+    TradeMonitorService(accounting_session).review(
+        trade["id"], "REVIEWED", "Reviewed recorded fill and cash."
+    )
     assert accounting_session.get(models.TradeEvent, trade["id"]).review_state == "REVIEWED"
 
 
-def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(accounting_session, seeded_market_clock):
+def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(
+    accounting_session, seeded_market_clock
+):
     from app.hedge_engine import HedgeRequest, HedgeService
-    result = HedgeService(accounting_session).create("KNK_MAIN", HedgeRequest(target=.2, fee_bps=2), None)
+
+    result = HedgeService(accounting_session).create(
+        "KNK_MAIN", HedgeRequest(target=0.2, fee_bps=2), None
+    )
     assert result["var_state"] == "AVAILABLE"
     assert result["var_after"] is not None
     assert result["hedge_beta"] == pytest.approx(1)
     assert result["hedge_inputs"]["price_provenance"]["source"]
-    assert result["beta_after"] == pytest.approx(.2, abs=.02)
+    assert result["beta_after"] == pytest.approx(0.2, abs=0.02)
     run = accounting_session.get(models.AnalysisRun, result["id"])
     assert run.parameters["_portfolio"]["valuation_run_id"] == result["valuation_run_id"]
 
 
 def test_transaction_import_is_atomic(drop, accounting_session):
-    uploaded = drop.receive("ledger.csv", b"Type,Trade Date,Symbol,Quantity,Price,Currency,Reference\nBUY,2026-09-04,AAPL,1,217,USD,buy-one\nSELL,2026-09-04,AAPL,99999,217,USD,invalid-sale\n")
-    mapped = drop.map_validate(uploaded["id"], profile(accounting_session, "GENERIC_PORTFOLIO_TRANSACTIONS").id)
+    uploaded = drop.receive(
+        "ledger.csv",
+        b"Type,Trade Date,Symbol,Quantity,Price,Currency,Reference\nBUY,2026-09-04,AAPL,1,217,USD,buy-one\nSELL,2026-09-04,AAPL,99999,217,USD,invalid-sale\n",
+    )
+    mapped = drop.map_validate(
+        uploaded["id"], profile(accounting_session, "GENERIC_PORTFOLIO_TRANSACTIONS").id
+    )
     assert mapped["state"] == "AWAITING_APPROVAL", mapped
     before = len(accounting_session.scalars(select(models.PortfolioTransaction)).all())
-    result = drop.import_file(uploaded["id"], name="Manual ledger", licence="Internal records", approve=True)
+    result = drop.import_file(
+        uploaded["id"], name="Manual ledger", licence="Internal records", approve=True
+    )
     assert result["state"] == "IMPORT_FAILED"
     assert len(accounting_session.scalars(select(models.PortfolioTransaction)).all()) == before
     assert not accounting_session.scalars(select(models.DatasetVersion)).all()
 
+
 def test_xlsx_and_json_preview_keep_original_bytes(drop, accounting_session):
-    from openpyxl import Workbook
     import io
+
+    from openpyxl import Workbook
+
     book = Workbook()
     book.active.append(["Date", "Close"])
     book.active.append(["2026-09-04", 220])
@@ -137,11 +169,16 @@ def test_xlsx_and_json_preview_keep_original_bytes(drop, accounting_session):
 
 def test_imported_fundamentals_do_not_fill_missing_from_demo(drop, accounting_session):
     from app.terminal_analytics import fundamentals, valuation
+
     raw = b"Symbol,Period,Metric,Value,Frequency,Unit,Scale,Actual Estimate,Report Date\nAAPL,2025,revenue,100,ANNUAL,USD,1000000,ACTUAL,2026-02-01\n"
     result = drop.receive("AAPL_fundamentals.csv", raw)
-    result = drop.map_validate(result["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id)
+    result = drop.map_validate(
+        result["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id
+    )
     assert result["state"] == "AWAITING_APPROVAL", result
-    result = drop.import_file(result["id"], name="AAPL statements", licence="Internal test data", approve=True)
+    result = drop.import_file(
+        result["id"], name="AAPL statements", licence="Internal test data", approve=True
+    )
     assert result["state"] == "IMPORTED"
     data = fundamentals(accounting_session, "AAPL")
     assert data["quality"] == "FILE IMPORT"
@@ -151,11 +188,18 @@ def test_imported_fundamentals_do_not_fill_missing_from_demo(drop, accounting_se
 
 
 def test_factor_is_oos_separation_and_insufficient_history():
-    import pandas as pd
     import numpy as np
+    import pandas as pd
     from app.factor_statistics import factor_statistics
+
     index = pd.bdate_range("2025-01-01", periods=120)
-    frame = pd.DataFrame({str(i): 100 + np.arange(120) * (.02 + i * .003) + np.sin(np.arange(120) / (4 + i)) for i in range(10)}, index=index)
+    frame = pd.DataFrame(
+        {
+            str(i): 100 + np.arange(120) * (0.02 + i * 0.003) + np.sin(np.arange(120) / (4 + i))
+            for i in range(10)
+        },
+        index=index,
+    )
     result = factor_statistics(frame, 21, 5)
     assert result["state"] == "CALCULATED"
     assert result["in_sample"]["end"] < result["out_of_sample"]["start"]
@@ -167,24 +211,43 @@ def test_factor_is_oos_separation_and_insufficient_history():
 
 
 def test_curated_quarters_units_and_restatements_keep_metric_provenance(drop, accounting_session):
-    from app.terminal_analytics import fundamentals
     from app.equity_financials import statements
+    from app.terminal_analytics import fundamentals
+
     header = "Symbol,Period,Metric,Value,Frequency,Unit,Scale,Actual Estimate,Report Date\n"
-    raw = header + "".join(f"AAPL,2025Q{i},revenue,{i*10},QUARTERLY,USD,1000000,ACTUAL,2026-02-01\nAAPL,2025Q{i},cash,{i*5},QUARTERLY,USD,1000000,ACTUAL,2026-02-01\n" for i in range(1, 5))
+    raw = header + "".join(
+        f"AAPL,2025Q{i},revenue,{i * 10},QUARTERLY,USD,1000000,ACTUAL,2026-02-01\nAAPL,2025Q{i},cash,{i * 5},QUARTERLY,USD,1000000,ACTUAL,2026-02-01\n"
+        for i in range(1, 5)
+    )
     upload = drop.receive("AAPL_quarters.csv", raw.encode())
-    mapped = drop.map_validate(upload["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id)
+    mapped = drop.map_validate(
+        upload["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id
+    )
     assert mapped["validation"]["valid"], mapped
-    imported = drop.import_file(upload["id"], name="Quarterly statements", licence="Internal test fixture", approve=True)
+    imported = drop.import_file(
+        upload["id"], name="Quarterly statements", licence="Internal test fixture", approve=True
+    )
     first = fundamentals(accounting_session, "AAPL")
     assert statements(first, "TTM")[0]["revenue"] == 100
-    second = drop.receive("AAPL_restatement.csv", (header + "AAPL,2025Q4,revenue,45,QUARTERLY,USD,1000000,ACTUAL,2026-03-01\nAAPL,2025Q4,debt,12,QUARTERLY,SHARES,1000000,ACTUAL,2026-03-01\n").encode())
+    second = drop.receive(
+        "AAPL_restatement.csv",
+        (
+            header
+            + "AAPL,2025Q4,revenue,45,QUARTERLY,USD,1000000,ACTUAL,2026-03-01\nAAPL,2025Q4,debt,12,QUARTERLY,SHARES,1000000,ACTUAL,2026-03-01\n"
+        ).encode(),
+    )
     drop.map_validate(second["id"], profile(accounting_session, "GENERIC_FUNDAMENTALS_LONG").id)
-    drop.import_file(second["id"], name="Restatement", licence="Internal test fixture", approve=True)
+    drop.import_file(
+        second["id"], name="Restatement", licence="Internal test fixture", approve=True
+    )
     revised = fundamentals(accounting_session, "AAPL")
     last = revised["items"][-1]
     assert statements(revised, "TTM")[0]["revenue"] == 105
     assert statements(revised, "TTM")[0]["cash"] == 20
     assert last["metric_sources"]["cash"]["version_id"] == imported["dataset_version_id"]
-    assert last["metric_sources"]["revenue"]["version_id"] != last["metric_sources"]["cash"]["version_id"]
+    assert (
+        last["metric_sources"]["revenue"]["version_id"]
+        != last["metric_sources"]["cash"]["version_id"]
+    )
     assert last.get("debt") is None
     assert any("incompatible unit SHARES" in warning for warning in revised["warnings"])

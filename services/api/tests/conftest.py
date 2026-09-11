@@ -24,6 +24,7 @@ def anyio_backend():
 def seeded_market_clock(monkeypatch):
     """Financial demo assertions use a dated snapshot, not the machine's day."""
     from datetime import UTC, datetime
+
     from app import portfolio_valuation
 
     class SnapshotClock(datetime):
@@ -40,6 +41,7 @@ def seeded_market_clock(monkeypatch):
 def authenticated_token():
     import secrets
     from datetime import UTC, datetime, timedelta
+
     from app import models
     from app.auth_sessions import token_digest
     from app.database import SessionLocal
@@ -48,10 +50,20 @@ def authenticated_token():
     ensure_database_ready()
     token = secrets.token_urlsafe(32)
     with SessionLocal() as session:
-        user = models.User(email=f"suite-{secrets.token_hex(8)}@example.test", password_hash="test-session-only", role="ADMIN")
+        user = models.User(
+            email=f"suite-{secrets.token_hex(8)}@example.test",
+            password_hash="test-session-only",
+            role="ADMIN",
+        )
         session.add(user)
         session.flush()
-        session.add(models.UserSession(user_id=user.id, session_hash=token_digest(token), expires_at=datetime.now(UTC) + timedelta(hours=1)))
+        session.add(
+            models.UserSession(
+                user_id=user.id,
+                session_hash=token_digest(token),
+                expires_at=datetime.now(UTC) + timedelta(hours=1),
+            )
+        )
         session.commit()
     return token
 

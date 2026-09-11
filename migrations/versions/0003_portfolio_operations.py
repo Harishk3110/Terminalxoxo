@@ -1,4 +1,5 @@
 """Add portfolio-first accounting, provenance, trade and file-agent records."""
+
 from alembic import op
 from app import models
 
@@ -8,12 +9,25 @@ branch_labels = None
 depends_on = None
 
 NAMES = {
-    "portfolio_profiles", "transaction_details", "portfolio_balance_adjustments",
-    "market_observations", "fx_observations", "source_precedence_rules",
-    "portfolio_valuation_runs", "position_valuations", "trade_events",
-    "trade_reviews", "trade_risk_snapshots", "broker_account_snapshots",
-    "portfolio_reconciliation_breaks", "mapping_profiles", "local_agents",
-    "local_agent_pairings", "external_files", "file_hashes", "research_candidates",
+    "portfolio_profiles",
+    "transaction_details",
+    "portfolio_balance_adjustments",
+    "market_observations",
+    "fx_observations",
+    "source_precedence_rules",
+    "portfolio_valuation_runs",
+    "position_valuations",
+    "trade_events",
+    "trade_reviews",
+    "trade_risk_snapshots",
+    "broker_account_snapshots",
+    "portfolio_reconciliation_breaks",
+    "mapping_profiles",
+    "local_agents",
+    "local_agent_pairings",
+    "external_files",
+    "file_hashes",
+    "research_candidates",
 }
 
 

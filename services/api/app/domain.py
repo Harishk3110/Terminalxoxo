@@ -3,9 +3,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from statistics import mean, pstdev
-
 
 Money = Decimal
 
@@ -58,7 +57,9 @@ def annualized_volatility(returns: list[Decimal], periods_per_year: int = 252) -
     return Decimal(str(std * math.sqrt(periods_per_year)))
 
 
-def sharpe_ratio(returns: list[Decimal], risk_free_rate: Decimal = Decimal("0"), periods_per_year: int = 252) -> Decimal:
+def sharpe_ratio(
+    returns: list[Decimal], risk_free_rate: Decimal = Decimal("0"), periods_per_year: int = 252
+) -> Decimal:
     if not returns:
         return Decimal("0")
     excess = [float(item - risk_free_rate / Decimal(periods_per_year)) for item in returns]
@@ -68,17 +69,23 @@ def sharpe_ratio(returns: list[Decimal], risk_free_rate: Decimal = Decimal("0"),
     return Decimal(str(mean(excess) / std * math.sqrt(periods_per_year)))
 
 
-def sortino_ratio(returns: list[Decimal], target_return: Decimal = Decimal("0"), periods_per_year: int = 252) -> Decimal:
+def sortino_ratio(
+    returns: list[Decimal], target_return: Decimal = Decimal("0"), periods_per_year: int = 252
+) -> Decimal:
     downside = [float(item - target_return) for item in returns if item < target_return]
     if not downside:
         return Decimal("0")
     downside_dev = math.sqrt(mean([item * item for item in downside]))
     if downside_dev == 0:
         return Decimal("0")
-    return Decimal(str(mean([float(item) for item in returns]) / downside_dev * math.sqrt(periods_per_year)))
+    return Decimal(
+        str(mean([float(item) for item in returns]) / downside_dev * math.sqrt(periods_per_year))
+    )
 
 
-def historical_var(returns: list[Decimal], nav: Decimal, confidence: Decimal = Decimal("0.95")) -> Decimal:
+def historical_var(
+    returns: list[Decimal], nav: Decimal, confidence: Decimal = Decimal("0.95")
+) -> Decimal:
     if not returns:
         return Decimal("0")
     ordered = sorted(returns)
@@ -86,7 +93,9 @@ def historical_var(returns: list[Decimal], nav: Decimal, confidence: Decimal = D
     return quantize_money(ordered[index] * nav)
 
 
-def historical_cvar(returns: list[Decimal], nav: Decimal, confidence: Decimal = Decimal("0.95")) -> Decimal:
+def historical_cvar(
+    returns: list[Decimal], nav: Decimal, confidence: Decimal = Decimal("0.95")
+) -> Decimal:
     if not returns:
         return Decimal("0")
     ordered = sorted(returns)
@@ -124,10 +133,14 @@ def correlation(left: list[Decimal], right: list[Decimal]) -> Decimal:
 def hedge_units(target_notional: Decimal, price: Decimal, multiplier: Decimal) -> Decimal:
     if price <= 0 or multiplier <= 0:
         raise ValueError("price and multiplier must be positive")
-    return Decimal(int((target_notional / (price * multiplier)).to_integral_value(rounding=ROUND_HALF_UP)))
+    return Decimal(
+        int((target_notional / (price * multiplier)).to_integral_value(rounding=ROUND_HALF_UP))
+    )
 
 
-def residual_notional(target_notional: Decimal, units: Decimal, price: Decimal, multiplier: Decimal) -> Decimal:
+def residual_notional(
+    target_notional: Decimal, units: Decimal, price: Decimal, multiplier: Decimal
+) -> Decimal:
     return target_notional - units * price * multiplier
 
 
@@ -140,7 +153,9 @@ class MovingAverageSignal:
     signal: int
 
 
-def moving_average_signals(rows: list[tuple[date, Decimal]], fast: int, slow: int) -> list[MovingAverageSignal]:
+def moving_average_signals(
+    rows: list[tuple[date, Decimal]], fast: int, slow: int
+) -> list[MovingAverageSignal]:
     if fast <= 0 or slow <= 0 or fast >= slow:
         raise ValueError("fast must be positive and less than slow")
     output: list[MovingAverageSignal] = []
@@ -148,5 +163,9 @@ def moving_average_signals(rows: list[tuple[date, Decimal]], fast: int, slow: in
     for index in range(slow - 1, len(rows)):
         fast_avg = sum(closes[index - fast + 1 : index + 1], Decimal("0")) / Decimal(fast)
         slow_avg = sum(closes[index - slow + 1 : index + 1], Decimal("0")) / Decimal(slow)
-        output.append(MovingAverageSignal(rows[index][0], rows[index][1], fast_avg, slow_avg, 1 if fast_avg > slow_avg else 0))
+        output.append(
+            MovingAverageSignal(
+                rows[index][0], rows[index][1], fast_avg, slow_avg, 1 if fast_avg > slow_avg else 0
+            )
+        )
     return output

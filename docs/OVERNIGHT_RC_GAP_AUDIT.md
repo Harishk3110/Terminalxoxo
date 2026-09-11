@@ -1,5 +1,10 @@
 # Overnight Gap Audit
 
+M2 inspection identified a historical FX risk in `MarketRepository.fx_rate`:
+the direct-rate query honors `on_date`, but its inverse fallback does not. Add a
+dated inverse-rate regression and fix the shared repository during the next batch.
+This is a code-controlled issue, not an external-data blocker.
+
 Baseline 3466694, 2026-09-12. Detailed domain limits in FINAL_GAP_AUDIT.md,
 ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.md.
 
@@ -13,10 +18,10 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Quant | PARTIAL | Corporate actions, PIT fundamentals, general walk-forward |
 | Equity | PARTIAL | Segments, ROIC, historical/forward multiples and feeds |
 | Options | PARTIAL | Historical OI/cones, multi-expiry and full portfolio scope |
-| Reports | BROKEN | Disabled standalone renderer; private queued replacement in progress |
+| Reports | PARTIAL | Owned queued exports verified; full financial-model content and rendered artifacts pending |
 | MFA/auth | PARTIAL | Trusted devices, provisioning and concurrency closure |
 | Monitoring/backup | PARTIAL | Ten dashboards and PostgreSQL/remote object restore |
-| Python quality | BROKEN | Fresh Ruff 218, mypy 1,260 |
+| Python quality | PARTIAL | Ruff/format pass; full API mypy still 1,140 errors in 46 files |
 | Browser release | BROKEN | Prior full run 28/35; six unresolved after targeted backtest fix |
 | Release command / hosted deployment | MISSING | Script implementation / external account access |
 

@@ -6,6 +6,7 @@ from app import models
 
 def test_legacy_health_consumes_structured_checks_not_response_object(ledger_session, monkeypatch):
     from app import main
+
     observed = {"database": "ready", "redis": "failed: ConnectionError", "object_storage": "ready"}
     monkeypatch.setattr(main, "readiness_checks", lambda session: observed)
     monkeypatch.setattr(main, "providers", lambda session: {"items": []})
@@ -18,6 +19,7 @@ def test_legacy_health_consumes_structured_checks_not_response_object(ledger_ses
 
 def test_metrics_zero_completed_or_removed_states(ledger_session):
     from app import main
+
     job = models.IngestionJob(
         job_type="provider_health_check", status="QUEUED", correlation_id=str(uuid4())
     )

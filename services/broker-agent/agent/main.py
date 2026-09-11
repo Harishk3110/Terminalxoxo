@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -32,7 +32,7 @@ def status():
         "gateway_host": os.getenv("IBKR_GATEWAY_HOST", "127.0.0.1"),
         "gateway_port": os.getenv("IBKR_GATEWAY_PORT", "7497"),
         "paired": False,
-        "heartbeat": datetime.now(timezone.utc).isoformat(),
+        "heartbeat": datetime.now(UTC).isoformat(),
         "credential_storage": "Windows Credential Manager integration point",
     }
 

@@ -3,15 +3,37 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
-
-from .schema import Base as Base, IdMixin, TimestampMixin as TimestampMixin, utcnow as utcnow, uuid_pk as uuid_pk
-from .ledger_models import PositionLot as PositionLot, PositionLotMatch as PositionLotMatch, TransactionRevision as TransactionRevision
-from .accounting_models import CapitalFlow as CapitalFlow, PortfolioIncome as PortfolioIncome, PortfolioFee as PortfolioFee, PortfolioAccrual as PortfolioAccrual, PortfolioLiability as PortfolioLiability
+from .accounting_models import CapitalFlow as CapitalFlow
+from .accounting_models import PortfolioAccrual as PortfolioAccrual
+from .accounting_models import PortfolioFee as PortfolioFee
+from .accounting_models import PortfolioIncome as PortfolioIncome
+from .accounting_models import PortfolioLiability as PortfolioLiability
 from .auth_models import TotpState as TotpState
+from .ledger_models import PositionLot as PositionLot
+from .ledger_models import PositionLotMatch as PositionLotMatch
+from .ledger_models import TransactionRevision as TransactionRevision
 from .report_models import ReportJob as ReportJob
+from .schema import Base as Base
+from .schema import IdMixin
+from .schema import TimestampMixin as TimestampMixin
+from .schema import utcnow as utcnow
+from .schema import uuid_pk as uuid_pk
 
 
 class User(IdMixin, Base):
@@ -92,21 +114,31 @@ class Instrument(IdMixin, Base):
     figi: Mapped[str | None] = mapped_column(String(32))
     isin: Mapped[str | None] = mapped_column(String(32))
     ibkr_contract_id: Mapped[str | None] = mapped_column(String(80))
-    __table_args__ = (UniqueConstraint("symbol", "exchange_id", name="uq_instrument_symbol_exchange"),)
+    __table_args__ = (
+        UniqueConstraint("symbol", "exchange_id", name="uq_instrument_symbol_exchange"),
+    )
 
 
 class InstrumentIdentifier(IdMixin, Base):
     __tablename__ = "instrument_identifiers"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     identifier_type: Mapped[str] = mapped_column(String(60), nullable=False)
     identifier_value: Mapped[str] = mapped_column(String(160), nullable=False)
     provider: Mapped[str | None] = mapped_column(String(120))
-    __table_args__ = (UniqueConstraint("identifier_type", "identifier_value", "provider", name="uq_identifier_provider"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "identifier_type", "identifier_value", "provider", name="uq_identifier_provider"
+        ),
+    )
 
 
 class ProviderInstrumentMapping(IdMixin, Base):
     __tablename__ = "provider_instrument_mappings"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     provider_symbol: Mapped[str] = mapped_column(String(160), nullable=False)
     provider_metadata: Mapped[dict | None] = mapped_column(JSON)
@@ -119,7 +151,9 @@ class ProviderConnection(IdMixin, Base):
     provider_type: Mapped[str] = mapped_column(String(80), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     configured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    connection_state: Mapped[str] = mapped_column(String(40), default="NOT_CONFIGURED", nullable=False)
+    connection_state: Mapped[str] = mapped_column(
+        String(40), default="NOT_CONFIGURED", nullable=False
+    )
     capabilities: Mapped[list | None] = mapped_column(JSON)
     masked_identifier: Mapped[str | None] = mapped_column(String(120))
     last_success: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -188,7 +222,9 @@ class MacroSeries(IdMixin, Base):
 
 class MacroObservation(IdMixin, Base):
     __tablename__ = "macro_observations"
-    series_id: Mapped[str] = mapped_column(ForeignKey("macro_series.series_id"), nullable=False, index=True)
+    series_id: Mapped[str] = mapped_column(
+        ForeignKey("macro_series.series_id"), nullable=False, index=True
+    )
     observation_date: Mapped[datetime] = mapped_column(Date, nullable=False, index=True)
     value: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
     units: Mapped[str | None] = mapped_column(String(160))
@@ -198,10 +234,19 @@ class MacroObservation(IdMixin, Base):
     release_date: Mapped[datetime | None] = mapped_column(Date)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
-    ingestion_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    ingestion_timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
     raw_object_id: Mapped[str | None] = mapped_column(ForeignKey("raw_objects.id"))
     __table_args__ = (
-        UniqueConstraint("series_id", "observation_date", "realtime_start", "realtime_end", "vintage_date", name="uq_macro_observation_version"),
+        UniqueConstraint(
+            "series_id",
+            "observation_date",
+            "realtime_start",
+            "realtime_end",
+            "vintage_date",
+            name="uq_macro_observation_version",
+        ),
         Index("ix_macro_series_date", "series_id", "observation_date"),
     )
 
@@ -213,21 +258,29 @@ class MacroRelease(IdMixin, Base):
     name: Mapped[str] = mapped_column(String(240), nullable=False)
     release_date: Mapped[datetime | None] = mapped_column(Date)
     raw_object_id: Mapped[str | None] = mapped_column(ForeignKey("raw_objects.id"))
-    __table_args__ = (UniqueConstraint("provider", "release_id", "release_date", name="uq_macro_release"),)
+    __table_args__ = (
+        UniqueConstraint("provider", "release_id", "release_date", name="uq_macro_release"),
+    )
 
 
 class MacroVintage(IdMixin, Base):
     __tablename__ = "macro_vintages"
-    series_id: Mapped[str] = mapped_column(ForeignKey("macro_series.series_id"), nullable=False, index=True)
+    series_id: Mapped[str] = mapped_column(
+        ForeignKey("macro_series.series_id"), nullable=False, index=True
+    )
     vintage_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     raw_object_id: Mapped[str | None] = mapped_column(ForeignKey("raw_objects.id"))
-    __table_args__ = (UniqueConstraint("series_id", "vintage_date", "provider", name="uq_macro_vintage"),)
+    __table_args__ = (
+        UniqueConstraint("series_id", "vintage_date", "provider", name="uq_macro_vintage"),
+    )
 
 
 class PriceBar(IdMixin, Base):
     __tablename__ = "price_bars"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     interval: Mapped[str] = mapped_column(String(20), nullable=False)
     open: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -239,12 +292,16 @@ class PriceBar(IdMixin, Base):
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
     raw_object_id: Mapped[str | None] = mapped_column(ForeignKey("raw_objects.id"))
-    __table_args__ = (UniqueConstraint("instrument_id", "timestamp", "interval", "provider", name="uq_price_bar"),)
+    __table_args__ = (
+        UniqueConstraint("instrument_id", "timestamp", "interval", "provider", name="uq_price_bar"),
+    )
 
 
 class LatestQuote(IdMixin, Base):
     __tablename__ = "latest_quotes"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, unique=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, unique=True
+    )
     price: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -260,12 +317,16 @@ class FxRate(IdMixin, Base):
     rate: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
-    __table_args__ = (UniqueConstraint("base_currency", "quote_currency", "date", "provider", name="uq_fx_rate"),)
+    __table_args__ = (
+        UniqueConstraint("base_currency", "quote_currency", "date", "provider", name="uq_fx_rate"),
+    )
 
 
 class CorporateAction(IdMixin, Base):
     __tablename__ = "corporate_actions"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     action_type: Mapped[str] = mapped_column(String(60), nullable=False)
     effective_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
@@ -295,7 +356,9 @@ class DatasetVersion(IdMixin, Base):
 
 class DatasetColumn(IdMixin, Base):
     __tablename__ = "dataset_columns"
-    dataset_version_id: Mapped[str] = mapped_column(ForeignKey("dataset_versions.id"), nullable=False, index=True)
+    dataset_version_id: Mapped[str] = mapped_column(
+        ForeignKey("dataset_versions.id"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     inferred_type: Mapped[str] = mapped_column(String(80), nullable=False)
     mapped_role: Mapped[str | None] = mapped_column(String(80))
@@ -303,7 +366,9 @@ class DatasetColumn(IdMixin, Base):
 
 class DatasetLineage(IdMixin, Base):
     __tablename__ = "dataset_lineage"
-    dataset_version_id: Mapped[str] = mapped_column(ForeignKey("dataset_versions.id"), nullable=False, index=True)
+    dataset_version_id: Mapped[str] = mapped_column(
+        ForeignKey("dataset_versions.id"), nullable=False, index=True
+    )
     source_type: Mapped[str] = mapped_column(String(80), nullable=False)
     source_id: Mapped[str] = mapped_column(String(160), nullable=False)
     transform: Mapped[str] = mapped_column(Text, nullable=False)
@@ -359,7 +424,9 @@ class DataQualityIssue(IdMixin, Base):
 
 class QuarantineRecord(IdMixin, Base):
     __tablename__ = "quarantine_records"
-    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(
+        ForeignKey("dataset_versions.id"), index=True
+    )
     row_number: Mapped[int | None] = mapped_column(Integer)
     payload: Mapped[dict | None] = mapped_column(JSON)
     error_message: Mapped[str] = mapped_column(Text, nullable=False)
@@ -375,7 +442,9 @@ class Portfolio(IdMixin, Base):
 
 class PortfolioAccount(IdMixin, Base):
     __tablename__ = "portfolio_accounts"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     account_type: Mapped[str] = mapped_column(String(80), nullable=False)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     provider: Mapped[str | None] = mapped_column(String(120))
@@ -383,7 +452,9 @@ class PortfolioAccount(IdMixin, Base):
 
 class PortfolioTransaction(IdMixin, Base):
     __tablename__ = "portfolio_transactions"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     account_id: Mapped[str | None] = mapped_column(ForeignKey("portfolio_accounts.id"), index=True)
     instrument_id: Mapped[str | None] = mapped_column(ForeignKey("instruments.id"), index=True)
     transaction_type: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -402,8 +473,12 @@ class PortfolioTransaction(IdMixin, Base):
 
 class PortfolioPosition(IdMixin, Base):
     __tablename__ = "portfolio_positions"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     average_cost: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     market_price: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -413,22 +488,30 @@ class PortfolioPosition(IdMixin, Base):
     weight: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=0, nullable=False)
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
-    __table_args__ = (UniqueConstraint("portfolio_id", "instrument_id", name="uq_portfolio_position"),)
+    __table_args__ = (
+        UniqueConstraint("portfolio_id", "instrument_id", name="uq_portfolio_position"),
+    )
 
 
 class PortfolioCashBalance(IdMixin, Base):
     __tablename__ = "portfolio_cash_balances"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
-    __table_args__ = (UniqueConstraint("portfolio_id", "currency", name="uq_portfolio_cash_currency"),)
+    __table_args__ = (
+        UniqueConstraint("portfolio_id", "currency", name="uq_portfolio_cash_currency"),
+    )
 
 
 class CashFlow(IdMixin, Base):
     __tablename__ = "cash_flows"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     flow_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -437,7 +520,9 @@ class CashFlow(IdMixin, Base):
 
 class NavSnapshot(IdMixin, Base):
     __tablename__ = "nav_snapshots"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     nav: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     cash: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -448,7 +533,9 @@ class NavSnapshot(IdMixin, Base):
 
 class DailyReturn(IdMixin, Base):
     __tablename__ = "daily_returns"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     date: Mapped[datetime] = mapped_column(Date, nullable=False, index=True)
     return_value: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
     __table_args__ = (UniqueConstraint("portfolio_id", "date", name="uq_daily_return"),)
@@ -456,7 +543,9 @@ class DailyReturn(IdMixin, Base):
 
 class BenchmarkReturn(IdMixin, Base):
     __tablename__ = "benchmark_returns"
-    benchmark_id: Mapped[str] = mapped_column(ForeignKey("benchmarks.id"), nullable=False, index=True)
+    benchmark_id: Mapped[str] = mapped_column(
+        ForeignKey("benchmarks.id"), nullable=False, index=True
+    )
     date: Mapped[datetime] = mapped_column(Date, nullable=False)
     return_value: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
     __table_args__ = (UniqueConstraint("benchmark_id", "date", name="uq_benchmark_return"),)
@@ -464,14 +553,18 @@ class BenchmarkReturn(IdMixin, Base):
 
 class TargetAllocation(IdMixin, Base):
     __tablename__ = "target_allocations"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False)
     target_weight: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
 
 
 class PerformanceSnapshot(IdMixin, Base):
     __tablename__ = "performance_snapshots"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     twr: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
     cagr: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
@@ -484,14 +577,18 @@ class PerformanceSnapshot(IdMixin, Base):
 
 class RiskPolicy(IdMixin, Base):
     __tablename__ = "risk_policies"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class RiskLimit(IdMixin, Base):
     __tablename__ = "risk_limits"
-    policy_id: Mapped[str] = mapped_column(ForeignKey("risk_policies.id"), nullable=False, index=True)
+    policy_id: Mapped[str] = mapped_column(
+        ForeignKey("risk_policies.id"), nullable=False, index=True
+    )
     metric: Mapped[str] = mapped_column(String(80), nullable=False)
     threshold: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     direction: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -499,7 +596,9 @@ class RiskLimit(IdMixin, Base):
 
 class RiskSnapshot(IdMixin, Base):
     __tablename__ = "risk_snapshots"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     beta: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     volatility: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
@@ -514,7 +613,9 @@ class RiskSnapshot(IdMixin, Base):
 
 class RiskBreach(IdMixin, Base):
     __tablename__ = "risk_breaches"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     limit_id: Mapped[str | None] = mapped_column(ForeignKey("risk_limits.id"))
     metric: Mapped[str] = mapped_column(String(80), nullable=False)
     observed_value: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -531,8 +632,12 @@ class StressScenario(IdMixin, Base):
 
 class StressResult(IdMixin, Base):
     __tablename__ = "stress_results"
-    scenario_id: Mapped[str] = mapped_column(ForeignKey("stress_scenarios.id"), nullable=False, index=True)
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    scenario_id: Mapped[str] = mapped_column(
+        ForeignKey("stress_scenarios.id"), nullable=False, index=True
+    )
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     pnl_impact: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     nav_after: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -541,7 +646,9 @@ class StressResult(IdMixin, Base):
 
 class HedgeInstrument(IdMixin, Base):
     __tablename__ = "hedge_instruments"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, unique=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, unique=True
+    )
     hedge_type: Mapped[str] = mapped_column(String(60), nullable=False)
     beta: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     contract_multiplier: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=1, nullable=False)
@@ -549,7 +656,9 @@ class HedgeInstrument(IdMixin, Base):
 
 class HedgeRecommendation(IdMixin, Base):
     __tablename__ = "hedge_recommendations"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     target_beta: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     current_beta: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
@@ -560,8 +669,12 @@ class HedgeRecommendation(IdMixin, Base):
 
 class HedgeRecommendationItem(IdMixin, Base):
     __tablename__ = "hedge_recommendation_items"
-    recommendation_id: Mapped[str] = mapped_column(ForeignKey("hedge_recommendations.id"), nullable=False, index=True)
-    hedge_instrument_id: Mapped[str] = mapped_column(ForeignKey("hedge_instruments.id"), nullable=False)
+    recommendation_id: Mapped[str] = mapped_column(
+        ForeignKey("hedge_recommendations.id"), nullable=False, index=True
+    )
+    hedge_instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("hedge_instruments.id"), nullable=False
+    )
     units: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     notional: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -578,7 +691,9 @@ class StrategyDefinition(IdMixin, Base):
 
 class StrategyVersion(IdMixin, Base):
     __tablename__ = "strategy_versions"
-    strategy_id: Mapped[str] = mapped_column(ForeignKey("strategy_definitions.id"), nullable=False, index=True)
+    strategy_id: Mapped[str] = mapped_column(
+        ForeignKey("strategy_definitions.id"), nullable=False, index=True
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     rules: Mapped[dict] = mapped_column(JSON, nullable=False)
     __table_args__ = (UniqueConstraint("strategy_id", "version", name="uq_strategy_version"),)
@@ -586,15 +701,21 @@ class StrategyVersion(IdMixin, Base):
 
 class StrategyParameter(IdMixin, Base):
     __tablename__ = "strategy_parameters"
-    strategy_version_id: Mapped[str] = mapped_column(ForeignKey("strategy_versions.id"), nullable=False, index=True)
+    strategy_version_id: Mapped[str] = mapped_column(
+        ForeignKey("strategy_versions.id"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     value_json: Mapped[dict | str | int | float | None] = mapped_column(JSON)
 
 
 class BacktestRun(IdMixin, Base):
     __tablename__ = "backtest_runs"
-    strategy_version_id: Mapped[str] = mapped_column(ForeignKey("strategy_versions.id"), nullable=False, index=True)
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    strategy_version_id: Mapped[str] = mapped_column(
+        ForeignKey("strategy_versions.id"), nullable=False, index=True
+    )
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -606,14 +727,18 @@ class BacktestRun(IdMixin, Base):
 
 class BacktestMetric(IdMixin, Base):
     __tablename__ = "backtest_metrics"
-    backtest_run_id: Mapped[str] = mapped_column(ForeignKey("backtest_runs.id"), nullable=False, index=True)
+    backtest_run_id: Mapped[str] = mapped_column(
+        ForeignKey("backtest_runs.id"), nullable=False, index=True
+    )
     metric: Mapped[str] = mapped_column(String(120), nullable=False)
     value: Mapped[Decimal] = mapped_column(Numeric(24, 10), nullable=False)
 
 
 class BacktestEquityCurve(IdMixin, Base):
     __tablename__ = "backtest_equity_curve"
-    backtest_run_id: Mapped[str] = mapped_column(ForeignKey("backtest_runs.id"), nullable=False, index=True)
+    backtest_run_id: Mapped[str] = mapped_column(
+        ForeignKey("backtest_runs.id"), nullable=False, index=True
+    )
     date: Mapped[datetime] = mapped_column(Date, nullable=False)
     equity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     drawdown: Mapped[Decimal] = mapped_column(Numeric(18, 10), nullable=False)
@@ -622,7 +747,9 @@ class BacktestEquityCurve(IdMixin, Base):
 
 class BacktestPosition(IdMixin, Base):
     __tablename__ = "backtest_positions"
-    backtest_run_id: Mapped[str] = mapped_column(ForeignKey("backtest_runs.id"), nullable=False, index=True)
+    backtest_run_id: Mapped[str] = mapped_column(
+        ForeignKey("backtest_runs.id"), nullable=False, index=True
+    )
     date: Mapped[datetime] = mapped_column(Date, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     market_value: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -630,7 +757,9 @@ class BacktestPosition(IdMixin, Base):
 
 class BacktestTrade(IdMixin, Base):
     __tablename__ = "backtest_trades"
-    backtest_run_id: Mapped[str] = mapped_column(ForeignKey("backtest_runs.id"), nullable=False, index=True)
+    backtest_run_id: Mapped[str] = mapped_column(
+        ForeignKey("backtest_runs.id"), nullable=False, index=True
+    )
     trade_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     side: Mapped[str] = mapped_column(String(20), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -641,8 +770,12 @@ class BacktestTrade(IdMixin, Base):
 
 class Signal(IdMixin, Base):
     __tablename__ = "signals"
-    strategy_version_id: Mapped[str] = mapped_column(ForeignKey("strategy_versions.id"), nullable=False, index=True)
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    strategy_version_id: Mapped[str] = mapped_column(
+        ForeignKey("strategy_versions.id"), nullable=False, index=True
+    )
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     signal_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     signal_value: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -657,7 +790,9 @@ class FactorDefinition(IdMixin, Base):
 
 class FactorRun(IdMixin, Base):
     __tablename__ = "factor_runs"
-    factor_id: Mapped[str] = mapped_column(ForeignKey("factor_definitions.id"), nullable=False, index=True)
+    factor_id: Mapped[str] = mapped_column(
+        ForeignKey("factor_definitions.id"), nullable=False, index=True
+    )
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -665,8 +800,12 @@ class FactorRun(IdMixin, Base):
 
 class FactorValue(IdMixin, Base):
     __tablename__ = "factor_values"
-    factor_run_id: Mapped[str] = mapped_column(ForeignKey("factor_runs.id"), nullable=False, index=True)
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    factor_run_id: Mapped[str] = mapped_column(
+        ForeignKey("factor_runs.id"), nullable=False, index=True
+    )
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     date: Mapped[datetime] = mapped_column(Date, nullable=False)
     value: Mapped[Decimal] = mapped_column(Numeric(24, 10), nullable=False)
 
@@ -678,7 +817,9 @@ class Watchlist(IdMixin, Base):
 
 class WatchlistItem(IdMixin, Base):
     __tablename__ = "watchlist_items"
-    watchlist_id: Mapped[str] = mapped_column(ForeignKey("watchlists.id"), nullable=False, index=True)
+    watchlist_id: Mapped[str] = mapped_column(
+        ForeignKey("watchlists.id"), nullable=False, index=True
+    )
     instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False)
     __table_args__ = (UniqueConstraint("watchlist_id", "instrument_id", name="uq_watchlist_item"),)
 
@@ -701,14 +842,18 @@ class InvestmentThesis(IdMixin, Base):
 
 class ThesisSource(IdMixin, Base):
     __tablename__ = "thesis_sources"
-    thesis_id: Mapped[str] = mapped_column(ForeignKey("investment_theses.id"), nullable=False, index=True)
+    thesis_id: Mapped[str] = mapped_column(
+        ForeignKey("investment_theses.id"), nullable=False, index=True
+    )
     source_type: Mapped[str] = mapped_column(String(80), nullable=False)
     citation: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 class ThesisAttachment(IdMixin, Base):
     __tablename__ = "thesis_attachments"
-    thesis_id: Mapped[str] = mapped_column(ForeignKey("investment_theses.id"), nullable=False, index=True)
+    thesis_id: Mapped[str] = mapped_column(
+        ForeignKey("investment_theses.id"), nullable=False, index=True
+    )
     uploaded_file_id: Mapped[str | None] = mapped_column(ForeignKey("uploaded_files.id"))
     attachment_type: Mapped[str] = mapped_column(String(80), nullable=False)
     license_notes: Mapped[str | None] = mapped_column(Text)
@@ -754,7 +899,9 @@ class SystemHealthSnapshot(IdMixin, Base):
     component: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     state: Mapped[str] = mapped_column(String(40), nullable=False)
     details: Mapped[dict | None] = mapped_column(JSON)
-    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
 
 
 class Workspace(IdMixin, Base):
@@ -765,7 +912,9 @@ class Workspace(IdMixin, Base):
 
 class WorkspaceTab(IdMixin, Base):
     __tablename__ = "workspace_tabs"
-    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"), nullable=False, index=True
+    )
     route: Mapped[str] = mapped_column(String(240), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
@@ -785,7 +934,9 @@ class RecentCommand(IdMixin, Base):
 
 class WorkspaceState(IdMixin, Base):
     __tablename__ = "workspace_states"
-    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), unique=True, nullable=False)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"), unique=True, nullable=False
+    )
     configuration: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
@@ -804,7 +955,9 @@ class AnalysisRun(IdMixin, Base):
 
 class FundamentalSnapshot(IdMixin, Base):
     __tablename__ = "fundamental_snapshots"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, unique=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, unique=True
+    )
     source: Mapped[str] = mapped_column(String(120), nullable=False)
     quality: Mapped[str] = mapped_column(String(40), nullable=False)
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -813,7 +966,9 @@ class FundamentalSnapshot(IdMixin, Base):
 
 class PortfolioProfile(IdMixin, Base):
     __tablename__ = "portfolio_profiles"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), unique=True, nullable=False)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), unique=True, nullable=False
+    )
     code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     configuration: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
@@ -821,7 +976,9 @@ class PortfolioProfile(IdMixin, Base):
 
 class TransactionDetail(IdMixin, Base):
     __tablename__ = "transaction_details"
-    transaction_id: Mapped[str] = mapped_column(ForeignKey("portfolio_transactions.id"), unique=True, nullable=False)
+    transaction_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolio_transactions.id"), unique=True, nullable=False
+    )
     gross_amount: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     commission: Mapped[Decimal] = mapped_column(Numeric(24, 8), default=0, nullable=False)
     tax: Mapped[Decimal] = mapped_column(Numeric(24, 8), default=0, nullable=False)
@@ -829,13 +986,17 @@ class TransactionDetail(IdMixin, Base):
     base_value: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     external_key: Mapped[str | None] = mapped_column(String(200), unique=True)
     source_file_id: Mapped[str | None] = mapped_column(ForeignKey("external_files.id"), index=True)
-    reconciliation_state: Mapped[str] = mapped_column(String(40), default="INTERNAL_ONLY", nullable=False)
+    reconciliation_state: Mapped[str] = mapped_column(
+        String(40), default="INTERNAL_ONLY", nullable=False
+    )
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
 
 class PortfolioBalanceAdjustment(IdMixin, Base):
     __tablename__ = "portfolio_balance_adjustments"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     effective_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     bucket: Mapped[str] = mapped_column(String(40), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -845,7 +1006,9 @@ class PortfolioBalanceAdjustment(IdMixin, Base):
 
 class MarketObservation(IdMixin, Base):
     __tablename__ = "market_observations"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False, index=True)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), nullable=False, index=True
+    )
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     price: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -853,10 +1016,20 @@ class MarketObservation(IdMixin, Base):
     source_category: Mapped[str] = mapped_column(String(30), nullable=False)
     data_state: Mapped[str] = mapped_column(String(40), nullable=False)
     adjustment_state: Mapped[str] = mapped_column(String(40), default="UNADJUSTED", nullable=False)
-    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(
+        ForeignKey("dataset_versions.id"), index=True
+    )
     source_file_id: Mapped[str | None] = mapped_column(ForeignKey("external_files.id"), index=True)
     fields: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
-    __table_args__ = (UniqueConstraint("instrument_id", "timestamp", "source", "dataset_version_id", name="uq_observation_source_version"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "instrument_id",
+            "timestamp",
+            "source",
+            "dataset_version_id",
+            name="uq_observation_source_version",
+        ),
+    )
 
 
 class FxObservation(IdMixin, Base):
@@ -873,7 +1046,9 @@ class FxObservation(IdMixin, Base):
 
 class SourcePrecedenceRule(IdMixin, Base):
     __tablename__ = "source_precedence_rules"
-    instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), unique=True, nullable=False)
+    instrument_id: Mapped[str] = mapped_column(
+        ForeignKey("instruments.id"), unique=True, nullable=False
+    )
     priority: Mapped[list] = mapped_column(JSON, nullable=False)
     preferred_source: Mapped[str | None] = mapped_column(String(120))
     stale_after_hours: Mapped[int] = mapped_column(Integer, default=72, nullable=False)
@@ -882,7 +1057,9 @@ class SourcePrecedenceRule(IdMixin, Base):
 
 class PortfolioValuationRun(IdMixin, Base):
     __tablename__ = "portfolio_valuation_runs"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     valuation_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -892,7 +1069,9 @@ class PortfolioValuationRun(IdMixin, Base):
 
 class PositionValuation(IdMixin, Base):
     __tablename__ = "position_valuations"
-    valuation_run_id: Mapped[str] = mapped_column(ForeignKey("portfolio_valuation_runs.id"), nullable=False, index=True)
+    valuation_run_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolio_valuation_runs.id"), nullable=False, index=True
+    )
     instrument_id: Mapped[str] = mapped_column(ForeignKey("instruments.id"), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     price: Mapped[Decimal | None] = mapped_column(Numeric(24, 8))
@@ -903,8 +1082,12 @@ class PositionValuation(IdMixin, Base):
 
 class TradeEvent(IdMixin, Base):
     __tablename__ = "trade_events"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
-    transaction_id: Mapped[str] = mapped_column(ForeignKey("portfolio_transactions.id"), unique=True, nullable=False)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
+    transaction_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolio_transactions.id"), unique=True, nullable=False
+    )
     event_type: Mapped[str] = mapped_column(String(40), nullable=False)
     source: Mapped[str] = mapped_column(String(120), nullable=False)
     review_state: Mapped[str] = mapped_column(String(40), default="REQUIRES_REVIEW", nullable=False)
@@ -921,7 +1104,9 @@ class TradeReview(IdMixin, Base):
 
 class TradeRiskSnapshot(IdMixin, Base):
     __tablename__ = "trade_risk_snapshots"
-    trade_id: Mapped[str] = mapped_column(ForeignKey("trade_events.id"), unique=True, nullable=False)
+    trade_id: Mapped[str] = mapped_column(
+        ForeignKey("trade_events.id"), unique=True, nullable=False
+    )
     before: Mapped[dict] = mapped_column(JSON, nullable=False)
     after: Mapped[dict] = mapped_column(JSON, nullable=False)
     breaches: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
@@ -929,7 +1114,9 @@ class TradeRiskSnapshot(IdMixin, Base):
 
 class BrokerAccountSnapshot(IdMixin, Base):
     __tablename__ = "broker_account_snapshots"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
     external_reference: Mapped[str] = mapped_column(String(160), unique=True, nullable=False)
     as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     source: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -941,8 +1128,12 @@ class BrokerAccountSnapshot(IdMixin, Base):
 
 class PortfolioReconciliationBreak(IdMixin, Base):
     __tablename__ = "portfolio_reconciliation_breaks"
-    portfolio_id: Mapped[str] = mapped_column(ForeignKey("portfolios.id"), nullable=False, index=True)
-    external_snapshot_id: Mapped[str | None] = mapped_column(ForeignKey("broker_account_snapshots.id"))
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("portfolios.id"), nullable=False, index=True
+    )
+    external_snapshot_id: Mapped[str | None] = mapped_column(
+        ForeignKey("broker_account_snapshots.id")
+    )
     break_type: Mapped[str] = mapped_column(String(60), nullable=False)
     state: Mapped[str] = mapped_column(String(40), default="OPEN", nullable=False)
     severity: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -989,7 +1180,9 @@ class ExternalFile(IdMixin, Base):
     agent_id: Mapped[str | None] = mapped_column(ForeignKey("local_agents.id"), index=True)
     uploaded_file_id: Mapped[str | None] = mapped_column(ForeignKey("uploaded_files.id"))
     profile_id: Mapped[str | None] = mapped_column(ForeignKey("mapping_profiles.id"))
-    dataset_version_id: Mapped[str | None] = mapped_column(ForeignKey("dataset_versions.id"), index=True)
+    dataset_version_id: Mapped[str | None] = mapped_column(
+        ForeignKey("dataset_versions.id"), index=True
+    )
     duplicate_of: Mapped[str | None] = mapped_column(ForeignKey("external_files.id"))
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     mapping: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
@@ -1000,7 +1193,9 @@ class ExternalFile(IdMixin, Base):
 class FileHash(IdMixin, Base):
     __tablename__ = "file_hashes"
     content_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    file_id: Mapped[str] = mapped_column(ForeignKey("external_files.id"), unique=True, nullable=False)
+    file_id: Mapped[str] = mapped_column(
+        ForeignKey("external_files.id"), unique=True, nullable=False
+    )
 
 
 class ResearchCandidate(IdMixin, Base):

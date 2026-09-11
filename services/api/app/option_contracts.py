@@ -1,9 +1,10 @@
 """Normalized option observations; file provenance does not establish dealer inventory."""
 
+from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 
 class ChainContract(BaseModel):
@@ -34,7 +35,7 @@ class ChainContract(BaseModel):
     greek_units: Literal["STANDARD", "UNSPECIFIED"] = "UNSPECIFIED"
 
     @model_validator(mode="after")
-    def coherent(self):
+    def coherent(self) -> Self:
         if self.timestamp.tzinfo is None:
             raise ValueError("Chain timestamp requires an explicit timezone")
         if self.expiry_time_utc.tzinfo is not None:
@@ -50,20 +51,22 @@ class ChainContract(BaseModel):
         return self
 
     @property
-    def expires_at(self):
+    def expires_at(self) -> datetime:
         return datetime.combine(self.expiry, self.expiry_time_utc, UTC)
 
     @property
-    def volatility(self):
+    def volatility(self) -> float | None:
         return self.iv / (100 if self.iv_unit == "PERCENT" else 1) if self.iv is not None else None
 
 
-def normalize_option(row):
+def normalize_option(row: Mapping[str, object]) -> dict[str, JsonValue]:
     values = {key: value for key, value in row.items() if value not in (None, "")}
     for key in ("symbol", "right", "exercise_style", "currency", "iv_unit", "greek_units"):
         if key in values:
             values[key] = str(values[key]).strip().upper()
-    values["right"] = {"C": "CALL", "P": "PUT"}.get(values.get("right"), values.get("right"))
+    right = values.get("right")
+    if isinstance(right, str):
+        values["right"] = {"C": "CALL", "P": "PUT"}.get(right, right)
     contract = ChainContract.model_validate(values)
     if contract.timestamp > datetime.now(UTC):
         raise ValueError("Option timestamp cannot be in the future")

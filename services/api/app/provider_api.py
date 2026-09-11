@@ -87,7 +87,10 @@ async def test_connection(key: str, request: Request, session: Database):
     require_enabled(row)
     adapter = adapters(get_settings())[key]
     from .provider_probe import probe
-    return await probe(session, row, key, adapter, actor, request.headers.get("x-correlation-id", "provider-test"))
+
+    return await probe(
+        session, row, key, adapter, actor, request.headers.get("x-correlation-id", "provider-test")
+    )
 
 
 class SecImport(BaseModel):

@@ -1,0 +1,3 @@
+def black_scholes_merton(
+    flag: str, S: float, K: float, t: float, r: float, sigma: float, q: float
+) -> float: ...

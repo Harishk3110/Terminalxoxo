@@ -5,6 +5,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 
+from pydantic import JsonValue
+
 
 class ProviderState(StrEnum):
     DISABLED = "DISABLED"
@@ -34,25 +36,23 @@ class Provider(Protocol):
     provider_name: str
     capabilities: list[str]
 
-    async def test_connection(self, correlation_id: str) -> ProviderStatus:
-        ...
+    async def test_connection(self, correlation_id: str) -> ProviderStatus: ...
 
-    async def health_check(self, correlation_id: str) -> ProviderStatus:
-        ...
+    async def health_check(self, correlation_id: str) -> ProviderStatus: ...
 
 
 class MacroDataProvider(Provider, Protocol):
-    async def search_series(self, query: str, correlation_id: str) -> dict:
-        ...
+    async def search_series(self, query: str, correlation_id: str) -> dict[str, JsonValue]: ...
 
-    async def series_metadata(self, series_id: str, correlation_id: str) -> dict:
-        ...
+    async def series_metadata(
+        self, series_id: str, correlation_id: str
+    ) -> dict[str, JsonValue]: ...
 
-    async def observations(self, series_id: str, correlation_id: str, observation_start: str | None = None) -> dict:
-        ...
+    async def observations(
+        self, series_id: str, correlation_id: str, observation_start: str | None = None
+    ) -> dict[str, JsonValue]: ...
 
-    async def vintage_dates(self, series_id: str, correlation_id: str) -> dict:
-        ...
+    async def vintage_dates(self, series_id: str, correlation_id: str) -> dict[str, JsonValue]: ...
 
 
 class MarketDataProvider(Provider, Protocol):

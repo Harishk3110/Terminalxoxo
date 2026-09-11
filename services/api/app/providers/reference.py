@@ -1,14 +1,18 @@
 """SEC data and OpenFIGI reference lookups. No EDGAR filing-submission API."""
 
 import re
+from collections.abc import Mapping, Sequence
 from datetime import date
+from typing import TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field
+import httpx
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
-from .http import ProviderError, fetch
+from ..config import Settings
+from .http import ProviderError, Response, fetch
 
 
-def cik_value(value):
+def cik_value(value: str | int) -> str:
     token = str(value).strip()
     if not re.fullmatch(r"[0-9]{1,10}", token) or int(token) <= 0:
         raise ValueError("CIK must be a positive 1-10 digit identifier")
@@ -19,11 +23,13 @@ class SecProvider:
     provider_name = "SEC EDGAR"
     capabilities = ["test", "submissions", "company_facts", "backfill"]
 
-    def __init__(self, settings, transport=None):
+    def __init__(
+        self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         self.settings, self.transport = settings, transport
 
     @property
-    def configured(self):
+    def configured(self) -> bool:
         agent = self.settings.sec_user_agent or ""
         return (
             len(agent) <= 250
@@ -31,7 +37,7 @@ class SecProvider:
             and not any(c in agent for c in "\r\n")
         )
 
-    async def read(self, cik, kind="submissions"):
+    async def read(self, cik: str | int, kind: str = "submissions") -> Response:
         if not self.configured:
             raise ProviderError(
                 "SEC_USER_AGENT requires an organization and contact email", "NOT_CONFIGURED"
@@ -47,7 +53,10 @@ class SecProvider:
         response = await fetch(
             self.provider_name,
             "https://data.sec.gov/" + path,
-            headers={"User-Agent": self.settings.sec_user_agent, "Accept": "application/json"},
+            headers={
+                "User-Agent": self.settings.sec_user_agent or "",
+                "Accept": "application/json",
+            },
             transport=self.transport,
         )
         if (
@@ -57,21 +66,45 @@ class SecProvider:
             raise ProviderError("SEC response CIK does not match request")
         return response
 
-    async def test(self):
+    async def test(self) -> Response:
         return await self.read("320193")
 
 
-def filing_rows(payload):
-    recent = payload.get("filings", {}).get("recent", {})
-    required = ("accessionNumber", "filingDate", "form", "primaryDocument")
-    columns = [recent.get(key) for key in required]
-    if (
-        any(not isinstance(column, list) for column in columns)
-        or len({len(c) for c in columns}) != 1
-    ):
+class FilingRow(TypedDict):
+    cik: str
+    accession: str
+    filing_date: str
+    form: str
+    document: str
+    url: str
+
+
+def filing_rows(payload: JsonValue) -> list[FilingRow]:
+    if not isinstance(payload, dict):
+        raise ProviderError("SEC response must be an object")
+    filings = payload.get("filings")
+    recent = filings.get("recent") if isinstance(filings, dict) else None
+    if not isinstance(recent, dict):
         raise ProviderError("SEC filing columns are missing or have unequal lengths")
-    cik = cik_value(payload["cik"])
-    result = []
+    required = ("accessionNumber", "filingDate", "form", "primaryDocument")
+    columns: list[list[str]] = []
+    for key in required:
+        values = recent.get(key)
+        if not isinstance(values, list):
+            raise ProviderError("SEC filing columns are missing or have unequal lengths")
+        strings: list[str] = []
+        for value in values:
+            if not isinstance(value, str):
+                raise ProviderError("SEC filing columns must contain strings")
+            strings.append(value)
+        columns.append(strings)
+    if len({len(column) for column in columns}) != 1:
+        raise ProviderError("SEC filing columns are missing or have unequal lengths")
+    cik_raw = payload.get("cik")
+    if not isinstance(cik_raw, (str, int)):
+        raise ProviderError("SEC response CIK is missing or invalid")
+    cik = cik_value(cik_raw)
+    result: list[FilingRow] = []
     for i, accession in enumerate(columns[0]):
         if not re.fullmatch(r"\d{10}-\d{2}-\d{6}", accession):
             raise ProviderError("SEC accession identifier is invalid")
@@ -111,10 +144,12 @@ class OpenFigiProvider:
     capabilities = ["test", "mapping", "review_mapping"]
     configured = True
 
-    def __init__(self, settings, transport=None):
+    def __init__(
+        self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         self.settings, self.transport = settings, transport
 
-    async def mapping(self, jobs):
+    async def mapping(self, jobs: Sequence[Mapping[str, object]]) -> Response:
         maximum = 100 if self.settings.openfigi_api_key else 10
         if not 1 <= len(jobs) <= maximum:
             raise ValueError(f"OpenFIGI allows 1-{maximum} mapping jobs per request")
@@ -147,5 +182,5 @@ class OpenFigiProvider:
                 raise ProviderError("OpenFIGI mapping candidates are malformed")
         return response
 
-    async def test(self):
+    async def test(self) -> Response:
         return await self.mapping([{"idType": "ID_BB_GLOBAL", "idValue": "BBG000B9XRY4"}])

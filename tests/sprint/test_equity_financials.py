@@ -1,4 +1,3 @@
-import pytest
 from app.equity_financials import comparable_statistics, ratios, statements
 
 

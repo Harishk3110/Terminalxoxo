@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 
 def test_application_source_has_no_forbidden_broker_action_methods():
@@ -22,7 +22,17 @@ def test_application_source_has_no_forbidden_broker_action_methods():
         "Live" + " execution toggle",
     ]
     scan_roots = [root / "apps", root / "packages", root / "services"]
-    skipped_parts = {"node_modules", ".next", ".next-prod", ".next-build", "logs", "dist", "coverage", "__pycache__", "tests"}
+    skipped_parts = {
+        "node_modules",
+        ".next",
+        ".next-prod",
+        ".next-build",
+        "logs",
+        "dist",
+        "coverage",
+        "__pycache__",
+        "tests",
+    }
     violations: list[str] = []
     for scan_root in scan_roots:
         for directory, dirs, files in os.walk(scan_root):
