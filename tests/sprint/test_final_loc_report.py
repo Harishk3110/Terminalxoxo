@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import pytest
+from test_loc_counter import command
 
 from scripts.loc_report import category_for, inventory
-from tests.sprint.test_loc_counter import command
 
 
 @pytest.mark.parametrize(

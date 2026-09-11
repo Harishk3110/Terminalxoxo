@@ -1,5 +1,7 @@
+from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import TypedDict, Unpack
 
 import pytest
 from app import models
@@ -14,14 +16,23 @@ D = Decimal
 DAY = date(2026, 6, 3)
 
 
-def entry(kind, **kwargs):
-    defaults = dict(id=kind, day=DAY, kind=kind, currency="SGD")
-    defaults.update(kwargs)
-    return Entry(**defaults)
+class EntryOverrides(TypedDict, total=False):
+    instrument_id: str
+    quantity: Decimal
+    price: Decimal
+    fee: Decimal
+    commission: Decimal
+    amount: Decimal
+    fx: Decimal
+    metadata: dict[str, str]
+
+
+def entry(kind: str, currency: str = "SGD", **kwargs: Unpack[EntryOverrides]) -> Entry:
+    return Entry(id=kind, day=DAY, kind=kind, currency=currency, **kwargs)
 
 
 @pytest.fixture
-def accounting_session():
+def accounting_session() -> Iterator[Session]:
     engine = create_engine("sqlite://")
     models.Base.metadata.create_all(engine)
     with Session(engine, expire_on_commit=False, autoflush=False) as session:
@@ -115,7 +126,7 @@ def test_native_cash_fx_conversion_and_income() -> None:
 
 
 @pytest.mark.parametrize("kind", ["FEE", "COMMISSION", "TAX"])
-def test_expense_types(kind):
+def test_expense_types(kind: str) -> None:
     state = LedgerState()
     state.apply(entry("DEPOSIT", amount=D("70000")))
     state.apply(entry(kind, amount=D("25")))
@@ -213,6 +224,7 @@ def test_stale_file_beats_newer_demo_and_missing_is_not_zero(accounting_session:
     item = accounting_session.scalar(
         select(models.Instrument).where(models.Instrument.symbol == "AAPL")
     )
+    assert item is not None
     accounting_session.add(
         models.MarketObservation(
             instrument_id=item.id,
@@ -228,7 +240,9 @@ def test_stale_file_beats_newer_demo_and_missing_is_not_zero(accounting_session:
     accounting_session.commit()
     resolver = MarketPriceResolver(accounting_session, [item.id])
     at = datetime(2026, 9, 4, 22, tzinfo=UTC)
-    assert resolver.resolve(item.id, at).source == "KOYFIN FILE"
+    selected = resolver.resolve(item.id, at)
+    assert selected is not None
+    assert selected.source == "KOYFIN FILE"
     assert resolver.describe(item.id, at)["data_state"] == "STALE"
     result = PortfolioValuationService(accounting_session).calculate(end=at.date())
     assert result["quality"] == "CALCULATED WITH STALE DATA"
@@ -241,6 +255,7 @@ def test_missing_selected_price_invalidates_complete_nav(accounting_session: Ses
     item = accounting_session.scalar(
         select(models.Instrument).where(models.Instrument.symbol == "AAPL")
     )
+    assert item is not None
     accounting_session.add(
         models.SourcePrecedenceRule(
             instrument_id=item.id,
@@ -266,11 +281,13 @@ def test_reset_archives_ledger_and_isolates_demo_prices(accounting_session: Sess
     from app.portfolio_seed import profile_for, reset_main_demo
 
     original = profile_for(accounting_session)
+    assert original is not None
     old_id = original.portfolio_id
     old_transactions = set(accounting_session.scalars(select(models.PortfolioTransaction.id)).all())
     item = accounting_session.scalar(
         select(models.Instrument).where(models.Instrument.symbol == "AAPL")
     )
+    assert item is not None
     accounting_session.add(
         models.MarketObservation(
             instrument_id=item.id,
@@ -286,6 +303,7 @@ def test_reset_archives_ledger_and_isolates_demo_prices(accounting_session: Sess
     accounting_session.commit()
     reset_main_demo(accounting_session)
     new = profile_for(accounting_session)
+    assert new is not None
     assert new.portfolio_id != old_id and new.configuration["price_mode"] == "DEMO_ONLY"
     assert old_transactions <= set(
         accounting_session.scalars(select(models.PortfolioTransaction.id)).all()

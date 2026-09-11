@@ -57,6 +57,17 @@ def distribution(path: Path) -> str:
     return "repository-tools"
 
 
+def type_environment(group: str, root: Path) -> dict[str, str]:
+    env = dict(os.environ)
+    env["PYTHONHASHSEED"] = "0"
+    paths = [root / "typings", root / "services/api"]
+    if group in {"tests/sprint", "services/api/tests"}:
+        # Pytest prepends each test directory for sibling fixture imports.
+        paths.append(root / group)
+    env["MYPYPATH"] = os.pathsep.join(map(str, paths))
+    return env
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "logs/python-types")
@@ -85,9 +96,7 @@ def main() -> int:
         if not args.inventory_only:
             # Runtime services have independent app/agent packages. API imports in
             # tests and compatibility launchers resolve to the API distribution.
-            env = dict(os.environ)
-            env["PYTHONHASHSEED"] = "0"
-            env["MYPYPATH"] = os.pathsep.join((str(ROOT / "typings"), str(ROOT / "services/api")))
+            env = type_environment(group, ROOT)
             print(f"Checking {group}: {len(paths)} files", flush=True)
             result = subprocess.run(
                 command,

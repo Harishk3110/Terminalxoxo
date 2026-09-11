@@ -14,18 +14,17 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
-
-from tests.sprint.test_local_agent_recovery import (
+from test_local_agent_recovery import (
     DATA,
     DIGEST,
     LocalAgent,
     queued,
     transport,
 )
-from tests.sprint.test_local_agent_recovery import (
+from test_local_agent_recovery import (
     agent as agent,
 )
-from tests.sprint.test_local_agent_recovery import (
+from test_local_agent_recovery import (
     agent_module as agent_module,
 )
 

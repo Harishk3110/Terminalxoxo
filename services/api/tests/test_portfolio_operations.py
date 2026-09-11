@@ -1,4 +1,5 @@
 import hashlib
+from pathlib import Path
 
 import pytest
 from app import models
@@ -13,10 +14,12 @@ from test_portfolio_accounting import accounting_session as accounting_session
 
 
 @pytest.fixture
-def drop(accounting_session, tmp_path, monkeypatch):
+def drop(
+    accounting_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> DataDropService:
     original = ObjectStorage.__init__
 
-    def initialize(self):
+    def initialize(self: ObjectStorage) -> None:
         original(self)
         self.local_root = tmp_path
         self._s3 = None
@@ -27,11 +30,17 @@ def drop(accounting_session, tmp_path, monkeypatch):
     return DataDropService(accounting_session)
 
 
-def profile(session, code="KOYFIN_PRICE_HISTORY"):
-    return session.scalar(select(models.MappingProfile).where(models.MappingProfile.code == code))
+def profile(session: Session, code: str = "KOYFIN_PRICE_HISTORY") -> models.MappingProfile:
+    selected = session.scalar(
+        select(models.MappingProfile).where(models.MappingProfile.code == code)
+    )
+    assert selected is not None
+    return selected
 
 
-def test_file_preview_approval_immutable_and_duplicate(drop, accounting_session):
+def test_file_preview_approval_immutable_and_duplicate(
+    drop: DataDropService, accounting_session: Session
+) -> None:
     raw = b"Date,Open,High,Low,Close,Volume\n2026-09-04,213,219,212,217,1000\n"
     uploaded = drop.receive("AAPL_2026-09-04_prices.csv", raw)
     assert uploaded["state"] == "MAPPING_REQUIRED"
@@ -57,7 +66,9 @@ def test_file_preview_approval_immutable_and_duplicate(drop, accounting_session)
     assert len(accounting_session.scalars(select(models.DatasetVersion)).all()) == 1
 
 
-def test_file_conflict_and_ohlc_validation(drop, accounting_session):
+def test_file_conflict_and_ohlc_validation(
+    drop: DataDropService, accounting_session: Session
+) -> None:
     raw = b"Symbol,Date,Open,High,Low,Close,Volume\nMSFT,2026-09-04,200,199,190,210,-1\n"
     uploaded = drop.receive("AAPL_2026-09-04_prices.csv", raw)
     result = drop.map_validate(uploaded["id"], profile(accounting_session).id)
@@ -68,7 +79,7 @@ def test_file_conflict_and_ohlc_validation(drop, accounting_session):
     assert result["state"] == "VALIDATION_FAILED"
 
 
-def test_file_versions_and_lineage(drop, accounting_session):
+def test_file_versions_and_lineage(drop: DataDropService, accounting_session: Session) -> None:
     first = drop.receive("AAPL_2026-09-03_prices.csv", b"Date,Close\n2026-09-03,216\n")
     drop.map_validate(first["id"], profile(accounting_session).id)
     drop.import_file(first["id"], name="AAPL EOD", licence="Private file", approve=True)
@@ -109,7 +120,9 @@ def test_manual_trade_review_and_duplicate(accounting_session: Session) -> None:
     TradeMonitorService(accounting_session).review(
         trade["id"], "REVIEWED", "Reviewed recorded fill and cash."
     )
-    assert accounting_session.get(models.TradeEvent, trade["id"]).review_state == "REVIEWED"
+    reviewed = accounting_session.get(models.TradeEvent, trade["id"])
+    assert reviewed is not None
+    assert reviewed.review_state == "REVIEWED"
 
 
 def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(
@@ -126,10 +139,13 @@ def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(
     assert result["hedge_inputs"]["price_provenance"]["source"]
     assert result["beta_after"] == pytest.approx(0.2, abs=0.02)
     run = accounting_session.get(models.AnalysisRun, result["id"])
-    assert run.parameters["_portfolio"]["valuation_run_id"] == result["valuation_run_id"]
+    assert run is not None
+    snapshot = run.parameters["_portfolio"]
+    assert isinstance(snapshot, dict)
+    assert snapshot["valuation_run_id"] == result["valuation_run_id"]
 
 
-def test_transaction_import_is_atomic(drop, accounting_session):
+def test_transaction_import_is_atomic(drop: DataDropService, accounting_session: Session) -> None:
     uploaded = drop.receive(
         "ledger.csv",
         b"Type,Trade Date,Symbol,Quantity,Price,Currency,Reference\nBUY,2026-09-04,AAPL,1,217,USD,buy-one\nSELL,2026-09-04,AAPL,99999,217,USD,invalid-sale\n",
@@ -147,20 +163,26 @@ def test_transaction_import_is_atomic(drop, accounting_session):
     assert not accounting_session.scalars(select(models.DatasetVersion)).all()
 
 
-def test_xlsx_and_json_preview_keep_original_bytes(drop, accounting_session):
+def test_xlsx_and_json_preview_keep_original_bytes(
+    drop: DataDropService, accounting_session: Session
+) -> None:
     import io
 
     from openpyxl import Workbook
+    from openpyxl.worksheet.worksheet import Worksheet
 
     book = Workbook()
-    book.active.append(["Date", "Close"])
-    book.active.append(["2026-09-04", 220])
+    sheet = book.active
+    assert isinstance(sheet, Worksheet)
+    sheet.append(["Date", "Close"])
+    sheet.append(["2026-09-04", 220])
     stream = io.BytesIO()
     book.save(stream)
     raw = stream.getvalue()
     result = drop.receive("AAPL_2026-09-04.xlsx", raw)
     assert result["state"] == "MAPPING_REQUIRED"
     uploaded = accounting_session.get(models.UploadedFile, drop.get(result["id"]).uploaded_file_id)
+    assert uploaded is not None
     assert drop.storage.get_bytes(uploaded.object_key) == raw
     assert drop.map_validate(result["id"], profile(accounting_session).id)["validation"]["valid"]
     result = drop.receive("AAPL_2026-09-04.json", b'[{"Date":"2026-09-04","Close":222}]')
@@ -168,7 +190,9 @@ def test_xlsx_and_json_preview_keep_original_bytes(drop, accounting_session):
     assert drop.map_validate(result["id"], profile(accounting_session).id)["validation"]["valid"]
 
 
-def test_imported_fundamentals_do_not_fill_missing_from_demo(drop, accounting_session):
+def test_imported_fundamentals_do_not_fill_missing_from_demo(
+    drop: DataDropService, accounting_session: Session
+) -> None:
     from app.terminal_analytics import fundamentals, valuation
 
     raw = b"Symbol,Period,Metric,Value,Frequency,Unit,Scale,Actual Estimate,Report Date\nAAPL,2025,revenue,100,ANNUAL,USD,1000000,ACTUAL,2026-02-01\n"
@@ -203,7 +227,10 @@ def test_factor_is_oos_separation_and_insufficient_history() -> None:
     )
     result = factor_statistics(frame, 21, 5)
     assert result["state"] == "CALCULATED"
-    assert result["in_sample"]["end"] < result["out_of_sample"]["start"]
+    in_sample_end = result["in_sample"]["end"]
+    out_of_sample_start = result["out_of_sample"]["start"]
+    assert in_sample_end is not None and out_of_sample_start is not None
+    assert in_sample_end < out_of_sample_start
     assert result["in_sample"]["mean_ic"] is not None
     assert len(result["quantile_returns"]) == len(result["ic"])
     insufficient = factor_statistics(frame.iloc[:20], 21, 5)
@@ -211,7 +238,9 @@ def test_factor_is_oos_separation_and_insufficient_history() -> None:
     assert insufficient["in_sample"]["mean_ic"] is None
 
 
-def test_curated_quarters_units_and_restatements_keep_metric_provenance(drop, accounting_session):
+def test_curated_quarters_units_and_restatements_keep_metric_provenance(
+    drop: DataDropService, accounting_session: Session
+) -> None:
     from app.equity_financials import statements
     from app.terminal_analytics import fundamentals
 

@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the test-contract commit: 0699ab0, pushed and deployed locally.
-Full backend 25 and browser 13 have finished successfully; browser 14 is active.
+Current HEAD before the accounting-fixture commit: e284269, pushed.
+Docker runtime is 0699ab0. Full backend 26 and browser 14 are active.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,12 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Accounting fixtures and sibling imports: 33 accounting/import/broker/quant tests
+  pass, plus 117 agent/tooling tests and 21 type-runner/scanner tests. Type-runner
+  source/tests pass strict types. Whole strict 29 exposed mixed qualified/sibling
+  module names; canonical sibling imports correct that fatal discovery problem.
+  Stable checkpoint 30 now checks all 277 sources: 1,095 diagnostics / 90 files;
+  API 622 / 27 files. Newly exposed untyped DataDrop calls remain visible.
 - Provider/options/risk/valuation fixture contracts: 83 tests pass, one warning,
   9.44s. Three test modules pass focused strict types. The valuation test retains
   one diagnostic in the untyped HedgeService constructor; no ignore was added.
@@ -270,7 +276,7 @@ then run the complete backend checkpoint and remaining strict API/domain work.
 The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 28 remains red at 1,134 errors.
+in the clean environment. Whole strict checkpoint 30 remains red at 1,095 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

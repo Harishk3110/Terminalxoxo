@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -63,6 +64,65 @@ def test_empty_inventory_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sys, "argv", ["check", "--inventory-only"])
     with pytest.raises(RuntimeError, match="empty type gate"):
         gate.main()
+
+
+@pytest.mark.parametrize("group", ["tests/sprint", "services/api/tests"])
+def test_sibling_test_imports_are_checked_in_their_own_distribution(
+    group: str, tmp_path: Path
+) -> None:
+    directory = tmp_path / group
+    directory.mkdir(parents=True)
+    helper = directory / "test_helper.py"
+    helper.write_text("value: int = 1\n", encoding="utf-8")
+    consumer = directory / "test_consumer.py"
+    consumer.write_text("from test_helper import value\nwrong: str = value\n", encoding="utf-8")
+    env = gate.type_environment(group, tmp_path)
+    paths = env["MYPYPATH"].split(os.pathsep)
+    assert paths[-1] == str(directory)
+    assert len(paths) == 3
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mypy",
+            "--strict",
+            "--explicit-package-bases",
+            str(helper),
+            str(consumer),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "Incompatible types in assignment" in result.stdout
+    assert "import-not-found" not in result.stdout
+    assert "Source file found twice" not in result.stdout
+    consumer.write_text("from test_helper import value\nvalid: int = value\n", encoding="utf-8")
+    fixed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mypy",
+            "--strict",
+            "--explicit-package-bases",
+            str(helper),
+            str(consumer),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert fixed.returncode == 0, fixed.stdout
+
+
+def test_runtime_groups_do_not_import_test_directories(tmp_path: Path) -> None:
+    paths = gate.type_environment("services/api/app", tmp_path)["MYPYPATH"].split(os.pathsep)
+    assert paths == [str(tmp_path / "typings"), str(tmp_path / "services/api")]
 
 
 def test_failed_distribution_is_not_converted_into_a_warning(

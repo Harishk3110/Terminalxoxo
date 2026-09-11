@@ -1157,3 +1157,27 @@ No file-wide or pattern-wide exemption is added. Ten scanner regressions pass
 modules (overnight-secret-fixture-types.log, native 0), and the rescan reports
 615 text files, zero findings (overnight-secret-fixture-scan.log, native 0).
 Ruff initially found one import-group spacing error; the spacing was corrected.
+
+## Accounting Fixtures And Test Import Resolution
+
+2026-09-12 07:33-07:38 SGT, e284269 plus test/type-runner worktree.
+Accounting fixtures retain the same Entry defaults, transactions, expected money,
+data bytes and financial comparisons. Optional SQL rows and worksheet/result
+objects are explicitly required before use. No application source changed.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Type-runner and scanner regressions | 0 | overnight-type-runner-fixtures.log: 21 passed, one warning, 6.51s; real mypy subprocess rejects a mismatched sibling type and accepts its correction |
+| Accounting/import/broker/quant fixture consumers | 0 | overnight-accounting-contracts.log: 33 passed, five warnings, 43.94s |
+| Type-runner source/test strict check | 0 | overnight-type-runner-fixtures-types.log: both modules, no imported-error suppression |
+| Whole strict 29 | 1 | overnight-whole-types-29/: sprint discovery stopped on mixed test_local_agent_recovery / tests.sprint.test_local_agent_recovery names; not a usable aggregate count |
+| Canonical-import agent/tooling regression suite | 0 | overnight-fixture-imports.log: 117 passed, one warning, 23.02s |
+| Whole strict 30 | 1 | overnight-whole-types-30/: 1,095 distinct diagnostics, 90 files, 277 source files; API 622 in 27 files; all distributions run |
+| Changed Ruff / formatting | 0 each | six files pass; two import groups were mechanically sorted after changing to sibling imports |
+| Secret / broker-action scans | 0 each | overnight-accounting-fixtures-secrets.log / overnight-accounting-fixtures-no-execution.log |
+
+MYPYPATH now matches pytest's sibling-fixture lookup only for the relevant test
+distribution. Runtime groups never receive test paths. No source is excluded and
+strict flags remain unchanged. Annotated DataDrop fixtures expose additional
+untyped source calls; these are retained for the source cleanup, not suppressed.
+Full backend 26 and full browser 14 are active, not reported as complete.
