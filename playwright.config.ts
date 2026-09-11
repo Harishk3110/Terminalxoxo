@@ -9,7 +9,7 @@ export default defineConfig({
   globalSetup: "./tests/e2e/servers.ts",
   timeout: 30_000,
   workers: 1,
-  reporter: [["list"], ["json", {outputFile:"logs/terminal-e2e-results.json"}]],
+  reporter: [["list"], ["json", {outputFile: process.env.PLAYWRIGHT_JSON_OUTPUT_FILE || "logs/terminal-e2e-results.json"}]],
   expect: { timeout: 15000, toHaveScreenshot: { maxDiffPixelRatio: 0.02 } },
   use: { baseURL: "http://127.0.0.1:3002", storageState: "logs/e2e-auth.json", trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [{ name: "chromium", use: {...devices["Desktop Chrome"]} }],

@@ -135,6 +135,32 @@ class DcfRequest(BaseModel):
         return self
 
 
+class DcfSensitivity(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    wacc: Decimal
+    terminal_growth: Decimal | None = None
+    exit_multiple: Decimal | None = None
+    fair_value: Decimal | None
+
+
+class DcfScenarioResult(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    name: Literal["BASE", "BULL", "BEAR"]
+    assumptions: DcfScenario
+    forecast: list[ForecastYear] = Field(min_length=1, max_length=10)
+    enterprise_value: Decimal
+    equity_value: Decimal
+    fair_value: Decimal
+    net_debt: Decimal
+    shares: Decimal
+    terminal_value: Decimal
+    terminal_pv: Decimal
+    terminal_share: Decimal | None
+    upside: Decimal | None
+    growth_sensitivity: list[DcfSensitivity] = Field(min_length=25, max_length=25)
+    exit_sensitivity: list[DcfSensitivity] = Field(min_length=9, max_length=9)
+
+
 def _project(
     base: Mapping[str, JsonValue],
     scenario: DcfScenario,

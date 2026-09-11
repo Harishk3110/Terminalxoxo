@@ -376,19 +376,25 @@ class DemoIngestionService:
                     high = close * Decimal("1.012")
                     low = close * Decimal("0.988")
                     instrument = instruments[symbol]
-                    self.market.insert_price_bar(
-                        instrument_id=instrument.id,
-                        timestamp=datetime(current.year, current.month, current.day, tzinfo=UTC),
-                        interval="1d",
-                        open=quantize_money(open_price),
-                        high=quantize_money(high),
-                        low=quantize_money(low),
-                        close=quantize_money(close),
-                        volume=Decimal(1_000_000 + idx * 50_000 + day_count),
-                        currency=instrument.currency,
-                        provider="DemoProvider",
-                        quality=QUALITY_DEMO,
-                        raw_object_id=raw_object.id,
+                    # The empty-security-master guard owns this fresh seed. New
+                    # instrument IDs cannot already have historical price rows.
+                    self.session.add(
+                        models.PriceBar(
+                            instrument_id=instrument.id,
+                            timestamp=datetime(
+                                current.year, current.month, current.day, tzinfo=UTC
+                            ),
+                            interval="1d",
+                            open=quantize_money(open_price),
+                            high=quantize_money(high),
+                            low=quantize_money(low),
+                            close=quantize_money(close),
+                            volume=Decimal(1_000_000 + idx * 50_000 + day_count),
+                            currency=instrument.currency,
+                            provider="DemoProvider",
+                            quality=QUALITY_DEMO,
+                            raw_object_id=raw_object.id,
+                        )
                     )
                     latest_prices[symbol] = quantize_money(close)
                 usdsgd = Decimal("1.31") + Decimal((day_count % 80) - 40) / Decimal("10000")

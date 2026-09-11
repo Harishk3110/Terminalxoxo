@@ -20,6 +20,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
+- [x] M2: shared validated DCF result consumers; existing financial assertions retained.
 - [x] M2: 152 test function contracts in 44 files; executable AST/import bindings preserved, full backend pass.
 - [x] M4: dated stress/hedge snapshots, future-date rejection and historical/current projection isolation.
 - [x] M5: imported security/version handoff to backtesting; newly queued run identity asserted.
@@ -29,6 +30,8 @@ milestone remain open unless explicitly verified below.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.
 - [ ] M4: BUY/partial SELL/dividend -> downstream risk/review and restart persistence.
+- [x] M4: real isolated PostgreSQL/API/worker restart preserves BUY/partial SELL/dividend, saved NAV, session and private report hashes.
+- [x] M4: fresh demo daily seed avoids per-row existence queries; exact history, source lineage, uniqueness and idempotency tested.
 - [ ] M5: all formats/profiles/types, immutable raw/curated versions and consumers.
 - [x] M5: seven fictional CSV templates, field definitions and parser/profile regression tests.
 - [ ] M6: Windows outbound watcher/pairing/revocation/credentials/logs/startup.
@@ -49,6 +52,7 @@ milestone remain open unless explicitly verified below.
 - [x] Operations: hidden background watchdog started and healthy observations verified.
 - [x] Operations: startup grace and upstream-scrape handling, API live/ready probes, six watchdog tests.
 - [ ] Operations: background watchdog startup and one-pass release scripts.
+- [x] Operations: 27-stage Make/PowerShell/shell runner, fail-fast command receipts, source/log/result hashes, timeout cleanup and no-skip checks.
 - [ ] Release: make release-candidate and PowerShell command pass all 27 stages.
 - [ ] Handoff: seven fictional import templates and onboarding/deploy/smoke scripts.
 - [ ] Handoff: all required runbooks, matrix, exact external blockers and commands.

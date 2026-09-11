@@ -367,3 +367,66 @@ integer forecast years. This does not certify the other financial-model/deck fam
 The PostgreSQL smoke used newly created database knk_report_verify_20260911_190316_79384b.
 The active book was not its target. Generated sources, workbooks, PDFs, page images,
 databases, logs and credentials remain ignored local evidence.
+
+## Release Runner And Restart Persistence
+
+2026-09-12 03:19-03:33 SGT, branch main, working tree based on pushed 0ad0434.
+No active portfolio database, broker credentials or existing user session was reset.
+
+| Command / check | Exit / result | Evidence under logs/ |
+| --- | --- | --- |
+| Typed DCF consumer regression selection | 0; 58 passed | overnight-dcf-consumer-tests.log |
+| Scoped DCF consumer strict types | 0 | overnight-dcf-consumer-types.log |
+| Initial runner orchestration tests | 0; 33 passed, 10.57s | overnight-release-runner-tests-01.log |
+| Runner + DCF/report affected selection | 0; 91 passed, 17.64s | overnight-release-affected-tests-01.log |
+| Final runner/result/seed selection | 0; 54 passed, 22.11s | overnight-release-runner-tests-02.log |
+| Scoped runner/result/lifecycle strict types | 0; six files | overnight-release-runner-types-06.log |
+| Real PostgreSQL migration/restart attempt 01 | 1; migration passed, cold-start timeout | overnight-postgres-lifecycle-01.log |
+| Corrected PostgreSQL migration/restart attempt 02 | 0; two passed, 72.60s | overnight-postgres-lifecycle-02.log |
+| First PowerShell release invocation | 1; gates 1-6 passed, gate 7 failed; 1,880 distinct diagnostics / 124 files / 251 sources | overnight-release-command-01.log / release-candidate/20260911T191922Z-b628c07c/manifest.json |
+| Expanded PowerShell release invocation | 1; gates 1-6 passed, gate 7 failed; 1,881 distinct diagnostic lines / 124 files / 255 sources | overnight-release-command-02.log / release-candidate/20260911T193027Z-5985dadc/manifest.json |
+| Expanded migration gate | 0; 16 SQLite/PostgreSQL tests, no skips, 28.63s | release-candidate/20260911T193027Z-5985dadc/04-01.log / migrations.xml |
+| Whole first-party format / Ruff | 0 / 0; 276 formatted files | release-candidate/20260911T193027Z-5985dadc/05-01.log / 06-01.log |
+| Frontend TypeScript / lint | 0 / 0 | overnight-release-frontend-types.log / overnight-release-frontend-lint.log |
+| Observe-only watchdog | 0; ten healthy services, successful init | overnight-release-health-01.log |
+| Full backend coverage run 14 | 0; 1,165 passed, 13 warnings, 300.50s; 10,598/12,078 lines, 87.7463% | overnight-backend-14.log / overnight-coverage-14.json |
+
+The release runner rejects empty gates, pre-existing output directories, changed
+source, missing/modified logs, altered command receipts, nonzero exits and missing/
+skipped test reports. It records later gates as NOT_RUN and kills only owned process
+trees on timeout. Full and visual browser JSON now have independent output paths.
+The evidence guard revalidates all preceding commands and hashes before writing
+the per-run Markdown receipt. This is not full domain certification.
+
+The first scoped type pass found Windows-only typing of POSIX process-group APIs;
+an explicit sys.platform branch resolved it without ignores. A broader seed-test
+type command exposed existing transitive application errors plus four Settings
+alias constructor diagnostics. Validated Settings input fixed the four new errors;
+the existing application errors remain included in the whole type gate.
+
+Restart test 01 failed before liveness because the fresh seed queried existence
+for every daily bar over ten years. The empty-security-master guard permits new
+PriceBar rows without those redundant lookups. No formula, price, date, volume,
+source, natural key, idempotency guard or timeout was weakened. The new history
+regression checks all daily rows, an exact first AAPL quote, source lineage and
+duplicate absence. Its first attempt accidentally counted its own inspection
+query; scoping observation to seed calls fixed the test. Final selection passed.
+
+Restart test 02 used database knk_restore_5ebc0b2df5a74a3ba73f9e277b62045e.
+It posts SGD 100,000 capital, ten D05 shares bought at 30, four sold at 35 and a
+12 dividend, then checks 99,852 cash, six remaining shares, 20 realised P&L and
+NAV = cash + market value. API process IDs 28176/33052 and worker IDs 36512/32516
+prove distinct owned processes before/after. Saved transactions and the entire
+saved NAV payload match after restart; the session remains valid, exactly one
+report remains, and anonymous download returns 401.
+Report SHA-256: e8f896806ca4c83b18e47bced0346f4c59b55ced4d68b7e477f2f03546f1ad04.
+Full receipt: overnight-postgres-lifecycle-02/test_api_and_worker_restart_pr0/restart-evidence.json.
+All owned test processes exited; the existing Docker stack stayed healthy.
+
+Expanded release source SHA-256:
+cd22163c765587e0355bf978d248f1859dd0ffddc77911d6a5c8ac90eb5e7ac2.
+The one-line difference from the preceding whole type count is an alternate
+ordering of missing TypedDict key names in the same existing diagnostic. No new
+runner/lifecycle module has a strict error. API-only remains 1,107 errors in 36
+files. Gates 8-27 are NOT_RUN in both release invocations, not passing checks.
+See RELEASE_CANDIDATE.md for commands, prerequisites and failure semantics.

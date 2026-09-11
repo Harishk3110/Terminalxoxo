@@ -1,6 +1,7 @@
 .PHONY: bootstrap dev stop test test-unit test-integration test-e2e lint format typecheck migrate seed reset-demo backfill backup backup-sqlite restore verify-backup verify-backup-sqlite restore-test security-check build health broker-agent-build
 
 PYTHON ?= python
+RELEASE_ARGS ?=
 BACKUP_ARGS ?=
 BACKUP_ARCHIVE ?=
 BACKUP_SHA256 ?=
@@ -77,3 +78,7 @@ health:
 
 broker-agent-build:
 	pnpm broker-agent-build
+
+.PHONY: release-candidate
+release-candidate:
+	$(PYTHON) scripts/release_candidate.py $(RELEASE_ARGS)

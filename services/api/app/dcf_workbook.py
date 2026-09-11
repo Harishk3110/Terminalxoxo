@@ -7,34 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter
 
-from .equity_valuation import DcfRequest, DcfScenario, ForecastYear, calculate_wacc, dcf_scenarios
+from .equity_valuation import DcfRequest, DcfScenarioResult, calculate_wacc, dcf_scenarios
 from .report_contracts import Cell, ReportSnapshot
-
-
-class Sensitivity(BaseModel):
-    model_config = ConfigDict(allow_inf_nan=False)
-    wacc: Decimal
-    terminal_growth: Decimal | None = None
-    exit_multiple: Decimal | None = None
-    fair_value: Decimal | None
-
-
-class SavedScenario(BaseModel):
-    model_config = ConfigDict(allow_inf_nan=False)
-    name: Literal["BASE", "BULL", "BEAR"]
-    assumptions: DcfScenario
-    forecast: list[ForecastYear] = Field(min_length=1, max_length=10)
-    enterprise_value: Decimal
-    equity_value: Decimal
-    fair_value: Decimal
-    net_debt: Decimal
-    shares: Decimal
-    terminal_value: Decimal
-    terminal_pv: Decimal
-    terminal_share: Decimal | None
-    upside: Decimal | None
-    growth_sensitivity: list[Sensitivity] = Field(min_length=25, max_length=25)
-    exit_sensitivity: list[Sensitivity] = Field(min_length=9, max_length=9)
 
 
 class DcfInput(BaseModel):
@@ -42,7 +16,7 @@ class DcfInput(BaseModel):
     calculation_version: Literal["knk-fcff-1.0"]
     parameters: DcfRequest
     base_statement: dict[str, JsonValue]
-    scenarios: list[SavedScenario] = Field(min_length=1, max_length=3)
+    scenarios: list[DcfScenarioResult] = Field(min_length=1, max_length=3)
     quote: dict[str, JsonValue] = Field(default_factory=dict)
 
 
@@ -95,7 +69,7 @@ def reconciled(snapshot: ReportSnapshot) -> tuple[DcfInput, Decimal | None]:
     price_value = saved.quote.get("price")
     price: Decimal | None = TypeAdapter(Decimal | None).validate_python(price_value)
     reproduced = dcf_scenarios(saved.base_statement, saved.parameters, price)
-    expected = TypeAdapter(list[SavedScenario]).validate_python(reproduced["scenarios"])
+    expected = TypeAdapter(list[DcfScenarioResult]).validate_python(reproduced["scenarios"])
     if saved.scenarios != expected:
         raise ValueError(
             "Saved DCF does not reconcile to its pinned inputs and calculation version"
@@ -174,7 +148,7 @@ def model_sheets(snapshot: ReportSnapshot) -> list[ModelSheet]:
     return [summary, *sheets]
 
 
-def scenario_sheet(saved: DcfInput, result: SavedScenario, price: Decimal | None) -> ModelSheet:
+def scenario_sheet(saved: DcfInput, result: DcfScenarioResult, price: Decimal | None) -> ModelSheet:
     sheet = ModelSheet(f"DCF {result.name}", last_column=max(7, len(result.forecast) + 1))
     assumption = result.assumptions
     sheet.write("A1", result.name + " | Unlevered FCFF", "header")
@@ -318,7 +292,7 @@ def wacc_sheet(request: DcfRequest) -> ModelSheet:
     return sheet
 
 
-def sensitivity_sheet(result: SavedScenario) -> ModelSheet:
+def sensitivity_sheet(result: DcfScenarioResult) -> ModelSheet:
     sheet = ModelSheet(f"DCF {result.name} Sens", last_column=3)
     sheet.write("A1", "Perpetuity sensitivities", "header")
     for column, label in zip("ABC", ("WACC", "Terminal growth", "Fair value"), strict=True):

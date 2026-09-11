@@ -11,7 +11,7 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Domain | Classification | Outstanding acceptance |
 | --- | --- | --- |
 | Private terminal and local Docker | DEMO_FUNCTIONAL | Ten services including reports healthy; full release checks remain |
-| Ledger/NAV/performance | DEMO_FUNCTIONAL | Fresh full certification and attribution extensions |
+| Ledger/NAV/performance | DEMO_FUNCTIONAL | Isolated API/worker restart preserves ledger/NAV/report; broader attribution and domain certification remain |
 | Risk/stress/hedge | PARTIAL | Dated workflows pass; complete browser gate and nonlinear/covariance/rebalance scope remain |
 | Data Drop/agent | PARTIAL | Complete profile/consumer/Windows acceptance |
 | Providers/IBKR | PROVIDER_READY_UNVERIFIED | Adapter gaps remain separately PARTIAL; real connectivity unverified |
@@ -24,7 +24,8 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | PostgreSQL/object backup | DEMO_FUNCTIONAL | Snapshot/hash/private isolated restore verified; operator-managed offsite storage and retention deletion |
 | Python quality | PARTIAL | Ruff/format pass; whole first-party strict runner now executes, but engine/API/test errors remain |
 | Browser release | PARTIAL | Full run 07 passed 37/37, zero retries, 8.3m; complete direct screenshot review still pending |
-| Release command / hosted deployment | MISSING | Script implementation / external account access |
+| Release command | PARTIAL | All 27 stages implemented and runner tests pass; actual run stops at strict types after gates 1-6 |
+| Hosted deployment | MISSING | Production/domain gates still open; external account access also required |
 
 No report formatting, service health or test count certifies financial accuracy.
 

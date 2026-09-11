@@ -3,7 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD at verification: 955ec9b, pushed. Native DCF workbook batch is uncommitted.
+Current HEAD at verification: 0ad0434, pushed. Runner/startup/typed-consumer batch
+has passed its affected and full backend checks and is being committed.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -12,17 +13,27 @@ kind/format combinations produce real files in tests. Native DCF/WACC/forecast/
 sensitivity formulas now reconcile to pinned inputs and independent Excel
 recalculation. Remaining financial-model/deck depth is PARTIAL.
 
-Next milestone: M2 static cleanup, then full browser closure. First unchecked report
+Next milestone: M2 static cleanup and source precedence, then full browser closure. First unchecked report
 subtask: complete financial model/deck content and actual rendered-artifact review.
-Current code batch: native DCF workbook, independent Excel verification and typed
-valuation engine. Next batch: finish output-consumer types and the release runner.
+Current code batch: 27-stage fail-fast runner, typed DCF consumers, real PostgreSQL
+migration/restart checks and faster fresh seeding. Next batch: remaining typed
+engine/API contracts and the historical FX resolver's source selection.
 Dated stress/hedge selection is implemented. Historical valuations no longer rewrite
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
-- Latest completed full backend rerun 13: 1,110 passed / 13 warnings / 301.79s;
-  10,601/12,078 statements covered (87.7712%), including native DCF report jobs.
+- Latest completed full backend rerun 14: 1,165 passed / 13 warnings / 300.50s;
+  10,598/12,078 statements covered (87.7463%), including native DCF and runner tests.
+- Runner/result/seed selection: 54 passed; six runner/result/lifecycle modules
+  pass scoped strict types. The whole type gate still fails.
+- Real PostgreSQL migration and API/report-worker restart: two passed, 72.60s.
+  Buy/partial sale/dividend, saved NAV, session and private report hash survive
+  distinct process restarts. Fresh-seed daily lookups were removed without
+  changing history or relaxing the 120-second startup deadline.
+- Actual PowerShell release checkpoint 20260911T193027Z-5985dadc passed gates 1-6,
+  including 16 SQLite/PostgreSQL migration tests with no skips; gate 7 failed.
+  Gates 8-27 were NOT_RUN in this invocation. No all-gates release pass is claimed.
 - Windows Excel integration: three passed, 88.78s in final run 02; 1,085 formulas
   recalculated, plus changed-revenue and invalid-perpetuity checks. Local rendered
   one-/ten-year workbooks were inspected; other report-family artifacts remain open.
@@ -41,13 +52,15 @@ Current evidence:
   upstream scrape failures do not restart healthy Prometheus.
 
 First-party Ruff passes. The latest format command includes services, packages,
-scripts, tests, typings, infrastructure and migrations: 269 formatted files.
+scripts, tests, typings, infrastructure and migrations: 276 formatted files.
 Mypy is NOT green: API-only 1,107 errors in 36 files; whole first-party runner
-reports 1,966 distinct diagnostic lines in 125 files across nine distributions.
-The latest whole-run inventory contains 248 files. Explicit DCF result types expose
-previously unchecked JSON indexing in the existing equity tests (86 diagnostics).
-The engine, native workbook builder, renderer and new tests pass scoped strict types;
-the old consumers still need typed result validation. Counts have not been hidden.
+reports 1,881 distinct diagnostic lines in 124 files across nine distributions.
+The latest whole-run inventory contains 255 files. The prior DCF consumer errors
+are resolved using shared validated result models and unchanged numeric assertions.
+The preceding runner invocation reported 1,880; the extra distinct diagnostic line
+is a different ordering of the same missing TypedDict key names across distributions.
+The engine, native builder, renderer, consumers and runner pass their scoped type
+checks. Remaining engine/API/imported test diagnostics have not been hidden.
 Flat invocation previously stopped on duplicate app/agent names; distribution
 grouping and explicit namespace bases for repository tools/tests fix that problem
 without suppressing errors. The runner and its tests pass strict mypy.
@@ -90,9 +103,12 @@ ephemeral readiness probe names are explicitly excluded in the manifest. A real
 concurrent-write integration test passes. Backup metrics, read-only receipt mount
 and Prometheus alert rules are live; offsite retention and external alert delivery
 require operator configuration. See MANAGED_BACKUP.md and build evidence.
-Ten dashboards, release runner and later domain gates remain open. No live provider
+Ten dashboards, full release-runner acceptance and later domain gates remain open. No live provider
 or cloud deployment is certified. No execution added.
 
 Focused equity/report browser rerun: three passed, zero retries, 1.2m.
-Exact next command: `Get-Content tests/sprint/test_equity_valuation.py`.
-Next implementation: typed DCF result consumers, then the 27-stage release command.
+Additional direct review: mobile macro/options/risk screenshots fit their viewports;
+risk's unavailable chart panels still need explicit empty-state treatment. Other
+unreviewed desktop combinations remain open.
+Exact next command: `Get-Content services/api/app/price_sources.py`.
+Next implementation: historical FX candidate selection and remaining engine types.

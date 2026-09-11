@@ -7,7 +7,7 @@ verification is implied. Every trading workflow remains manual/read-only.
 | Workspace | Route | Implemented source/workflow | Evidence and remaining gate |
 | --- | --- | --- | --- |
 | Overview | /overview | Ledger-backed capital, balances, positions, observed status | performance/operating browser tests; complete M4 certification open |
-| Portfolio | /portfolio | Manual transactions, corrections, lots, accounting inspectors | ledger, directory, exposure, NAV and position browser tests; full release rerun required |
+| Portfolio | /portfolio | Manual transactions, corrections, lots, accounting inspectors | ledger, directory, exposure and browser tests; isolated PostgreSQL/API/worker restart preserves transactions and NAV; broader M4 gate open |
 | Performance | /performance | Saved valuation returns, benchmark and decomposition | performance browser/backend tests; broader attribution acceptance open |
 | Alpha | /alpha | Saved return-source regression with sample/window diagnostics | quant-research tests; populated visual matrix in progress; PIT scope open |
 | Equity | /equity | Holdings, coverage, saved valuations and research links | equity-research tests; segments/ROIC/forward estimates remain partial |
@@ -19,7 +19,7 @@ verification is implied. Every trading workflow remains manual/read-only.
 | Data Drop | /data-drop | Validate, license, approve and import files | upload/operating/browser tests and seven template profiles; complete onboarding open |
 | Data Catalogue | /data-catalogue | Persisted immutable versions and lineage | dataset integrity tests; all downstream consumer acceptance open |
 | Backtest Result | /backtests | Saved next-open offline runs with pinned data/FX/costs | quant-research and lifecycle browser tests; corporate actions/PIT scope open |
-| Excel Studio | /excel-studio | Owned queued XLSX/PDF and pinned source download | report pipeline tests and browser smoke; full model content/render QA incomplete |
+| Excel Studio | /excel-studio | Owned queued XLSX/PDF, native DCF/WACC formulas and pinned source download | report/browser tests and 1,085 independently recalculated Excel formulas; other model content/render QA incomplete |
 | Deck Builder | /deck-builder | Owned queued editable PPTX and source download | report pipeline tests and browser smoke; full IC-deck depth/render QA incomplete |
 | System Health | /system-health | Observed API/worker/report/provider/backup states | PostgreSQL private isolated restore and receipt metrics verified; ten dashboards remain open |
 
