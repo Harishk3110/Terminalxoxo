@@ -1,5 +1,6 @@
 """Scan tracked and eligible new text files without printing credential values."""
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -14,6 +15,21 @@ CREDENTIAL_ASSIGNMENT = re.compile(
 PROHIBITED = re.compile(
     r"(?:^|/)(?:node_modules|\.next[^/]*|\.vercel|coverage|test-results|logs|__pycache__)(?:/|$)|\.(?:db|sqlite3?|pyc|tsbuildinfo)$|(?:^|/)\.env(?:\..+)?$"
 )
+# Exact public fixtures only; never exempt a test file or an entire credential key.
+PUBLIC_TEST_FIXTURES = {
+    ("tests/sprint/test_provider_connections.py", "MARKET_DATA_API_KEY"): "server-secret",
+}
+
+
+def public_fixture(name: str, key: str, expression: str) -> bool:
+    expected = PUBLIC_TEST_FIXTURES.get((name, key))
+    if expected is None:
+        return False
+    try:
+        value = ast.literal_eval(expression.removesuffix(","))
+    except (SyntaxError, ValueError):
+        return False
+    return isinstance(value, str) and value == expected
 
 
 def main() -> int:
@@ -41,7 +57,11 @@ def main() -> int:
             if TOKEN.search(line):
                 findings.append(f"{name}:{line_no}: possible credential or private key")
             assignment = CREDENTIAL_ASSIGNMENT.match(line)
-            if assignment and assignment[2].strip("\"'"):
+            if (
+                assignment
+                and assignment[2].strip("\"'")
+                and not public_fixture(name, assignment[1], assignment[2])
+            ):
                 findings.append(
                     f"{name}:{line_no}: nonempty credential assignment ({assignment[1]})"
                 )

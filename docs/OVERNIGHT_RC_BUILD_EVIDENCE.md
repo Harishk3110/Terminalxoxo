@@ -1143,3 +1143,17 @@ the same five adapters.
 Browser 14 is active with 47 tests and zero retries. Runtime source is held at
 0699ab0 during this invocation; frontend files equal the macro/options build.
 No new complete browser/backend or final release pass is claimed at this point.
+
+2026-09-12 07:29-07:32 SGT: the pre-push scan for ddfc83c returned 1 for the
+existing public fake market key after its constructor keyword changed to the
+declared uppercase alias. The command sequence incorrectly continued to push;
+this was not a successful security gate and is recorded as an operator error.
+The flagged value is a deterministic mock fixture, not a real credential.
+
+The scanner now permits only that exact path/key/literal triple. Other values,
+files, keys, expressions and token-shaped content remain blocking and redacted.
+No file-wide or pattern-wide exemption is added. Ten scanner regressions pass
+(overnight-secret-fixture-tests.log, native 0, 0.88s), strict types pass for both
+modules (overnight-secret-fixture-types.log, native 0), and the rescan reports
+615 text files, zero findings (overnight-secret-fixture-scan.log, native 0).
+Ruff initially found one import-group spacing error; the spacing was corrected.
