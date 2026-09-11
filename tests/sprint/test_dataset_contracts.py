@@ -1,10 +1,12 @@
 import hashlib
+from pathlib import Path
 
 import pytest
 from app import models
 from app.config import get_settings
 from app.object_storage import ObjectStorage
 from app.quant_data import dataset_rows
+from sqlalchemy.orm import Session
 
 
 def dataset(session, monkeypatch, tmp_path, content, *, curated=True, schema_updates=None):
@@ -80,8 +82,8 @@ def test_curated_inputs_require_tabular_objects(ledger_session, monkeypatch, tmp
 
 
 def test_raw_mapping_preserves_zero_null_and_verified_provenance(
-    ledger_session, monkeypatch, tmp_path
-):
+    ledger_session: Session, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     version = dataset(
         ledger_session,
         monkeypatch,

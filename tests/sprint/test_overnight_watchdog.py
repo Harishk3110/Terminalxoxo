@@ -1,6 +1,8 @@
 import json
 import subprocess
 
+import pytest
+
 from scripts import overnight_watchdog as watchdog
 
 
@@ -39,7 +41,7 @@ def test_docker_failure_never_invokes_repair(monkeypatch):
     assert len(calls) == 1
 
 
-def test_observe_only_does_not_restart(monkeypatch):
+def test_observe_only_does_not_restart(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         watchdog, "command", lambda args: subprocess.CompletedProcess(args, 0, "", "")
     )

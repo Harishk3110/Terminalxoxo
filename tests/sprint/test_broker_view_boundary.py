@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal as D
 from types import SimpleNamespace
 
+import pytest
 from app import broker_api
 from sqlalchemy.orm import Session
 
@@ -65,7 +66,7 @@ def reported_snapshot() -> SimpleNamespace:
 
 def test_connected_view_does_not_leak_existing_or_future_internal_fields(
     ledger_session: Session,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     internal = internal_snapshot()
     before = deepcopy(internal)
@@ -97,7 +98,7 @@ def test_connected_view_does_not_leak_existing_or_future_internal_fields(
 
 def test_disconnected_view_remains_explicitly_internal_without_altering_snapshot(
     ledger_session: Session,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     internal = internal_snapshot()
     monkeypatch.setattr(broker_api, "current_snapshot", lambda *_: (None, False))

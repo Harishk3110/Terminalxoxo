@@ -3,6 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
+Current HEAD: ce3def3; verified milestone changes and final visual fixes are uncommitted.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -12,17 +13,19 @@ and rendered artifact review remain PARTIAL; these are source-pinned review expo
 
 Next milestone: M2 static cleanup, then full browser closure. First unchecked report
 subtask: complete financial model/deck content and actual rendered-artifact review.
-Next code batch: remaining engine/API contracts and final visual-workflow review.
+Current code batch: PostgreSQL backup closure and final visual-workflow review.
+Next code batch: compact chart/risk-monitor layout verification, then engine/API contracts.
 Dated stress/hedge selection is implemented. Historical valuations no longer rewrite
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
-- Full backend rerun: 1,059 passed / 13 warnings / 337.36s; 10,309/11,784 statements covered.
-- This run includes the type-gate and retired-service regression tests.
+- Latest completed full backend rerun 12: 1,097 passed / 13 warnings / 342.50s;
+  10,339/11,816 statements covered (87.5%), including final backup guard tests.
 - Subsequent native-chart report selection: 34 passed. Eight new report/watchdog
   modules passed scoped strict mypy; changed modules passed Ruff.
-- Full frontend rerun: 251 terminal + 5 shared tests passed (256 total).
+- Full frontend rerun: 256 terminal + 5 shared tests passed (261 total), including
+  compact chart-axis and percentage-label regression tests.
 - Workspace TypeScript/lint and Node 22 local/Docker production builds passed.
 - Report browser workflow passed twice, including the mobile resize fix and
   persisted date/format; screenshots at 1440px/390px were inspected.
@@ -34,11 +37,10 @@ Current evidence:
   upstream scrape failures do not restart healthy Prometheus.
 
 First-party Ruff passes. The latest format command includes services, packages,
-scripts, tests, typings, infrastructure and migrations: 255 files including the
-template tests. The subsequent expanded format check reports 259 formatted files.
+scripts, tests, typings, infrastructure and migrations: 266 formatted files.
 Mypy is NOT green: API-only 1,119 errors in 37 files; whole first-party runner
-reports 1,995 distinct diagnostic lines in 133 files across nine distributions.
-The latest whole-run inventory contains 239 files, including the new gate tests.
+reports 1,896 distinct diagnostic lines in 126 files across nine distributions.
+The latest whole-run inventory contains 245 files, including managed-backup tests.
 Flat invocation previously stopped on duplicate app/agent names; distribution
 grouping and explicit namespace bases for repository tools/tests fix that problem
 without suppressing errors. The runner and its tests pass strict mypy.
@@ -52,22 +54,35 @@ explicit fixture re-exports fixed them. The 17-test affected selection and the
 subsequent complete 973-test run passed without disabling any lint or test checks.
 The first full backend attempt used incompatible test/HTTPS-cookie configuration:
 949 passed / 3 failed. Correct local-demo auth selection passed all 47; no runtime
-security checks were weakened. Full browser zero-failure gate is still open.
-The first browser full run had 30 passes and six failures. Dated analytical fixtures
-then passed all six affected cases. The expanded 37-test full run is underway;
-three assertions pinned to the old valuation version were corrected. That run
-finished 34/37. The next populated-view run finished 36/37, exposing an actual
-upload-to-backtest symbol handoff bug and a test that could accept an older run.
-Both are corrected; the focused browser workflow now passes with a QQQ dataset
-and native USD base currency, without fabricated FX. All requested pages are
-included at four desktop sizes and 390px; another full run and screenshot review
-are underway. No whole-browser or release-candidate pass is claimed yet.
+security checks were weakened. Full browser run 04 passed 37/37 with zero retries.
+Run 05 added selected file/dataset views and failed four duplicate-draft fixtures.
+Viewport-specific unapproved drafts fixed fixture isolation; both targeted sizes
+then passed. Full run 06 passed 37/37, zero retries, 8.9m. Uploaded backtesting
+still asserts the newly queued QQQ run and native USD without fabricated FX.
+Visual review subsequently found crowded NAV/percentage ticks and risk-monitor
+grid tracks extending beyond their parent rows at 1366px. The new containment
+assertion failed against the old build; the corrected build passed both targeted
+1366px/390px visual journeys (2.2m). Updated overview/performance/risk-monitor/risk
+screenshots at 1366px were inspected: labels and panel containment are corrected.
+Full browser run 07 is in progress. Visual and release-candidate completion are
+not claimed.
 
 Ten long-running Docker services, including reports, are healthy; MinIO init exited
-0. Runtime currently carries df8dab6. The earlier refresh was interrupted by the old
-watchdog's startup bug; diagnosis, correction and recovery passed. Images for the
-dated-valuation batch are built and await refresh; the corrected watchdog is active.
+0. Runtime carries the saved-form, backup-health and chart/layout batch based on
+ce3def3. The frontend refresh returned healthy, but the PowerShell command wrapper
+reported exit 1 on Docker stderr progress. An explicit native-exit-code verification
+with --no-deps returned 0; the corrected watchdog remains active.
 Local URL: http://127.0.0.1:3001/overview (private login, not hosted).
 Existing SQLite, local objects, `.env`, Compose credentials and volumes are preserved.
-PostgreSQL backup/restore, all dashboards, release runner and later domain gates
-remain open. No live provider or cloud deployment is certified. No execution added.
+PostgreSQL backup/verification/private isolated restore pass for 113 tables and
+four non-probe objects, with all table/content hashes reconciled. The three
+ephemeral readiness probe names are explicitly excluded in the manifest. A real
+concurrent-write integration test passes. Backup metrics, read-only receipt mount
+and Prometheus alert rules are live; offsite retention and external alert delivery
+require operator configuration. See MANAGED_BACKUP.md and build evidence.
+Ten dashboards, release runner and later domain gates remain open. No live provider
+or cloud deployment is certified. No execution added.
+
+Exact next verification: `Get-Content logs/overnight-browser-full-07.log -Tail 12`.
+Do not launch a second browser suite while run 07 is active. Next implementation:
+source-pinned native DCF workbook formulas and financial-model reconciliation.

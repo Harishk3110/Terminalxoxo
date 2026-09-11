@@ -21,7 +21,7 @@ verification is implied. Every trading workflow remains manual/read-only.
 | Backtest Result | /backtests | Saved next-open offline runs with pinned data/FX/costs | quant-research and lifecycle browser tests; corporate actions/PIT scope open |
 | Excel Studio | /excel-studio | Owned queued XLSX/PDF and pinned source download | report pipeline tests and browser smoke; full model content/render QA incomplete |
 | Deck Builder | /deck-builder | Owned queued editable PPTX and source download | report pipeline tests and browser smoke; full IC-deck depth/render QA incomplete |
-| System Health | /system-health | Observed API/worker/report/provider states | watchdog and health tests; ten dashboards and PostgreSQL restore evidence open |
+| System Health | /system-health | Observed API/worker/report/provider/backup states | PostgreSQL private isolated restore and receipt metrics verified; ten dashboards remain open |
 
 Visual coverage now enumerates these workspaces, plus macro and risk, at 1366x768,
 1440x900, 1920x1080, 2560x1440 and 390x844. Screenshot generation, nonblank chart

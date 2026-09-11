@@ -235,3 +235,86 @@ separate options/GEX, macro and risk), at five sizes. Direct review has confirme
 populated alpha/GEX on desktop and the overview, portfolio, performance, alpha,
 equity, quant, GEX, risk/trade and hedge mobile layouts. Remaining screenshot
 review and the complete release gates stay open.
+
+## Saved Forms, Test Contracts And Managed Backup
+
+2026-09-12 SGT, working tree based on ce3def3; branch main. Full browser run 04
+completed with 37 passes, zero retries, 8.4m. The form-defaults batch preserves
+explicit saved values while filling fields absent from older saved configurations.
+Missing catalogue licence information is now labelled "Not recorded", not "Seed fixture".
+44 Python test files gained explicit fixture/return contracts on 152 test functions.
+The AST comparison confirms unchanged executable bodies and imported bindings.
+
+| Command / check | Exit / result | Evidence under logs/ |
+| --- | --- | --- |
+| Full pytest rerun 10 | 0; 1,059 passed, 13 warnings, 340.58s | overnight-backend-10.log |
+| Executable AST comparison | 0; 44 files preserve behavior/import bindings | overnight-test-types-ast.json |
+| Frontend workspace units | 0; 254 terminal + 5 shared = 259 | overnight-form-defaults-tests.log |
+| TypeScript / frontend lint | 0 / 0 | overnight-form-defaults-typecheck.log / overnight-form-defaults-lint.log |
+| Node 22 production build | 0 | overnight-form-defaults-build.log |
+| Frontend Docker build | 0 | overnight-form-defaults-docker-build.log |
+| Whole strict types, run 05 | 1; 1,897 distinct diagnostic lines / 126 files / 245 sources / nine groups | python-types-05/manifest.json |
+| Expanded full browser run 05 | 1; 33 passed / four duplicate-draft visual failures, 9.4m | overnight-browser-full-05.log |
+| Corrected draft visuals 1440px/390px | 0; two passed, 1.8m | overnight-visual-drafts-target.log |
+| Full browser run 06 | 0; 37 passed, zero retries, 8.9m | overnight-browser-full-06.log |
+| Backup/health/legacy archive tests | 0; 50 passed before final probe/publication refinements | overnight-backup-health-tests-02.log |
+| Real PostgreSQL/S3 integration 03 | 0; one passed, 6.55s, 31 upstream deprecation warnings | overnight-managed-backup-integration-03.log |
+| promtool configuration/rules check | 0 | overnight-backup-alerts-validation.log |
+| API/worker/report Docker builds | 0 | overnight-backup-docker-build.log |
+| Detached Compose refresh and --wait | 0; all ten long-running services healthy | overnight-backup-docker-up.log |
+
+Managed backup is implemented in infrastructure/scripts/managed_backup*.py and
+managed_postgres.py. CLI commands and limits are in docs/MANAGED_BACKUP.md.
+The first S3 check failed on list-vs-HTTP timestamp precision; comparison now
+uses header precision while retaining exact before/after inventory timestamps.
+The first restore stopped on MinIO's unsupported public-access-block call.
+Portable ACL/policy checks and actual unsigned listing/download rejection replace
+that call, not an ignored exception. Later backups correctly rejected constantly
+rewritten readiness objects. Exactly three disposable health-probe keys are now
+declared as excluded in the manifest; no financial or user-object prefix is excluded.
+
+The latest real archive contains 113 tables and four non-probe objects. Backup,
+PowerShell-wrapper verification and isolated restore all returned exit 0:
+overnight-managed-backup-create-04.log, overnight-managed-backup-ps-verify.log and
+overnight-managed-restore-04.log. SHA-256:
+8f9ff62482e5a23a5cb8debc1f4e35831a2ff940e757aef26351036837b2df92.
+Restore targets: knk_restore_b8d35d40d1b04133816886f487a2aad7 and
+knk-restore-b8d35d40d1b04133816886f487a2aad7. Active data was not a restore target.
+The separate integration test proves exact-decimal, snapshot-consistent restore
+despite a concurrent source update, and restores all five object classes including
+unreferenced retained content. Archive publication was subsequently changed to an
+exclusive hard link; the integration test 03 verifies that final behavior.
+
+The live API exposes knk_backup_state{state="VERIFIED"}=1 and all other backup states
+zero. Prometheus has loaded the knk-backup rules. This reports the most recent
+verification receipt, not a fresh archive checksum on every scrape. Alertmanager
+delivery, other dashboards, whole strict mypy and the 27-stage release command
+remain incomplete. Generated archives, credentials, screenshots and logs are ignored.
+
+## Compact Chart And Backup Checkpoint
+
+2026-09-12 SGT, ce3def3 plus the saved-form/managed-backup/chart working tree.
+Native chart labels retain a 10px font, suppress overlapping ticks and preserve
+two-decimal percentage precision. Risk-monitor parent rows retain their minimum
+track heights instead of allowing subsequent panels to cover them.
+
+| Command / check | Exit / result | Evidence under logs/ |
+| --- | --- | --- |
+| Full backend pytest with coverage, run 12 | 0; 1,097 passed, 13 warnings, 342.50s; 10,339/11,816 statements, 87.5% | overnight-backend-12.log / overnight-coverage-12.json |
+| Whole first-party Ruff / format | 0 / 0; 266 formatted files | overnight-backup-final-ruff.log / overnight-backup-final-format.log |
+| Scoped managed-backup strict types | 0 | overnight-backup-final-types-02.log |
+| Whole first-party strict types, run 06 | 1; 1,896 distinct diagnostics / 126 files / 245 sources / nine groups | python-types-06/manifest.json |
+| Full frontend units | 0; 256 terminal + 5 shared = 261 | overnight-chart-label-full-units.log |
+| TypeScript / lint | 0 / 0 | overnight-chart-label-typecheck-03.log / overnight-chart-label-lint.log |
+| Node 22 production build | 0 | overnight-chart-label-build.log |
+| Negative-control browser against old build | 1; new risk-panel containment assertion caught the known overflow | overnight-risk-layout-before.log |
+| Corrected 1366px/390px visual journeys | 0; two passed, 2.2m | overnight-risk-layout-after.log |
+| Final chart frontend Docker build | 0 | overnight-chart-label-docker-build.log |
+| Frontend Compose refresh | Wrapper exit 1 despite healthy Docker result; explicit native-exit-code verification returned 0 | overnight-chart-label-docker-up.log / overnight-chart-label-docker-up-02.log |
+| Full browser run 07 | Running; no full-pass claim for this revision yet | overnight-browser-full-07.log |
+
+The initial chart test needed the jsdom environment and an explicit value-axis
+type guard. Both were corrected without suppressing TypeScript diagnostics.
+Direct review of the corrected 1366px overview, performance, risk-monitor and
+risk screenshots confirms the label/containment changes. Screenshots are local
+evidence only; no all-pages/all-sizes visual-completion claim is made.

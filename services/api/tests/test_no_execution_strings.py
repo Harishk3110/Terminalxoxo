@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 
-def test_application_source_has_no_forbidden_broker_action_methods():
+def test_application_source_has_no_forbidden_broker_action_methods() -> None:
     root = Path(__file__).resolve().parents[3]
     forbidden = [
         "place" + "Order",

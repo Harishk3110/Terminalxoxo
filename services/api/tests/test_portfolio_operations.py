@@ -8,6 +8,7 @@ from app.object_storage import ObjectStorage
 from app.portfolio_operations import PortfolioLedgerService, TradeMonitorService
 from app.portfolio_valuation import PortfolioValuationService
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 from test_portfolio_accounting import accounting_session as accounting_session
 
 
@@ -82,7 +83,7 @@ def test_file_versions_and_lineage(drop, accounting_session):
     assert len(accounting_session.scalars(select(models.DatasetLineage)).all()) == 2
 
 
-def test_manual_trade_review_and_duplicate(accounting_session):
+def test_manual_trade_review_and_duplicate(accounting_session: Session) -> None:
     service = PortfolioLedgerService(accounting_session)
     data = {
         "transaction_type": "BUY",
@@ -112,8 +113,8 @@ def test_manual_trade_review_and_duplicate(accounting_session):
 
 
 def test_saved_etf_hedge_recalculates_covariance_on_the_same_marks(
-    accounting_session, seeded_market_clock
-):
+    accounting_session: Session, seeded_market_clock: None
+) -> None:
     from app.hedge_engine import HedgeRequest, HedgeService
 
     result = HedgeService(accounting_session).create(
@@ -187,7 +188,7 @@ def test_imported_fundamentals_do_not_fill_missing_from_demo(drop, accounting_se
         valuation(accounting_session, "AAPL")
 
 
-def test_factor_is_oos_separation_and_insufficient_history():
+def test_factor_is_oos_separation_and_insufficient_history() -> None:
     import numpy as np
     import pandas as pd
     from app.factor_statistics import factor_statistics

@@ -10,7 +10,7 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 
 | Domain | Classification | Outstanding acceptance |
 | --- | --- | --- |
-| Private terminal and local Docker | DEMO_FUNCTIONAL | Full release checks and report service |
+| Private terminal and local Docker | DEMO_FUNCTIONAL | Ten services including reports healthy; full release checks remain |
 | Ledger/NAV/performance | DEMO_FUNCTIONAL | Fresh full certification and attribution extensions |
 | Risk/stress/hedge | PARTIAL | Dated workflows pass; complete browser gate and nonlinear/covariance/rebalance scope remain |
 | Data Drop/agent | PARTIAL | Complete profile/consumer/Windows acceptance |
@@ -20,9 +20,10 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Options | PARTIAL | Historical OI/cones, multi-expiry and full portfolio scope |
 | Reports | PARTIAL | Owned queued exports verified; full financial-model content and rendered artifacts pending |
 | MFA/auth | PARTIAL | Trusted devices, provisioning and concurrency closure |
-| Monitoring/backup | PARTIAL | Ten dashboards and PostgreSQL/remote object restore |
+| Monitoring | PARTIAL | Ten dashboards and external alert delivery remain |
+| PostgreSQL/object backup | DEMO_FUNCTIONAL | Snapshot/hash/private isolated restore verified; operator-managed offsite storage and retention deletion |
 | Python quality | PARTIAL | Ruff/format pass; whole first-party strict runner now executes, but engine/API/test errors remain |
-| Browser release | PARTIAL | Populated full run: 36/37; upload handoff corrected and focused pass; full rerun underway |
+| Browser release | PARTIAL | Full run 06 passed 37/37; compact chart/risk-panel fixes pass targeted desktop/mobile journeys; full run 07 underway |
 | Release command / hosted deployment | MISSING | Script implementation / external account access |
 
 No report formatting, service health or test count certifies financial accuracy.

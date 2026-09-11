@@ -15,7 +15,7 @@ from app.report_sources import capture
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from openpyxl import load_workbook
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture
@@ -192,7 +192,7 @@ def test_report_health_requires_real_dependencies_and_recent_poll(reports, monke
     assert client.get("/health/ready").status_code == 503
 
 
-def test_busy_worker_readiness_is_bounded(monkeypatch):
+def test_busy_worker_readiness_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     import time
 
     from app import report_engine
@@ -274,7 +274,7 @@ def test_active_job_limit(reports, snapshot, monkeypatch):
     assert client.post("/api/v1/report-jobs", json={"kind": "portfolio"}).status_code == 429
 
 
-def test_real_portfolio_source_is_explicitly_dated(ledger_session):
+def test_real_portfolio_source_is_explicitly_dated(ledger_session: Session) -> None:
     from datetime import date
 
     snapshot = capture(
@@ -286,7 +286,7 @@ def test_real_portfolio_source_is_explicitly_dated(ledger_session):
     assert snapshot.calculation_version != "UNVERSIONED"
 
 
-def test_missing_analysis_does_not_fabricate_report(ledger_session):
+def test_missing_analysis_does_not_fabricate_report(ledger_session: Session) -> None:
     with pytest.raises(ValueError, match="completed matching"):
         capture(ledger_session, ReportRequest(kind="backtest"))
 
@@ -311,7 +311,7 @@ def test_expired_worker_cannot_publish_after_lease_is_lost(reports, snapshot, mo
         assert session.get(ReportJob, identifier).content_hash is None
 
 
-def test_saved_comparables_and_macro_capture(ledger_session):
+def test_saved_comparables_and_macro_capture(ledger_session: Session) -> None:
     run = models.AnalysisRun(
         kind="comparables",
         name="Saved peers",

@@ -23,12 +23,15 @@ from app.portfolio_operations import PortfolioReconciliationService
 from app.portfolio_seed import profile_for
 from app.portfolio_valuation import PortfolioValuationService
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
 from starlette.requests import Request
 from test_portfolio_accounting import accounting_session as accounting_session
 from test_portfolio_operations import drop as drop
 
 
-def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(accounting_session):
+def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(
+    accounting_session: Session,
+) -> None:
     session = accounting_session
     main = profile_for(session)
     agent = models.LocalAgent(
@@ -151,7 +154,7 @@ def test_paper_snapshot_scopes_precedence_missing_fx_and_fill_approval(accountin
     )
 
 
-def test_broker_rejects_live_account_and_future_timestamp(accounting_session):
+def test_broker_rejects_live_account_and_future_timestamp(accounting_session: Session) -> None:
     session = accounting_session
     agent = models.LocalAgent(
         name="test",

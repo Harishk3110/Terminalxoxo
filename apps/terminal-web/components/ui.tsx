@@ -776,15 +776,21 @@ export function LineChart({
           type: "category",
           data: rows.map((r) => String(r.date)),
           axisLine: { lineStyle: { color: COLORS.grid } },
-          axisLabel: { formatter: (v: string) => v.slice(5), fontSize: 10 },
+          axisLabel: {
+            formatter: (v: string) => v.slice(5),
+            fontSize: 10,
+            hideOverlap: true,
+          },
         },
         yAxis: {
           type: "value",
           scale: true,
           splitLine: { lineStyle: { color: COLORS.grid } },
           axisLabel: {
+            fontSize: 10,
+            hideOverlap: true,
             formatter: percent
-              ? (v: number) => `${(v * 100).toFixed(0)}%`
+              ? (v: number) => pct(v).replace(/^\+/, "")
               : undefined,
           },
         },

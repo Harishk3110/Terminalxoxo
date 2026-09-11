@@ -31,37 +31,18 @@ import {
   type Column,
 } from "./ui";
 import { PageTitle, useApi } from "./core-pages";
-import { initialBacktestSource } from "./backtest-source";
+import { backtestForm } from "./backtest-source";
 import type { Row, Run, UploadPreview, MacroDashboardPayload } from "./types";
 
 export function BacktestPage() {
   const { bootstrap, config, setConfig, activeTab } = useTerminal();
   const portfolio = usePortfolio();
   const client = useQueryClient();
-  const [form, setForm] = useTabState("backtest-config", {
-    ...initialBacktestSource(activeTab),
-    additional_symbols: "",
-    source_mode: "SOURCE_AWARE",
-    base_currency: "SGD",
-    strategy: "SMA",
-    weighting: "EQUAL",
-    direction: "LONG_ONLY",
-    frequency: "WEEKLY",
-    gross_limit: 0.95,
-    position_limit: 0.95,
-    sector_limit: 1,
-    minimum_cash: 0.05,
-    top_n: 3,
-    spread_bps: 0,
-    short_borrow_rate: 0.03,
-    fast: 20,
-    slow: 50,
-    capital: 0,
-    fee_bps: 5,
-    slippage_bps: 5,
-    start: "2020-01-01",
-    end: "",
-  });
+  const [savedForm, setForm] = useTabState(
+    "backtest-config",
+    backtestForm(activeTab),
+  );
+  const form = backtestForm(activeTab, savedForm);
   const [runId, setRunId] = useTabState(
     "backtest-run",
     activeTab.route.startsWith("/backtests/run/")
@@ -1097,7 +1078,7 @@ export function CataloguePage({ route }: { route: string }) {
               <dt>Content hash</dt>
               <dd>{version.hash}</dd>
               <dt>Licence</dt>
-              <dd>{version.schema.licence ?? "Seed fixture"}</dd>
+              <dd>{version.schema.licence ?? "Not recorded"}</dd>
               <dt>Availability</dt>
               <dd>Point-in-time unverified</dd>
             </dl>

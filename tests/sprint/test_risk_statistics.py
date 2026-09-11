@@ -18,7 +18,7 @@ def inputs():
     return prices, pd.Series({"A": 0.4, "B": -0.2})
 
 
-def test_risk_models_are_repeatable_and_components_reconcile():
+def test_risk_models_are_repeatable_and_components_reconcile() -> None:
     prices, weights = inputs()
     first = calculate_risk(prices, weights, 100000, "SPY")
     second = calculate_risk(prices, weights, 100000, "SPY")
@@ -64,7 +64,7 @@ def test_incomplete_histories_do_not_become_valid_risk(failure):
     assert result.metrics["volatility"] is None
 
 
-def test_missing_benchmark_preserves_security_risk_but_not_beta():
+def test_missing_benchmark_preserves_security_risk_but_not_beta() -> None:
     prices, weights = inputs()
     prices.loc[prices.index[10], "SPY"] = np.nan
     result = calculate_risk(prices, weights, 100000, "SPY")
@@ -72,7 +72,7 @@ def test_missing_benchmark_preserves_security_risk_but_not_beta():
     assert result.metrics["beta"] is None
 
 
-def test_constant_returns_have_zero_volatility_without_fake_beta():
+def test_constant_returns_have_zero_volatility_without_fake_beta() -> None:
     prices = pd.DataFrame({"A": [100.0] * 100}, index=pd.bdate_range(date(2026, 1, 1), periods=100))
     result = calculate_risk(prices, pd.Series({"A": 1.0}), 100000, "A")
     assert result.metrics["volatility"] == 0
@@ -81,7 +81,7 @@ def test_constant_returns_have_zero_volatility_without_fake_beta():
     assert result.positions["A"]["risk_contribution"] is None
 
 
-def test_settings_do_not_allow_unbounded_work_or_nonfinite_estimation():
+def test_settings_do_not_allow_unbounded_work_or_nonfinite_estimation() -> None:
     with pytest.raises(ValueError):
         RiskSettings(simulations=100000000)
     with pytest.raises(ValueError):

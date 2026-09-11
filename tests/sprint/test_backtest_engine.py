@@ -46,7 +46,7 @@ def test_approved_strategy_runs_real_offline_fills(strategy):
     )
 
 
-def test_backtest_is_deterministic_cost_sensitive_and_next_bar():
+def test_backtest_is_deterministic_cost_sensitive_and_next_bar() -> None:
     data = frames()
     settings = BacktestSettings(fast=5, slow=30, fee_bps=0, slippage_bps=0)
     result = simulate(data, settings)
@@ -61,7 +61,7 @@ def test_backtest_is_deterministic_cost_sensitive_and_next_bar():
     assert costly["metrics"]["commission"] > 0
 
 
-def test_future_prices_cannot_change_earlier_signals_or_equity():
+def test_future_prices_cannot_change_earlier_signals_or_equity() -> None:
     data = frames()
     settings = BacktestSettings(fast=5, slow=30)
     before = simulate(data, settings)
@@ -75,7 +75,7 @@ def test_future_prices_cannot_change_earlier_signals_or_equity():
     )
 
 
-def test_missing_date_grid_rejected_and_short_statistics_null():
+def test_missing_date_grid_rejected_and_short_statistics_null() -> None:
     data = frames(50)
     result = simulate(data, BacktestSettings(fast=5, slow=20))
     assert result["metrics"]["cagr"] is None and result["metrics"]["sharpe"] is None
@@ -84,14 +84,14 @@ def test_missing_date_grid_rejected_and_short_statistics_null():
         simulate(data, BacktestSettings(fast=5, slow=20))
 
 
-def test_risk_parity_equalises_diagonal_risk_contributions():
+def test_risk_parity_equalises_diagonal_risk_contributions() -> None:
     covariance = np.diag([0.01, 0.04, 0.09])
     weights = risk_parity(covariance)
     contribution = weights * (covariance @ weights)
     assert contribution / contribution.sum() == pytest.approx([1 / 3] * 3, abs=1e-5)
 
 
-def test_long_short_includes_signed_positions():
+def test_long_short_includes_signed_positions() -> None:
     result = simulate(
         frames(),
         BacktestSettings(
@@ -103,7 +103,7 @@ def test_long_short_includes_signed_positions():
     )
 
 
-def test_cash_and_sector_caps_apply_to_intended_weights():
+def test_cash_and_sector_caps_apply_to_intended_weights() -> None:
     result = simulate(
         frames(),
         BacktestSettings(

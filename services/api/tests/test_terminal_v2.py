@@ -17,7 +17,7 @@ client = TestClient(app)
 pytestmark = pytest.mark.usefixtures("seeded_market_clock")
 
 
-def test_registry_is_unique_and_bootstrap_matches():
+def test_registry_is_unique_and_bootstrap_matches() -> None:
     payload = client.get("/api/v1/terminal/bootstrap").json()
     assert len(FUNCTIONS) >= 100
     assert len({f["mnemonic"] for f in FUNCTIONS}) == len(FUNCTIONS)
@@ -28,7 +28,7 @@ def test_registry_is_unique_and_bootstrap_matches():
     )
 
 
-def test_workspace_round_trip():
+def test_workspace_round_trip() -> None:
     configuration = {
         "tabs": [{"id": "a", "title": "STRESS", "route": "/stress-tests"}],
         "tabStates": {"a": {"equity_shock": -17}},
@@ -51,7 +51,7 @@ def test_workspace_round_trip():
     assert client.post(f"/api/v1/workspaces/{created['id']}/delete").status_code == 200
 
 
-def test_risk_and_stress_are_recomputed_and_reconcile():
+def test_risk_and_stress_are_recomputed_and_reconcile() -> None:
     with SessionLocal() as session:
         data = portfolio_analytics(session)
         a = stress_result(session, {"_portfolio": data, "equity_shock": -10})
@@ -68,7 +68,7 @@ def test_risk_and_stress_are_recomputed_and_reconcile():
             stress_result(session, {"_portfolio": data, "equity_shock": float("nan")})
 
 
-def test_run_lifecycle_and_immutable_inputs(monkeypatch):
+def test_run_lifecycle_and_immutable_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.terminal_api.launch_worker", lambda run_id: None)
     queued = client.post(
         "/api/v1/terminal/runs",
@@ -92,7 +92,7 @@ def test_run_lifecycle_and_immutable_inputs(monkeypatch):
     assert book["Summary"]["C2"].value == "=A2+B2"
 
 
-def test_cancelled_run_never_publishes_a_result(monkeypatch):
+def test_cancelled_run_never_publishes_a_result(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.terminal_api.launch_worker", lambda run_id: None)
     run = client.post(
         "/api/v1/terminal/runs", json={"kind": "stress", "name": "Cancel test"}
@@ -102,7 +102,7 @@ def test_cancelled_run_never_publishes_a_result(monkeypatch):
     assert client.get(f"/api/v1/terminal/runs/{run['id']}").json()["result"] is None
 
 
-def test_upload_validation_import_and_backtest(monkeypatch):
+def test_upload_validation_import_and_backtest(monkeypatch: pytest.MonkeyPatch) -> None:
     import pandas as pd
 
     dates = pd.date_range("2024-01-01", periods=240, freq="B")
@@ -150,7 +150,7 @@ def test_upload_validation_import_and_backtest(monkeypatch):
     assert result["result"]["metrics"]["trade_count"] > 0
 
 
-def test_invalid_upload_cannot_be_imported():
+def test_invalid_upload_cannot_be_imported() -> None:
     response = client.post(
         "/api/v1/uploads/preview",
         files={"file": ("bad.csv", "date,close\ninvalid,-20", "text/csv")},
@@ -174,7 +174,7 @@ def test_malformed_files_return_validation_error(filename, body):
     )
 
 
-def test_valuation_changes_and_rejects_invalid_discount_rate():
+def test_valuation_changes_and_rejects_invalid_discount_rate() -> None:
     with SessionLocal() as session:
         low = valuation(session, "AAPL", wacc=0.08)
         high = valuation(session, "AAPL", wacc=0.15)
@@ -184,7 +184,7 @@ def test_valuation_changes_and_rejects_invalid_discount_rate():
             valuation(session, "AAPL", wacc=0.02, terminal_growth=0.03)
 
 
-def test_concurrent_first_load_of_synthetic_financials():
+def test_concurrent_first_load_of_synthetic_financials() -> None:
     from concurrent.futures import ThreadPoolExecutor
 
     with SessionLocal() as session:
@@ -201,7 +201,7 @@ def test_concurrent_first_load_of_synthetic_financials():
     assert all(response.json()["items"] == responses[0].json()["items"] for response in responses)
 
 
-def test_oversell_is_rejected():
+def test_oversell_is_rejected() -> None:
     response = client.post(
         "/api/v1/portfolios/default/transactions",
         json={
@@ -217,7 +217,7 @@ def test_oversell_is_rejected():
     assert response.status_code == 400
 
 
-def test_storage_rejects_path_traversal():
+def test_storage_rejects_path_traversal() -> None:
     with pytest.raises(ValueError):
         ObjectStorage().get_bytes("../config.py")
 
@@ -231,7 +231,7 @@ def test_private_api_requires_authentication_in_every_environment(monkeypatch, e
     assert client.get("/api/v1/public/content").status_code == 404
 
 
-def test_backtest_costs_affect_results():
+def test_backtest_costs_affect_results() -> None:
     with SessionLocal() as session:
         cheap = backtest_result(
             session,

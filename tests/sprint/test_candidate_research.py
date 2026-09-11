@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from app import models
 from app.database import get_session
@@ -5,10 +7,11 @@ from app.desks_api import CandidateConfiguration, router
 from app.research_inputs import ResearchInput, pin_input
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 from test_research_inputs import seed_bars
 
 
-def test_candidate_boundaries_cannot_overlap():
+def test_candidate_boundaries_cannot_overlap() -> None:
     with pytest.raises(ValueError, match="chronological"):
         CandidateConfiguration(
             training_start="2024-01-01", training_end="2024-12-31", validation_start="2024-06-01"
@@ -16,8 +19,8 @@ def test_candidate_boundaries_cannot_overlap():
 
 
 def test_candidate_review_preserves_prior_decisions_and_matches_versions(
-    ledger_session, session_token, monkeypatch, tmp_path
-):
+    ledger_session: Session, session_token: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "object_storage_local_dir", str(tmp_path))

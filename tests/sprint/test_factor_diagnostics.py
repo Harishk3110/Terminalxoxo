@@ -32,7 +32,7 @@ def test_factor_diagnostics_are_measured_and_purged(factor):
     )
 
 
-def test_unknown_fundamental_factor_never_backfills_current_snapshot():
+def test_unknown_fundamental_factor_never_backfills_current_snapshot() -> None:
     data = factor_statistics(prices(), 21, 5, "VALUE")
     assert data["state"] == "INSUFFICIENT DATA"
     assert data["ic"] == []

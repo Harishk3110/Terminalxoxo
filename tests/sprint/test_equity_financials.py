@@ -1,7 +1,7 @@
 from app.equity_financials import comparable_statistics, ratios, statements
 
 
-def test_ttm_needs_consecutive_quarters_and_keeps_point_in_time_balances():
+def test_ttm_needs_consecutive_quarters_and_keeps_point_in_time_balances() -> None:
     data = {
         "items": [
             {
@@ -22,7 +22,7 @@ def test_ttm_needs_consecutive_quarters_and_keeps_point_in_time_balances():
     assert statements(data, "TTM") == []
 
 
-def test_ratios_missing_negative_denominators_and_average_balances():
+def test_ratios_missing_negative_denominators_and_average_balances() -> None:
     row = {
         "year": "2025",
         "revenue": 100,
@@ -46,7 +46,7 @@ def test_ratios_missing_negative_denominators_and_average_balances():
     assert result["forward_pe"] is None
 
 
-def test_comps_exclude_missing_multiples_and_translate_ev_to_equity():
+def test_comps_exclude_missing_multiples_and_translate_ev_to_equity() -> None:
     peers = [
         {"symbol": str(i), "ev_sales": value} for i, value in enumerate([1, 2, 3, 4, 100, None])
     ]

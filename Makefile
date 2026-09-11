@@ -1,4 +1,9 @@
-.PHONY: bootstrap dev stop test test-unit test-integration test-e2e lint format typecheck migrate seed reset-demo backfill backup restore verify-backup security-check build health broker-agent-build
+.PHONY: bootstrap dev stop test test-unit test-integration test-e2e lint format typecheck migrate seed reset-demo backfill backup backup-sqlite restore verify-backup verify-backup-sqlite restore-test security-check build health broker-agent-build
+
+PYTHON ?= python
+BACKUP_ARGS ?=
+BACKUP_ARCHIVE ?=
+BACKUP_SHA256 ?=
 
 bootstrap:
 	corepack prepare pnpm@9.15.4 --activate
@@ -44,13 +49,22 @@ backfill:
 	pnpm backfill
 
 backup:
+	$(PYTHON) -m infrastructure.scripts.managed_backup backup $(BACKUP_ARGS)
+
+backup-sqlite:
 	pnpm backup
 
 restore:
 	pnpm restore
 
 verify-backup:
-	python infrastructure/scripts/verify_backup.py
+	$(PYTHON) -m infrastructure.scripts.managed_backup verify --archive "$(BACKUP_ARCHIVE)"
+
+verify-backup-sqlite:
+	$(PYTHON) infrastructure/scripts/verify_backup.py "$(BACKUP_ARCHIVE)"
+
+restore-test:
+	$(PYTHON) -m infrastructure.scripts.managed_backup restore-test --archive "$(BACKUP_ARCHIVE)" --sha256 "$(BACKUP_SHA256)" $(BACKUP_ARGS)
 
 security-check:
 	pnpm security-check

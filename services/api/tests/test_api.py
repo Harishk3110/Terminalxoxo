@@ -6,7 +6,7 @@ client = TestClient(app)
 pytestmark = pytest.mark.usefixtures("seeded_market_clock")
 
 
-def test_environment_badges_are_explicit():
+def test_environment_badges_are_explicit() -> None:
     response = client.get("/api/v1/environment")
     assert response.status_code == 200
     payload = response.json()
@@ -14,7 +14,7 @@ def test_environment_badges_are_explicit():
     assert payload["paper_only"] is True
 
 
-def test_public_content_route_is_removed():
+def test_public_content_route_is_removed() -> None:
     response = client.get("/api/v1/public/content")
     assert response.status_code == 404
     text = response.text.lower()
@@ -23,7 +23,7 @@ def test_public_content_route_is_removed():
     assert "provider_secret" not in text
 
 
-def test_portfolio_is_database_backed_and_demo_labelled():
+def test_portfolio_is_database_backed_and_demo_labelled() -> None:
     response = client.get("/api/v1/portfolios/default")
     assert response.status_code == 200
     payload = response.json()
@@ -33,7 +33,7 @@ def test_portfolio_is_database_backed_and_demo_labelled():
     assert all(row["quality"] == "DEMO DATA" for row in payload["positions"])
 
 
-def test_macro_dashboard_returns_persisted_series():
+def test_macro_dashboard_returns_persisted_series() -> None:
     response = client.get("/api/v1/macro/dashboard")
     assert response.status_code == 200
     payload = response.json()
@@ -43,7 +43,7 @@ def test_macro_dashboard_returns_persisted_series():
     assert fedfunds["quality"] == "DEMO DATA"
 
 
-def test_add_manual_transaction_recalculates_portfolio():
+def test_add_manual_transaction_recalculates_portfolio() -> None:
     before = client.get("/api/v1/portfolios/default").json()["portfolio"]["nav"]
     response = client.post(
         "/api/v1/portfolios/default/transactions",
@@ -64,7 +64,7 @@ def test_add_manual_transaction_recalculates_portfolio():
     assert after != before
 
 
-def test_fred_status_truthful_without_credentials():
+def test_fred_status_truthful_without_credentials() -> None:
     response = client.get("/api/v1/providers/fred/status")
     assert response.status_code == 200
     payload = response.json()

@@ -1,10 +1,39 @@
 import { describe, expect, it } from "vitest";
 import {
+  backtestForm,
   initialBacktestSource,
   normalizedPreviewSecurity,
 } from "../components/backtest-source";
 
 describe("file backtest launch", () => {
+  it("fills missing persisted controls without changing saved inputs", () => {
+    const saved = { symbol: "MSFT", fast: 10, start: "2025-01-01" };
+    const form = backtestForm({ route: "/backtests" }, saved);
+    expect(form).toMatchObject({
+      ...saved,
+      additional_symbols: "",
+      fee_bps: 5,
+      slippage_bps: 5,
+      frequency: "WEEKLY",
+    });
+    expect(saved).toEqual({ symbol: "MSFT", fast: 10, start: "2025-01-01" });
+  });
+  it("preserves explicitly zero assumptions", () => {
+    expect(
+      backtestForm(
+        { route: "/backtests" },
+        { fee_bps: 0, slippage_bps: 0, minimum_cash: 0 },
+      ),
+    ).toMatchObject({ fee_bps: 0, slippage_bps: 0, minimum_cash: 0 });
+  });
+  it("preserves an explicit unresolved security instead of selecting a benchmark", () => {
+    expect(
+      backtestForm(
+        { route: "/backtests/dataset/id", security: "QQQ" },
+        { symbol: "" },
+      ).symbol,
+    ).toBe("");
+  });
   it("pins the uploaded version and resolved security", () => {
     expect(
       initialBacktestSource({

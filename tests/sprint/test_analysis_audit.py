@@ -1,14 +1,16 @@
+import pytest
 from app import models
 from app.database import get_session
 from app.terminal_api import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 def test_queue_and_cancel_require_an_actor_and_retain_audit(
-    ledger_session, session_token, monkeypatch
-):
+    ledger_session: Session, session_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr("app.terminal_api.launch_worker", lambda _id: None)
     app = FastAPI()
     app.include_router(router)

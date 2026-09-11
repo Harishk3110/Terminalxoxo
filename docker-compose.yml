@@ -76,6 +76,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: http://minio:9000
       OBJECT_STORAGE_BUCKET: knk-terminal-local
+      KNK_BACKUP_DIR: /var/lib/knk-backups
+    volumes:
+      - ${KNK_LOCAL_BACKUP_DIR:-./infrastructure/backups}:/var/lib/knk-backups:ro
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -189,6 +192,7 @@ services:
     image: prom/prometheus:v2.55.1
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/backup-alerts.yml:/etc/prometheus/backup-alerts.yml:ro
     ports:
       - "127.0.0.1:9090:9090"
     healthcheck:

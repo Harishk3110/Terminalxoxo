@@ -18,7 +18,7 @@ def test_seeded_paths_probabilities_and_fan(method):
     assert sum(row["count"] for row in result["terminal_distribution"]) == 100
 
 
-def test_constant_returns_and_ineligible_history():
+def test_constant_returns_and_ineligible_history() -> None:
     data = monte_carlo([0.001] * 100, MonteCarloSettings(paths=100, horizon=10))
     assert data["metrics"]["median_return"] == pytest.approx(1.001**10 - 1)
     assert data["metrics"]["drawdown_probability"] == 0

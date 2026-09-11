@@ -6,7 +6,46 @@ export async function populateVisualAnalysis(
   page: Page,
   route: string,
   backtestId: string,
+  datasetId: string,
 ) {
+  if (route === "data-drop") {
+    const width = page.viewportSize()!.width;
+    await page.getByLabel("Upload data files").setInputFiles({
+      name: `QQQ_2026-01-06_visual-draft-${width}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        `Date,Open,High,Low,Close,Volume\n2026-01-05,100,102,99,101,${width}\n2026-01-06,101,103,100,102,${width + 1}\n`,
+      ),
+    });
+    await expect(
+      page.getByRole("tab", { name: "Preview", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel(/^file-preview-.* table$/)).toContainText(
+      "2026-01-06",
+    );
+    await expect(
+      page.getByLabel("Approve this validated version"),
+    ).not.toBeChecked();
+  }
+  if (route === "data-catalogue") {
+    expect(datasetId).toBeTruthy();
+    await page.goto(`/data-catalogue/${datasetId}`);
+    await expect(page.getByLabel("dataset-version table")).toContainText("SPY");
+    await expect(page.getByLabel("Dataset version")).not.toHaveValue("");
+  }
+  if (route === "backtests") {
+    await expect(
+      page.getByLabel("Backtest currency", { exact: true }),
+    ).toHaveValue("SGD");
+    await expect(
+      page.getByLabel("Backtest security", { exact: true }),
+    ).toHaveValue("SPY");
+    const numbers = page.getByRole("spinbutton", { name: /^Backtest / });
+    await expect(numbers).toHaveCount(12);
+    for (const input of await numbers.all()) {
+      await expect(input).not.toHaveValue("");
+    }
+  }
   if (route === "alpha") {
     await page.getByLabel("Alpha return source").selectOption(backtestId);
     await page

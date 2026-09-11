@@ -3,6 +3,7 @@
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
 from app import models, portfolio_valuation
 from app.portfolio_valuation import PortfolioValuationService
 from sqlalchemy import select
@@ -19,7 +20,7 @@ class Clock(datetime):
 
 def test_historical_run_is_reused_across_wall_clock_minute_and_day_changes(
     ledger_session: Session,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(portfolio_valuation, "datetime", Clock)
     monkeypatch.setattr(Clock, "instant", datetime(2026, 1, 20, 12, 59, 59, tzinfo=UTC))
@@ -35,7 +36,7 @@ def test_historical_run_is_reused_across_wall_clock_minute_and_day_changes(
 
 
 def test_current_day_freshness_still_uses_a_minute_epoch(
-    ledger_session: Session, monkeypatch
+    ledger_session: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(portfolio_valuation, "datetime", Clock)
     monkeypatch.setattr(Clock, "instant", datetime(2026, 1, 20, 12, 59, 59, tzinfo=UTC))

@@ -4,6 +4,7 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -79,6 +80,9 @@ REQUEST_COUNT = Counter(
 )
 REQUEST_LATENCY = Histogram("knk_api_request_seconds", "API request latency", ["method", "path"])
 JOB_COUNT = Gauge("knk_jobs_by_state", "Jobs by state", ["state"])
+BACKUP_STATE = Gauge(
+    "knk_backup_state", "Last recorded backup verification or attempt state", ["state"]
+)
 DATA_RECORDS_INGESTED = Counter(
     "knk_data_records_ingested_total", "Data records ingested", ["provider", "dataset"]
 )
@@ -307,6 +311,11 @@ def metrics(session: Session = SESSION_DEPENDENCY):
     )
     for state in JOB_STATES:
         JOB_COUNT.labels(state).set(counts.get(state, 0))
+    from .backup_health import backup_state
+
+    backup = backup_state(Path(settings.backup_dir))
+    for state in ("NOT_VERIFIED", "VERIFIED", "STALE", "FAILED"):
+        BACKUP_STATE.labels(state).set(int(backup["state"] == state))
     return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 

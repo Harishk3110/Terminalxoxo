@@ -1,0 +1,18 @@
+groups:
+  - name: knk-backup
+    rules:
+      - alert: KnKBackupNotVerified
+        expr: knk_backup_state{state=~"NOT_VERIFIED|STALE|FAILED"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "KnK backup is not recently verified"
+          description: "Inspect the latest backup attempt and receipt. Do not restore over the active database."
+      - alert: KnKBackupSignalMissing
+        expr: absent(knk_backup_state{job="knk-api"})
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "KnK API backup-state metric is missing"

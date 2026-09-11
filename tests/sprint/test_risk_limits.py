@@ -4,6 +4,7 @@ import pytest
 from app import models
 from app.risk_limits import LimitRequest, RiskLimitService
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 
 def data(value):
@@ -16,7 +17,9 @@ def data(value):
     }
 
 
-def test_breach_persists_once_missing_is_not_clear_and_recovery_is_audited(ledger_session):
+def test_breach_persists_once_missing_is_not_clear_and_recovery_is_audited(
+    ledger_session: Session,
+) -> None:
     service = RiskLimitService(ledger_session)
     service.configure(
         "book",
@@ -48,7 +51,7 @@ def test_breach_persists_once_missing_is_not_clear_and_recovery_is_audited(ledge
     assert ledger_session.scalar(select(func.count(models.RiskBreach.id))) == 1
 
 
-def test_loss_limits_compare_positive_loss_magnitudes(ledger_session):
+def test_loss_limits_compare_positive_loss_magnitudes(ledger_session: Session) -> None:
     service = RiskLimitService(ledger_session)
     service.configure(
         "book",
@@ -60,7 +63,9 @@ def test_loss_limits_compare_positive_loss_magnitudes(ledger_session):
     assert Decimal(result[0]["value"]) == 150
 
 
-def test_disabling_limit_preserves_evidence_and_configuration_requires_valid_metric(ledger_session):
+def test_disabling_limit_preserves_evidence_and_configuration_requires_valid_metric(
+    ledger_session: Session,
+) -> None:
     service = RiskLimitService(ledger_session)
     request = LimitRequest(metric="gross_exposure", threshold=".5", reason="Review exposure limit")
     row = service.configure("book", request, None)

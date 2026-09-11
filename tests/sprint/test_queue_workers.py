@@ -4,6 +4,7 @@ import pytest
 from app import models, queue_worker, terminal_worker
 from app.provider_data import NAMES
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 def sessions(monkeypatch, ledger_session):
@@ -11,7 +12,9 @@ def sessions(monkeypatch, ledger_session):
     monkeypatch.setattr(terminal_worker, "SessionLocal", lambda: nullcontext(ledger_session))
 
 
-def test_quant_claim_is_idempotent_and_cancelled_runs_are_not_executed(monkeypatch, ledger_session):
+def test_quant_claim_is_idempotent_and_cancelled_runs_are_not_executed(
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     sessions(monkeypatch, ledger_session)
     monkeypatch.setattr("app.worker_health.heartbeat", lambda key: nullcontext())
     run = models.AnalysisRun(
@@ -69,7 +72,9 @@ async def test_data_job_records_actual_probe_outcome(monkeypatch, ledger_session
 
 
 @pytest.mark.anyio
-async def test_unknown_data_job_fails_without_simulated_success(monkeypatch, ledger_session):
+async def test_unknown_data_job_fails_without_simulated_success(
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     sessions(monkeypatch, ledger_session)
     job = models.IngestionJob(
         job_type="unimplemented", status="QUEUED", parameters={}, correlation_id="test"
@@ -82,7 +87,9 @@ async def test_unknown_data_job_fails_without_simulated_success(monkeypatch, led
 
 
 @pytest.mark.anyio
-async def test_invalid_provider_job_actor_fails_before_network_call(monkeypatch, ledger_session):
+async def test_invalid_provider_job_actor_fails_before_network_call(
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     sessions(monkeypatch, ledger_session)
     job = models.IngestionJob(
         job_type="provider_health_check",
@@ -104,7 +111,9 @@ async def test_invalid_provider_job_actor_fails_before_network_call(monkeypatch,
 
 
 @pytest.mark.anyio
-async def test_missing_or_finished_data_jobs_are_not_claimed(monkeypatch, ledger_session):
+async def test_missing_or_finished_data_jobs_are_not_claimed(
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     sessions(monkeypatch, ledger_session)
     job = models.IngestionJob(
         job_type="provider_health_check", status="SUCCEEDED", parameters={}, correlation_id="test"

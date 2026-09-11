@@ -386,7 +386,12 @@ for (const viewport of [
       await expect(page.getByTestId("terminal-shell")).toBeVisible();
       await expect(page.locator(".loading-state")).toHaveCount(0);
       await expect(page.locator(".error-state")).toHaveCount(0);
-      await populateVisualAnalysis(page, route, backtest.id);
+      await populateVisualAnalysis(
+        page,
+        route,
+        backtest.id,
+        backtest.parameters.dataset_id,
+      );
       await expect(page.locator(".error-state")).toHaveCount(0);
       await expect(page.locator(".page-toolbar h1")).toBeVisible();
       await expect(page.getByTestId("security-context")).toBeVisible();
@@ -407,6 +412,24 @@ for (const viewport of [
         await expect(
           page.getByLabel("Hedge target", { exact: true }),
         ).toBeVisible();
+      }
+      if (route === "risk-trade-monitor") {
+        const contained = await page
+          .locator(
+            ".risk-trade-dashboard-grid > .terminal-panel, .risk-exposure-grid > .terminal-panel, .risk-policy-grid > .terminal-panel",
+          )
+          .evaluateAll((panels) =>
+            panels.map((panel) => {
+              const bounds = panel.getBoundingClientRect();
+              const parent = panel.parentElement!.getBoundingClientRect();
+              return (
+                bounds.top >= parent.top - 1 &&
+                bounds.bottom <= parent.bottom + 1
+              );
+            }),
+          );
+        expect(contained).toHaveLength(6);
+        expect(contained.every(Boolean)).toBe(true);
       }
       const bounds = await page.evaluate(() => ({
         width: innerWidth,

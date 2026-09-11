@@ -40,12 +40,12 @@ def test_anonymous_investment_requests_are_rejected(monkeypatch, environment, pa
     assert "KNK_MAIN" not in response.text
 
 
-def test_no_publishing_route_is_registered():
+def test_no_publishing_route_is_registered() -> None:
     paths = [getattr(route, "path", "") for route in app.routes]
     assert not any("/public/" in path or "publish" in path for path in paths)
 
 
-def test_hosted_admin_setup_is_not_public_registration(monkeypatch):
+def test_hosted_admin_setup_is_not_public_registration(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "knk_env", "production-paper")
     with TestClient(app) as anonymous:
         response = anonymous.post(
@@ -58,7 +58,7 @@ def test_hosted_admin_setup_is_not_public_registration(monkeypatch):
     assert response.status_code == 403
 
 
-def test_sign_in_logout_revocation_expiry_and_inactive_user():
+def test_sign_in_logout_revocation_expiry_and_inactive_user() -> None:
     email, password = f"login-{secrets.token_hex(6)}@example.test", secrets.token_urlsafe(24)
     with SessionLocal() as session:
         user = models.User(email=email, password_hash=hasher.hash(password), role="ADMIN")

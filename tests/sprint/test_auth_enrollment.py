@@ -1,5 +1,6 @@
 import secrets
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pyotp
 import pytest
@@ -249,7 +250,9 @@ def test_totp_counter_persists_and_does_not_accept_older_steps(account):
     assert consume_totp(session, user.id, secret, otp.at(later), later)
 
 
-def test_local_key_is_persistent_and_wrong_key_fails_closed(monkeypatch, tmp_path):
+def test_local_key_is_persistent_and_wrong_key_fails_closed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.delenv("AUTH_SECRET", raising=False)
     path = tmp_path / "private" / "auth.key"
     monkeypatch.setenv("KNK_AUTH_KEY_FILE", str(path))
@@ -262,7 +265,9 @@ def test_local_key_is_persistent_and_wrong_key_fails_closed(monkeypatch, tmp_pat
         decrypt_secret(value)
 
 
-def test_production_rejects_missing_key_and_legacy_plaintext(monkeypatch):
+def test_production_rejects_missing_key_and_legacy_plaintext(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "knk_env", "production-paper")

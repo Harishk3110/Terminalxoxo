@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 client = TestClient(app)
 
 
-def test_dataset_upload_infers_csv_schema():
+def test_dataset_upload_infers_csv_schema() -> None:
     response = client.post(
         "/api/v1/uploads",
         files={"file": ("prices.csv", b"date,ticker,close\n2026-09-05,AAPL,231.42\n", "text/csv")},
@@ -15,7 +15,7 @@ def test_dataset_upload_infers_csv_schema():
     assert [column["name"] for column in payload["columns"]] == ["date", "ticker", "close"]
 
 
-def test_report_generation_creates_workbook_object():
+def test_report_generation_creates_workbook_object() -> None:
     response = client.post("/api/v1/reports/portfolio-xlsx")
     assert response.status_code == 200
     payload = response.json()
@@ -23,7 +23,7 @@ def test_report_generation_creates_workbook_object():
     assert payload["size_bytes"] > 1000
 
 
-def test_pine_export_contains_strategy_rules_without_execution_claims():
+def test_pine_export_contains_strategy_rules_without_execution_claims() -> None:
     response = client.get("/api/v1/pine/export")
     assert response.status_code == 200
     payload = response.json()

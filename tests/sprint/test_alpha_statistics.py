@@ -14,7 +14,7 @@ def sample():
     return returns, factors
 
 
-def test_hac_regression_recovers_alpha_betas_and_intervals():
+def test_hac_regression_recovers_alpha_betas_and_intervals() -> None:
     returns, factors = sample()
     result = regression(returns, factors, AlphaSettings())
     assert result["state"] == "AVAILABLE"
@@ -30,7 +30,7 @@ def test_hac_regression_recovers_alpha_betas_and_intervals():
     assert result["p_value"] < 0.05 and result["r_squared"] > 0.9
 
 
-def test_rolling_alpha_does_not_see_future_and_excess_is_separate():
+def test_rolling_alpha_does_not_see_future_and_excess_is_separate() -> None:
     returns, factors = sample()
     first = alpha_analysis(returns, factors, AlphaSettings(), benchmark=factors.market)
     changed = returns.copy()
@@ -54,13 +54,13 @@ def test_regression_unavailable_states(fault):
     assert result["annualised_alpha"] is None and result["reason"]
 
 
-def test_unaligned_factor_dates_rejected():
+def test_unaligned_factor_dates_rejected() -> None:
     returns, factors = sample()
     with pytest.raises(ValueError, match="aligned"):
         regression(returns, factors.iloc[::-1], AlphaSettings())
 
 
-def test_empty_returns_never_report_zero_excess_performance():
+def test_empty_returns_never_report_zero_excess_performance() -> None:
     dates = pd.DatetimeIndex([])
     empty = pd.Series([], index=dates, dtype=float)
     result = alpha_analysis(

@@ -29,7 +29,7 @@ def contract(**overrides):
     )
 
 
-def test_gex_formula_dealer_signs_and_open_interest_not_owned_quantity():
+def test_gex_formula_dealer_signs_and_open_interest_not_owned_quantity() -> None:
     contracts = [contract(), contract(option_symbol="AAA-P-100", right="PUT")]
     for sign in ("DEALER_SHORT", "NEUTRAL", "CALL_POSITIVE_PUT_NEGATIVE"):
         result = analyse_chain(
@@ -49,7 +49,7 @@ def test_gex_formula_dealer_signs_and_open_interest_not_owned_quantity():
     assert len(positions["payoff"]) == 101
 
 
-def test_stale_expired_and_missing_oi_not_silently_zero():
+def test_stale_expired_and_missing_oi_not_silently_zero() -> None:
     rows = [
         contract(open_interest=None),
         contract(option_symbol="OLD", timestamp=datetime(2025, 1, 1, tzinfo=UTC)),
@@ -61,7 +61,7 @@ def test_stale_expired_and_missing_oi_not_silently_zero():
     assert result["state"] == "UNAVAILABLE"
 
 
-def test_provider_units_and_american_approximation_require_consent():
+def test_provider_units_and_american_approximation_require_consent() -> None:
     row = contract(exercise_style="AMERICAN", gamma=0.1, delta=0.5, theta=-0.03, vega=0.2, rho=0.1)
     assert (
         analyse_chain([row], OptionsRequest(symbol="AAA"), 100, AS_OF)["items"][0]["gamma"] is None
@@ -84,7 +84,7 @@ def test_provider_units_and_american_approximation_require_consent():
     assert report["coverage"]["spot_profile_contracts"] == 0
 
 
-def test_iv_percent_conversion_and_invalid_quotes():
+def test_iv_percent_conversion_and_invalid_quotes() -> None:
     row = normalize_option(
         contract(iv=0.25).model_dump(mode="json") | {"iv": 25, "iv_unit": "PERCENT"}
     )
@@ -97,7 +97,7 @@ def test_iv_percent_conversion_and_invalid_quotes():
         contract(timestamp=datetime(2026, 1, 1))
 
 
-def test_unknown_position_and_mixed_expiry_payoff_unavailable():
+def test_unknown_position_and_mixed_expiry_payoff_unavailable() -> None:
     rows = [contract(), contract(option_symbol="LATER", expiry="2026-03-02")]
     result = analyse_chain(rows, OptionsRequest(symbol="AAA"), 100, AS_OF)
     report = position_analytics(result, [OptionLeg(option_symbol="MISSING", quantity=2)])

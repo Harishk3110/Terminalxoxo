@@ -1,6 +1,7 @@
 import pytest
 from app import models, terminal_api
 from app.services import ReportService
+from sqlalchemy.orm import Session
 
 
 def capture(monkeypatch):
@@ -12,8 +13,8 @@ def capture(monkeypatch):
 
 
 def test_position_report_preserves_contract_multiplier_and_source_quality(
-    monkeypatch, ledger_session
-):
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     capture(monkeypatch)
     monkeypatch.setattr(
         terminal_api,
@@ -45,8 +46,8 @@ def test_position_report_preserves_contract_multiplier_and_source_quality(
 
 
 def test_run_export_preserves_missing_timestamp_and_heterogeneous_column_order(
-    monkeypatch, ledger_session
-):
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     capture(monkeypatch)
     run = models.AnalysisRun(
         kind="wacc",

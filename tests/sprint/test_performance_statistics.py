@@ -18,6 +18,7 @@ from app.performance_domain.money_weighted import money_weighted
 from app.performance_domain.series import periods
 from app.portfolio_performance import observations_from_snapshot
 from app.portfolio_valuation import PortfolioValuationService
+from sqlalchemy.orm import Session
 
 
 def history(count=80):
@@ -37,7 +38,7 @@ def history(count=80):
     ]
 
 
-def test_capm_and_sample_volatility_match_known_linear_returns():
+def test_capm_and_sample_volatility_match_known_linear_returns() -> None:
     rows = history()
     result = sample_statistics(
         periods(rows, Frequency.DAILY, FeeBasis.NET), rows, PerformanceSettings()
@@ -68,7 +69,7 @@ def test_invalid_annual_risk_samples_do_not_drop_bad_observations(mutation):
     assert all(metric.reason for metric in result.values())
 
 
-def test_missing_benchmark_does_not_hide_portfolio_volatility():
+def test_missing_benchmark_does_not_hide_portfolio_volatility() -> None:
     rows = history()
     rows[10] = replace(rows[10], benchmark_return=None)
     result = sample_statistics(
@@ -78,7 +79,7 @@ def test_missing_benchmark_does_not_hide_portfolio_volatility():
     assert result["alpha"].value is None
 
 
-def test_partial_weekly_bins_not_annualised_as_complete_weeks():
+def test_partial_weekly_bins_not_annualised_as_complete_weeks() -> None:
     rows = history(12)[1:]
     chosen = periods(rows, Frequency.WEEKLY, FeeBasis.NET)
     assert [row.statistical_ready for row in chosen] == [False, True, False]
@@ -89,7 +90,7 @@ def test_partial_weekly_bins_not_annualised_as_complete_weeks():
     assert result["volatility"].observations == 1
 
 
-def test_partial_monthly_bins_keep_returns_but_not_risk_samples():
+def test_partial_monthly_bins_keep_returns_but_not_risk_samples() -> None:
     rows = history(80)
     chosen = periods(rows, Frequency.MONTHLY, FeeBasis.NET)
     assert chosen[0].value is not None and not chosen[0].statistical_ready
@@ -98,7 +99,7 @@ def test_partial_monthly_bins_keep_returns_but_not_risk_samples():
     assert not chosen[-1].statistical_ready
 
 
-def test_rolling_windows_fail_on_gaps_and_recover_with_complete_new_window():
+def test_rolling_windows_fail_on_gaps_and_recover_with_complete_new_window() -> None:
     rows = history(20)
     rows.pop(5)
     result = rolling_statistics(periods(rows, Frequency.DAILY, FeeBasis.NET), 5, 252)
@@ -107,7 +108,7 @@ def test_rolling_windows_fail_on_gaps_and_recover_with_complete_new_window():
     assert result[-1]["volatility"] is not None
 
 
-def test_short_history_calendar_returns_are_partial_not_full_year():
+def test_short_history_calendar_returns_are_partial_not_full_year() -> None:
     result = period_returns(history(10), PerformanceSettings())
     assert result["ytd"].state == "PARTIAL_PERIOD"
     assert result["mtd"].state == "PARTIAL_PERIOD"
@@ -115,7 +116,7 @@ def test_short_history_calendar_returns_are_partial_not_full_year():
     assert result["one_year"].value is None
 
 
-def test_money_weighted_known_one_year_growth_and_nonconventional_guard():
+def test_money_weighted_known_one_year_growth_and_nonconventional_guard() -> None:
     rows = [
         ReturnObservation(date(2025, 1, 1), D(0), D(0), D(100), D(100), D(0)),
         ReturnObservation(date(2026, 1, 1), D(".1"), D(100), D(110), D(0), D(10)),
@@ -127,7 +128,7 @@ def test_money_weighted_known_one_year_growth_and_nonconventional_guard():
     assert money_weighted(rows, None, FeeBasis.NET)["xirr"].value is None
 
 
-def test_saved_nav_curve_uses_decimal_fields_and_records_fees(ledger_session):
+def test_saved_nav_curve_uses_decimal_fields_and_records_fees(ledger_session: Session) -> None:
     result = PortfolioValuationService(ledger_session).latest("book", end=date(2026, 1, 9))
     rows = observations_from_snapshot(result)
     assert all(isinstance(row["nav_exact"], str) for row in result["curve"])
@@ -137,7 +138,7 @@ def test_saved_nav_curve_uses_decimal_fields_and_records_fees(ledger_session):
     assert result["metric_metadata"]["ytd"]["state"] == "PARTIAL_PERIOD"
 
 
-def test_legacy_snapshots_remain_readable_but_gross_fees_are_unavailable():
+def test_legacy_snapshots_remain_readable_but_gross_fees_are_unavailable() -> None:
     result = observations_from_snapshot(
         {
             "curve": [

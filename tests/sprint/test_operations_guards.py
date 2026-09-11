@@ -6,10 +6,12 @@ from app.auth_guards import check_login_limit, origin_allowed
 from app.services import DemoIngestionService
 from app.worker_health import worker_state
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 
-def test_persisted_login_limit_and_expiry(ledger_session):
+def test_persisted_login_limit_and_expiry(ledger_session: Session) -> None:
     for _ in range(10):
         ledger_session.add(
             models.LoginAttempt(
@@ -27,7 +29,7 @@ def test_persisted_login_limit_and_expiry(ledger_session):
     check_login_limit(ledger_session, "account@example.invalid", "127.0.0.1")
 
 
-def test_mutation_origin_protection():
+def test_mutation_origin_protection() -> None:
     allowed = ["http://127.0.0.1:3001"]
     assert origin_allowed("POST", allowed[0], "same-origin", allowed)
     assert origin_allowed("POST", None, None, allowed)
@@ -35,7 +37,7 @@ def test_mutation_origin_protection():
     assert not origin_allowed("POST", None, "cross-site", allowed)
 
 
-def test_global_reset_never_deletes_user_records(ledger_session):
+def test_global_reset_never_deletes_user_records(ledger_session: Session) -> None:
     before = ledger_session.scalar(select(func.count()).select_from(models.PortfolioTransaction))
     with pytest.raises(ValueError, match="Destructive global reset"):
         DemoIngestionService(ledger_session).seed(reset=True)
@@ -45,7 +47,9 @@ def test_global_reset_never_deletes_user_records(ledger_session):
     )
 
 
-def test_worker_health_expires_and_does_not_infer_running_from_job_state(ledger_session):
+def test_worker_health_expires_and_does_not_infer_running_from_job_state(
+    ledger_session: Session,
+) -> None:
     run = models.AnalysisRun(
         id="worker-test", kind="backtest", name="Test", status="RUNNING", parameters={}, history=[]
     )
@@ -65,8 +69,8 @@ def test_worker_health_expires_and_does_not_infer_running_from_job_state(ledger_
 
 
 def test_manual_buy_flows_through_cash_nav_performance_risk_trade_monitor_and_audit(
-    client, ledger_session
-):
+    client: TestClient, ledger_session: Session
+) -> None:
     from decimal import Decimal
 
     from app.portfolio_operations import TradeMonitorService
@@ -106,7 +110,9 @@ def test_manual_buy_flows_through_cash_nav_performance_risk_trade_monitor_and_au
     assert audit.resource_id == response.json()["id"]
 
 
-def test_logout_all_is_scoped_to_the_authenticated_user(ledger_session, session_token):
+def test_logout_all_is_scoped_to_the_authenticated_user(
+    ledger_session: Session, session_token: str
+) -> None:
     from app.database import get_session
     from app.terminal_api import router
     from fastapi import FastAPI

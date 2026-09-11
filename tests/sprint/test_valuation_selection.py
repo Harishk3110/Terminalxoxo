@@ -7,9 +7,10 @@ from app.portfolio_operations import PortfolioLedgerService
 from app.portfolio_valuation import PortfolioValuationService
 from app.valuation_selection import ValuationSelection
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
-def test_historical_valuation_does_not_replace_current_projection(ledger_session):
+def test_historical_valuation_does_not_replace_current_projection(ledger_session: Session) -> None:
     ledger = PortfolioLedgerService(ledger_session)
     for kind, day, quantity in [("BUY", "2026-01-06", "10"), ("SELL", "2026-01-09", "3")]:
         ledger.add(
@@ -58,13 +59,15 @@ def test_invalid_valuation_selection_fails_closed(values):
         HedgeRequest.model_validate(values)
 
 
-def test_future_direct_valuation_is_rejected(ledger_session):
+def test_future_direct_valuation_is_rejected(ledger_session: Session) -> None:
     with pytest.raises(ValueError, match="future"):
         PortfolioValuationService(ledger_session).latest("book", end=date(2099, 1, 1))
     assert not list(ledger_session.scalars(select(models.PortfolioValuationRun)))
 
 
-def test_dated_and_saved_hedges_keep_the_selected_valuation(ledger_session, session_token):
+def test_dated_and_saved_hedges_keep_the_selected_valuation(
+    ledger_session: Session, session_token: str
+) -> None:
     user = ledger_session.scalar(select(models.User))
     settings = {
         "mode": "NET",
@@ -94,8 +97,8 @@ def test_dated_and_saved_hedges_keep_the_selected_valuation(ledger_session, sess
 
 
 def test_stress_pins_dated_snapshot_and_rejects_invalid_selection(
-    ledger_session, session_token, monkeypatch
-):
+    ledger_session: Session, session_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from app import terminal_api
     from app.database import get_session
     from fastapi import FastAPI

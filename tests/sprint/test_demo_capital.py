@@ -7,6 +7,7 @@ from app import models
 from app.portfolio_seed import REFERENCE_CAPITAL, upgrade_demo_capital
 from app.portfolio_valuation import load_entries
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 
 def old_demo(session):
@@ -22,7 +23,9 @@ def old_demo(session):
     return portfolio, profile, detail
 
 
-def test_opening_capital_revision_preserves_original_and_is_idempotent(ledger_session):
+def test_opening_capital_revision_preserves_original_and_is_idempotent(
+    ledger_session: Session,
+) -> None:
     portfolio, profile, detail = old_demo(ledger_session)
     assert upgrade_demo_capital(ledger_session, portfolio, profile)
     ledger_session.commit()

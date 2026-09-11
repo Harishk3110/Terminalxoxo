@@ -7,6 +7,7 @@ from app import models
 from app.price_sources import MarketPriceResolver
 from app.repositories import DatasetRepository, MarketRepository, RepositoryError
 from sqlalchemy import Date, func, select
+from sqlalchemy.orm import Session
 
 
 def add_fx(session, base, quote, day, rate):
@@ -23,7 +24,7 @@ def add_fx(session, base, quote, day, rate):
     session.flush()
 
 
-def test_inverse_fx_is_bounded_by_requested_date(ledger_session):
+def test_inverse_fx_is_bounded_by_requested_date(ledger_session: Session) -> None:
     add_fx(ledger_session, "SGD", "USD", date(2026, 1, 1), "0.8")
     add_fx(ledger_session, "SGD", "USD", date(2026, 2, 1), "0.5")
     repo = MarketRepository(ledger_session)
@@ -31,13 +32,13 @@ def test_inverse_fx_is_bounded_by_requested_date(ledger_session):
     assert repo.fx_rate("USD", "SGD") == Decimal("2")
 
 
-def test_future_inverse_fx_cannot_fill_missing_history(ledger_session):
+def test_future_inverse_fx_cannot_fill_missing_history(ledger_session: Session) -> None:
     add_fx(ledger_session, "SGD", "USD", date(2026, 2, 1), "0.5")
     with pytest.raises(RepositoryError, match="Missing FX"):
         MarketRepository(ledger_session).fx_rate("USD", "SGD", date(2026, 1, 15))
 
 
-def test_direct_fx_and_identity_preserve_existing_precedence(ledger_session):
+def test_direct_fx_and_identity_preserve_existing_precedence(ledger_session: Session) -> None:
     add_fx(ledger_session, "USD", "SGD", date(2026, 1, 1), "1.3")
     add_fx(ledger_session, "USD", "SGD", date(2026, 2, 1), "1.5")
     add_fx(ledger_session, "SGD", "USD", date(2026, 1, 1), "0.8")
@@ -46,7 +47,7 @@ def test_direct_fx_and_identity_preserve_existing_precedence(ledger_session):
     assert repo.fx_rate("SGD", "SGD", date(2026, 1, 15)) == Decimal("1")
 
 
-def test_sql_date_annotations_match_materialized_values():
+def test_sql_date_annotations_match_materialized_values() -> None:
     checked = 0
     for mapper in models.Base.registry.mappers:
         hints = get_type_hints(mapper.class_)

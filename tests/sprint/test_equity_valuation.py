@@ -6,7 +6,7 @@ from app.equity_valuation import DcfRequest, DcfScenario, WaccInputs, calculate_
 BASE = {"year": "2025", "revenue": 100, "debt": 20, "cash": 10, "shares": 10}
 
 
-def test_fcff_uses_change_in_working_capital_and_end_year_discounting():
+def test_fcff_uses_change_in_working_capital_and_end_year_discounting() -> None:
     request = DcfRequest(
         symbol="AAA",
         initial_working_capital=10,
@@ -35,7 +35,7 @@ def test_fcff_uses_change_in_working_capital_and_end_year_discounting():
     assert len(result["exit_sensitivity"]) == 9
 
 
-def test_cash_debt_share_overrides_and_negative_equity_are_not_hidden():
+def test_cash_debt_share_overrides_and_negative_equity_are_not_hidden() -> None:
     request = DcfRequest(symbol="AAA", debt_override=10000, scenarios=[DcfScenario(name="BEAR")])
     result = dcf_scenarios(BASE, request)["scenarios"][0]
     assert D(result["equity_value"]) < 0
@@ -43,7 +43,7 @@ def test_cash_debt_share_overrides_and_negative_equity_are_not_hidden():
     assert BASE["debt"] == 20
 
 
-def test_wacc_uses_market_weights_and_after_tax_debt():
+def test_wacc_uses_market_weights_and_after_tax_debt() -> None:
     result = calculate_wacc(WaccInputs())
     assert D(result["wacc"]) == D(".0719")
     request = DcfRequest(
@@ -70,7 +70,7 @@ def test_bad_assumptions_rejected(config):
         DcfScenario(name="BASE", **config)
 
 
-def test_loss_year_has_no_assumed_cash_tax_credit():
+def test_loss_year_has_no_assumed_cash_tax_credit() -> None:
     request = DcfRequest(
         symbol="AAA", scenarios=[DcfScenario(name="BEAR", ebit_margins=[D("-.1")] * 5)]
     )
@@ -79,7 +79,7 @@ def test_loss_year_has_no_assumed_cash_tax_credit():
     )
 
 
-def test_exit_multiple_and_missing_baseline():
+def test_exit_multiple_and_missing_baseline() -> None:
     request = DcfRequest(
         symbol="AAA",
         scenarios=[

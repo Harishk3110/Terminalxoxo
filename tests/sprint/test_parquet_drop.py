@@ -1,6 +1,7 @@
 import io
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -9,6 +10,7 @@ from app import models
 from app.data_drop import DataDropService
 from app.data_mapping import parse_file, seed_profiles
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 def parquet_bytes(rows):
@@ -17,7 +19,9 @@ def parquet_bytes(rows):
     return buffer.getvalue()
 
 
-def test_parquet_decimal_date_and_approved_import(ledger_session, tmp_path, monkeypatch):
+def test_parquet_decimal_date_and_approved_import(
+    ledger_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "object_storage_local_dir", str(tmp_path))
@@ -47,14 +51,14 @@ def test_parquet_decimal_date_and_approved_import(ledger_session, tmp_path, monk
     assert drop.receive("renamed.parquet", content)["state"] == "DUPLICATE"
 
 
-def test_parquet_nested_and_oversized_rows_rejected():
+def test_parquet_nested_and_oversized_rows_rejected() -> None:
     with pytest.raises(ValueError, match="scalar"):
         parse_file(parquet_bytes([{"nested": [1, 2]}]), "bad.parquet")
     with pytest.raises(ValueError, match="100,000"):
         parse_file(parquet_bytes([{"value": 1}] * 100001), "huge.parquet")
 
 
-def test_jsonl_and_legacy_xls():
+def test_jsonl_and_legacy_xls() -> None:
     import xlwt
 
     rows, _ = parse_file(

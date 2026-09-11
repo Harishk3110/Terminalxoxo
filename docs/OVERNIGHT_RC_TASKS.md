@@ -19,8 +19,10 @@ milestone remain open unless explicitly verified below.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
+- [x] M2: 152 test function contracts in 44 files; executable AST/import bindings preserved, full backend pass.
 - [x] M4: dated stress/hedge snapshots, future-date rejection and historical/current projection isolation.
 - [x] M5: imported security/version handoff to backtesting; newly queued run identity asserted.
+- [x] M5: missing saved backtest fields receive defaults without overwriting explicit zero/blank values.
 - [x] M8: retired inbound dummy broker pairing/snapshot/heartbeat responses disabled and tested.
 - [ ] M3: full single-run browser suite, zero retries masking failures.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
@@ -37,7 +39,9 @@ milestone remain open unless explicitly verified below.
 - [ ] M12: Pine compatibility/equivalence/download/webhook, compilation honest.
 - [ ] M13: trusted devices, production bootstrap, forced MFA, concurrency/security.
 - [ ] M14: all ten monitoring dashboards and real metrics/probes.
-- [ ] M15: PostgreSQL and complete objects backup/verification/isolated restore.
+- [x] M15: PostgreSQL snapshot, referenced/all retained objects, verification and new-database/new-bucket restore.
+- [x] M15: exact table/object hashes, concurrent-write integration, private access checks and retention metadata.
+- [x] M15: read-only API receipt mount, failed-attempt state, backup metrics and evaluated alert rules.
 - [ ] M16: production images/environment/admin/CORS/cookies/rollback smoke.
 - [ ] CI: every critical test/build/security/report/backup gate blocks deployment.
 - [x] Operations: bounded watchdog code, three tests and live observe-only check.

@@ -43,7 +43,7 @@ def accounting_session():
     engine.dispose()
 
 
-def test_dated_demo_marks_remain_stale_outside_snapshot_window(accounting_session):
+def test_dated_demo_marks_remain_stale_outside_snapshot_window(accounting_session: Session) -> None:
     report = PortfolioValuationService(accounting_session).latest(end=date(2026, 9, 11))
     assert report["positions"]
     assert all(row["price_provenance"]["stale"] for row in report["positions"])
@@ -51,7 +51,7 @@ def test_dated_demo_marks_remain_stale_outside_snapshot_window(accounting_sessio
     assert report["risk"]["beta"] is None
 
 
-def test_deposit_requires_explicit_amount():
+def test_deposit_requires_explicit_amount() -> None:
     with pytest.raises(ValueError, match="explicit"):
         LedgerState().apply(entry("DEPOSIT"))
     state = LedgerState()
@@ -59,7 +59,7 @@ def test_deposit_requires_explicit_amount():
     assert state.cash["SGD"] == state.external_flows == D("70000")
 
 
-def test_average_cost_partial_sale_and_realised_pnl():
+def test_average_cost_partial_sale_and_realised_pnl() -> None:
     state = LedgerState()
     state.apply(entry("DEPOSIT", amount=D("70000")))
     state.apply(entry("BUY", instrument_id="A", quantity=D("10"), price=D("100"), fee=D("1")))
@@ -74,7 +74,7 @@ def test_average_cost_partial_sale_and_realised_pnl():
     assert state.fees == D("4")
 
 
-def test_short_cover_cost_basis():
+def test_short_cover_cost_basis() -> None:
     state = LedgerState()
     state.apply(entry("DEPOSIT", amount=D("1000")))
     state.apply(entry("SHORT", instrument_id="A", quantity=D("10"), price=D("100")))
@@ -87,7 +87,7 @@ def test_short_cover_cost_basis():
         state.apply(entry("COVER", instrument_id="A", quantity=D("7"), price=D("80")))
 
 
-def test_native_cash_fx_conversion_and_income():
+def test_native_cash_fx_conversion_and_income() -> None:
     state = LedgerState()
     state.apply(entry("DEPOSIT", amount=D("70000")))
     state.apply(
@@ -123,7 +123,7 @@ def test_expense_types(kind):
     assert state.fees + state.taxes == 25
 
 
-def test_split_and_spinoff_preserve_book_cost():
+def test_split_and_spinoff_preserve_book_cost() -> None:
     state = LedgerState()
     state.apply(entry("BUY", instrument_id="A", quantity=D("10"), price=D("100")))
     state.apply(entry("SPLIT", instrument_id="A", metadata={"ratio": "2"}))
@@ -140,7 +140,7 @@ def test_split_and_spinoff_preserve_book_cost():
     assert state.lots["B"].cost_base == 250
 
 
-def test_transfers_and_correction_are_explicit():
+def test_transfers_and_correction_are_explicit() -> None:
     state = LedgerState()
     state.apply(entry("TRANSFER_IN", instrument_id="A", quantity=D("10"), price=D("100")))
     state.apply(entry("TRANSFER_OUT", instrument_id="A", quantity=D("4"), price=D("120")))
@@ -158,7 +158,7 @@ def test_transfers_and_correction_are_explicit():
     assert state.adjustments == 10
 
 
-def test_nav_full_balance_sheet_and_flow_adjustment():
+def test_nav_full_balance_sheet_and_flow_adjustment() -> None:
     result = nav_total(
         D("20000"),
         [D("51000"), D("-500")],
@@ -176,7 +176,7 @@ def test_nav_full_balance_sheet_and_flow_adjustment():
     assert ret == D(".0125")
 
 
-def test_seed_nav_and_independent_reconciliation(accounting_session):
+def test_seed_nav_and_independent_reconciliation(accounting_session: Session) -> None:
     service = PortfolioValuationService(accounting_session)
     opening = service.calculate(end=DAY)
     assert opening["portfolio"]["nav"] == "100000.00"
@@ -197,7 +197,7 @@ def test_seed_nav_and_independent_reconciliation(accounting_session):
     assert frozen["valuation_run_id"] == result["valuation_run_id"]
 
 
-def test_correlation_order_uses_symbols_and_undefined_values_are_missing():
+def test_correlation_order_uses_symbols_and_undefined_values_are_missing() -> None:
     histories = {"first-id": {DAY: 100}, "second-id": {DAY: 200}}
     positions = [
         {"instrument_id": "first-id", "symbol": "ZZZ", "weight": 0.5},
@@ -209,7 +209,7 @@ def test_correlation_order_uses_symbols_and_undefined_values_are_missing():
     assert risk["beta"] is None
 
 
-def test_stale_file_beats_newer_demo_and_missing_is_not_zero(accounting_session):
+def test_stale_file_beats_newer_demo_and_missing_is_not_zero(accounting_session: Session) -> None:
     item = accounting_session.scalar(
         select(models.Instrument).where(models.Instrument.symbol == "AAPL")
     )
@@ -237,7 +237,7 @@ def test_stale_file_beats_newer_demo_and_missing_is_not_zero(accounting_session)
     assert resolver.resolve("unknown", at) is None
 
 
-def test_missing_selected_price_invalidates_complete_nav(accounting_session):
+def test_missing_selected_price_invalidates_complete_nav(accounting_session: Session) -> None:
     item = accounting_session.scalar(
         select(models.Instrument).where(models.Instrument.symbol == "AAPL")
     )
@@ -262,7 +262,7 @@ def test_missing_selected_price_invalidates_complete_nav(accounting_session):
     assert next(p for p in result["attribution"] if p["symbol"] == "AAPL")["total_pnl"] is None
 
 
-def test_reset_archives_ledger_and_isolates_demo_prices(accounting_session):
+def test_reset_archives_ledger_and_isolates_demo_prices(accounting_session: Session) -> None:
     from app.portfolio_seed import profile_for, reset_main_demo
 
     original = profile_for(accounting_session)

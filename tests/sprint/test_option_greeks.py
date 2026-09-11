@@ -19,7 +19,7 @@ def inputs(**overrides):
     )
 
 
-def test_known_european_reference_price_and_greeks_units():
+def test_known_european_reference_price_and_greeks_units() -> None:
     result = greeks(inputs())
     assert result["theoretical_price"] == pytest.approx(10.450583572185565)
     assert result["delta"] == pytest.approx(0.6368306511756191)
@@ -29,7 +29,7 @@ def test_known_european_reference_price_and_greeks_units():
     assert result["rho"] == pytest.approx(0.5323248154537634)
 
 
-def test_put_call_parity_and_implied_volatility_roundtrip():
+def test_put_call_parity_and_implied_volatility_roundtrip() -> None:
     for sigma in (0.05, 0.2, 0.8, 2):
         call, put = (
             inputs(volatility=sigma, dividend_yield=0.02),
@@ -43,7 +43,7 @@ def test_put_call_parity_and_implied_volatility_roundtrip():
         assert implied_iv(p["theoretical_price"], put) == pytest.approx(sigma, abs=1e-9)
 
 
-def test_advanced_sensitivities_against_independent_closed_form_identities():
+def test_advanced_sensitivities_against_independent_closed_form_identities() -> None:
     config = inputs()
     result = greeks(config)
     d1 = (math.log(100 / 100) + (0.05 + 0.2**2 / 2)) / 0.2

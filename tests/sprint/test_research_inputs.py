@@ -1,9 +1,12 @@
+from pathlib import Path
+
 import pytest
 from app import models
 from app.model_runs import model_result
 from app.object_storage import ObjectStorage
 from app.quant_data import dataset_rows
 from app.research_inputs import ResearchInput, bars_frame, pin_input
+from sqlalchemy.orm import Session
 
 
 def seed_bars(session):
@@ -29,7 +32,9 @@ def seed_bars(session):
     session.flush()
 
 
-def test_research_snapshot_is_deduplicated_and_hash_verified(ledger_session, monkeypatch, tmp_path):
+def test_research_snapshot_is_deduplicated_and_hash_verified(
+    ledger_session: Session, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "object_storage_local_dir", str(tmp_path))
@@ -55,12 +60,12 @@ def test_research_snapshot_is_deduplicated_and_hash_verified(ledger_session, mon
         dataset_rows(ledger_session, first["dataset_version_id"])
 
 
-def test_source_aware_missing_open_is_not_synthesised(ledger_session):
+def test_source_aware_missing_open_is_not_synthesised(ledger_session: Session) -> None:
     with pytest.raises(ValueError, match="OHLC"):
         pin_input(ledger_session, ResearchInput(symbol="AAA"))
 
 
-def test_bar_validation_rejects_duplicates_missing_bounds_and_bad_dates():
+def test_bar_validation_rejects_duplicates_missing_bounds_and_bad_dates() -> None:
     row = {"date": "2026-01-01", "open": 100, "high": 101, "low": 99, "close": 100}
     for rows in (
         [row, row],
@@ -72,7 +77,9 @@ def test_bar_validation_rejects_duplicates_missing_bounds_and_bad_dates():
             bars_frame(rows, "SPY")
 
 
-def test_fx_snapshot_uses_only_prior_fixings(ledger_session, monkeypatch, tmp_path):
+def test_fx_snapshot_uses_only_prior_fixings(
+    ledger_session: Session, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     from datetime import date, timedelta
 
     from app.backtest_inputs import pin_backtest_inputs

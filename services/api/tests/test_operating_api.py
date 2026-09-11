@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 client = TestClient(app)
 
 
-def test_portfolio_operating_api_and_export():
+def test_portfolio_operating_api_and_export() -> None:
     response = client.get("/api/v1/operations/portfolio")
     assert response.status_code == 200
     data = response.json()
@@ -32,7 +32,7 @@ def test_portfolio_operating_api_and_export():
     )
 
 
-def test_agent_pairing_scopes_single_use_revocation():
+def test_agent_pairing_scopes_single_use_revocation() -> None:
     pairing = client.post("/api/v1/data-drop/agents/pair").json()
     claim = client.post(
         "/agent/v1/pair", json={"code": pairing["code"], "name": "Test agent " + str(uuid.uuid4())}
@@ -64,7 +64,7 @@ def test_agent_pairing_scopes_single_use_revocation():
     assert client.get("/agent/v1/files", headers=headers).status_code == 401
 
 
-def test_agent_endpoint_and_path_boundaries(tmp_path):
+def test_agent_endpoint_and_path_boundaries(tmp_path: Path) -> None:
     spec = importlib.util.spec_from_file_location(
         "local_data_agent", Path(__file__).parents[2] / "local-agent" / "agent.py"
     )
@@ -83,7 +83,7 @@ def test_agent_endpoint_and_path_boundaries(tmp_path):
         assert type(module.credential_backend()).__name__ == "WinVaultKeyring"
 
 
-def test_candidate_requires_pinned_version_and_blocks_unverified_promotion():
+def test_candidate_requires_pinned_version_and_blocks_unverified_promotion() -> None:
     from app import models
     from app.database import SessionLocal
     from sqlalchemy import select
@@ -131,7 +131,7 @@ def test_candidate_requires_pinned_version_and_blocks_unverified_promotion():
     assert missing.status_code == 422
 
 
-def test_factor_horizon_never_silently_shortens():
+def test_factor_horizon_never_silently_shortens() -> None:
     response = client.get("/api/v1/factors?lookback=252")
     assert response.status_code == 200
     assert response.json()["quality"] == "INSUFFICIENT DATA"

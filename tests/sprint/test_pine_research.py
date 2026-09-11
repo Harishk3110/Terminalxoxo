@@ -1,5 +1,6 @@
 import csv
 import io
+from pathlib import Path
 
 import pytest
 from app import models
@@ -10,6 +11,7 @@ from app.pine_research import PineSettings, compare_export, generate
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 
 def export_file(signal="1", periods=80):
@@ -50,7 +52,7 @@ def test_invalid_template_inputs(payload):
         PineSettings(**payload)
 
 
-def test_comparison_reports_only_observed_post_warmup():
+def test_comparison_reports_only_observed_post_warmup() -> None:
     result = compare_export(export_file(), PineSettings())
     assert result["compared"] == 31 and result["warmup_excluded"] == 49
     assert result["match_rate"] == 1 and result["mismatch_count"] == 0
@@ -76,8 +78,8 @@ def test_invalid_or_empty_comparison(raw):
 
 
 def test_saved_template_comparison_auth_and_ledger_unchanged(
-    ledger_session, session_token, monkeypatch, tmp_path
-):
+    ledger_session: Session, session_token: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(get_settings(), "object_storage_local_dir", str(tmp_path))
     app = FastAPI()
     app.include_router(router)

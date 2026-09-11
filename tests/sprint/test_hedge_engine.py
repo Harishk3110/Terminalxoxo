@@ -2,6 +2,7 @@ import pytest
 from app import models
 from app.hedge_engine import HedgeRequest, HedgeService, size_hedge
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture
@@ -72,7 +73,9 @@ def test_invalid_sector_and_excessive_notional_rejected(book, hedge):
         size_hedge(book, HedgeRequest(), hedge)
 
 
-def test_saved_hedge_is_scoped_reviewable_and_does_not_change_ledger(ledger_session, session_token):
+def test_saved_hedge_is_scoped_reviewable_and_does_not_change_ledger(
+    ledger_session: Session, session_token: str
+) -> None:
     user = ledger_session.scalar(select(models.User))
     service = HedgeService(ledger_session)
     parameters = HedgeRequest(

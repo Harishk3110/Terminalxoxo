@@ -33,7 +33,7 @@ def test_sec_facts_reject_malformed_nested_shapes(payload):
         provider_api.fact_rows(payload)
 
 
-def test_sec_fact_cannot_override_its_taxonomy_concept_or_unit():
+def test_sec_fact_cannot_override_its_taxonomy_concept_or_unit() -> None:
     observation = {"val": 100, "taxonomy": "other", "concept": "other", "unit": "other"}
     rows = provider_api.fact_rows(
         {"facts": {"us-gaap": {"Revenue": {"label": "Revenue", "units": {"USD": [observation]}}}}}

@@ -13,7 +13,7 @@ def bars():
     )
 
 
-def test_feature_pipeline_cannot_see_future_and_target_starts_next_open():
+def test_feature_pipeline_cannot_see_future_and_target_starts_next_open() -> None:
     frame = bars()
     x, y = features_and_target(frame, 5)
     changed = frame.copy()
@@ -34,7 +34,7 @@ def test_chronological_models_purge_labels_and_produce_artifacts(model):
         assert fold["train_end"] < fold["test_start"] and fold["gap"] == 6
 
 
-def test_no_random_holdout_refit_and_deterministic_predictions():
+def test_no_random_holdout_refit_and_deterministic_predictions() -> None:
     frame = bars()
     first, _ = model_research(frame, ModelSettings(trees=10))
     repeat, _ = model_research(frame, ModelSettings(trees=10))
@@ -45,6 +45,6 @@ def test_no_random_holdout_refit_and_deterministic_predictions():
     assert first["feature_importance"] == second["feature_importance"]
 
 
-def test_short_history_rejected():
+def test_short_history_rejected() -> None:
     with pytest.raises(ValueError, match="240"):
         model_research(bars().iloc[:200], ModelSettings())
