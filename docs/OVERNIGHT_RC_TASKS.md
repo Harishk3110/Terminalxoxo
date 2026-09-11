@@ -54,6 +54,10 @@ milestone remain open unless explicitly verified below.
 - [ ] M7: full FRED/SEC/OpenFIGI/vendor/FX/options adapters and source conflicts.
 - [ ] M8: complete paper read-only broker contract/reconnect/dedup tests.
 - [x] M2/M8: validate persisted broker holdings/fills, preserve recorded approval values and account/execution dedup identity, reject invalid sides/fingerprints/FX before financial use; 62 affected tests and 200 exact old/new broker views pass.
+- [x] M2/M9/M10: validated research desk result/lineage reads, exact parent dataset linkage, immutable review failure behavior, latest valuation and superseded-thesis contracts; 39 affected tests and populated old/new view parity pass.
+- [ ] M3: verify longer production HTTP keep-alive lifetime after browser-12 six-second connection-reset race; new regression added without retries.
+- [ ] M3: verify rebuilt System Health missing timestamps; 12 formatter unit tests pass.
+- [ ] M3/M11: options gamma-profile negative million-scale axis label containment found in 1366px review; inspect and correct without changing values.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.
 - [ ] M10: segments/ROIC/multiples/normalization/estimates/research linkage and DCF.
 - [ ] M11: full options unit/expiry/coverage/history/portfolio acceptance.

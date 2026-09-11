@@ -1,10 +1,12 @@
 """Research operating views; no synthetic live signals or strategy performance."""
 
+import math
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import Annotated, Self
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,10 +19,36 @@ from .terminal_api import run_payload
 
 router = APIRouter(prefix="/api/v1/desks")
 Database = Annotated[Session, Depends(get_session)]
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+TEXT = TypeAdapter(str)
+
+
+def finite_number(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise ValueError("Research metric must be a numeric scalar")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("Research metric must be finite")
+    return number
+
+
+def dataset_versions(parameters: Mapping[str, JsonValue]) -> set[str]:
+    versions = set()
+    direct = parameters.get("dataset_version_id")
+    if direct is not None:
+        versions.add(TEXT.validate_python(direct, strict=True))
+    datasets = JSON_OBJECT.validate_python(parameters.get("_datasets", {}), strict=True)
+    for value in datasets.values():
+        dataset = JSON_OBJECT.validate_python(value, strict=True)
+        version = dataset.get("dataset_version_id")
+        if version is not None:
+            versions.add(TEXT.validate_python(version, strict=True))
+    return versions
 
 
 @router.get("/quant")
-def quant(session: Database):
+def quant(session: Database) -> dict[str, JsonValue]:
     runs = session.scalars(
         select(models.AnalysisRun)
         .where(models.AnalysisRun.kind.in_(["backtest", "model", "alpha", "monte_carlo"]))
@@ -66,10 +94,12 @@ def quant(session: Database):
         for row in runs
     ]
     oos = [
-        part["metrics"]
+        JSON_OBJECT.validate_python(part["metrics"], strict=True)
         for row in runs
         if row.kind == "model" and row.status == "SUCCEEDED"
-        for part in (row.result or {}).get("cost_backtests", [])
+        for part in JSON_ROWS.validate_python(
+            (row.result or {}).get("cost_backtests", []), strict=True
+        )
         if part["partition"] == "TEST"
     ]
     summary = {
@@ -81,26 +111,30 @@ def quant(session: Database):
         "failed_backtests": sum(row.kind == "backtest" and row.status == "FAILED" for row in runs),
         "model_runs": sum(row.kind == "model" for row in runs),
         "best_oos_sharpe": max(
-            (item["sharpe"] for item in oos if item.get("sharpe") is not None), default=None
+            (finite_number(item["sharpe"]) for item in oos if item.get("sharpe") is not None),
+            default=None,
         ),
         "queued": sum(row.status == "QUEUED" for row in runs),
         "running": sum(row.status == "RUNNING" for row in runs),
         "scope": "Latest 100 research jobs",
     }
-    return {
-        "strategies": strategies,
-        "runs": job_rows,
-        "candidates": candidates,
-        "summary": summary,
-        "signal_state": "HISTORICAL RESEARCH ONLY",
-        "paper_state": "NO VERIFIED PAPER PERFORMANCE",
-    }
+    return JSON_OBJECT.validate_python(
+        {
+            "strategies": strategies,
+            "runs": job_rows,
+            "candidates": candidates,
+            "summary": summary,
+            "signal_state": "HISTORICAL RESEARCH ONLY",
+            "paper_state": "NO VERIFIED PAPER PERFORMANCE",
+        },
+        strict=True,
+    )
 
 
 @router.get("/equity")
-def equity(session: Database):
+def equity(session: Database) -> dict[str, JsonValue]:
     data = PortfolioValuationService(session).latest()
-    theses = [
+    theses: list[dict[str, JsonValue]] = [
         {
             "id": t.id,
             "title": t.title,
@@ -116,20 +150,26 @@ def equity(session: Database):
         .order_by(models.AnalysisRun.created_at.desc())
         .limit(500)
     ).all()
-    superseded = {row.result.get("parent_id") for row in research}
+    saved_theses = [(row, JSON_OBJECT.validate_python(row.result, strict=True)) for row in research]
+    superseded = {
+        TEXT.validate_python(result["parent_id"], strict=True)
+        for _, result in saved_theses
+        if result.get("parent_id") is not None
+    }
     structured_ids = {row.id for row in research}
     theses = [row for row in theses if row["id"] not in structured_ids]
     theses.extend(
         {
             "id": row.id,
-            **row.result,
-            "summary": row.result.get("one_sentence"),
+            **result,
+            "summary": result.get("one_sentence"),
             "review_due": bool(
-                row.result.get("review_date")
-                and row.result["review_date"] <= date.today().isoformat()
+                result.get("review_date")
+                and date.fromisoformat(TEXT.validate_python(result["review_date"], strict=True))
+                <= date.today()
             ),
         }
-        for row in research
+        for row, result in saved_theses
         if row.id not in superseded
     )
     valuations = session.scalars(
@@ -138,22 +178,32 @@ def equity(session: Database):
         .order_by(models.AnalysisRun.created_at.desc())
         .limit(500)
     ).all()
-    targets = {}
+    targets: dict[str, dict[str, JsonValue]] = {}
     for run in valuations:
-        key = run.result.get("instrument_id")
+        result = JSON_OBJECT.validate_python(run.result, strict=True)
+        key = TEXT.validate_python(result["instrument_id"], strict=True)
         if key not in targets:
             base = next(
-                (row for row in run.result.get("scenarios", []) if row["name"] == "BASE"), None
+                (
+                    row
+                    for row in JSON_ROWS.validate_python(result.get("scenarios", []), strict=True)
+                    if row["name"] == "BASE"
+                ),
+                None,
             )
             if base:
                 targets[key] = {
                     "fair_value": base["fair_value"],
                     "valuation_id": run.id,
-                    "valuation_quality": run.result["quality"],
+                    "valuation_quality": result["quality"],
                 }
-    coverage = []
-    for row in data["positions"]:
-        item = session.get(models.Instrument, row["instrument_id"])
+    coverage: list[dict[str, JsonValue]] = []
+    for row in JSON_ROWS.validate_python(data["positions"], strict=True):
+        item = session.get(
+            models.Instrument, TEXT.validate_python(row["instrument_id"], strict=True)
+        )
+        if item is None:
+            raise ValueError("Portfolio holding references a missing instrument")
         files = session.scalars(
             select(models.MarketObservation)
             .where(
@@ -177,12 +227,16 @@ def equity(session: Database):
                     t["instrument_id"] == item.id and t.get("review_due") for t in theses
                 ),
                 "fair_value": targets.get(item.id, {}).get("fair_value"),
-                "upside": float(targets[item.id]["fair_value"]) / float(row["market_price"]) - 1
-                if item.id in targets and row["market_price"] and float(row["market_price"]) > 0
+                "upside": finite_number(targets[item.id]["fair_value"])
+                / finite_number(row["market_price"])
+                - 1
+                if item.id in targets
+                and row["market_price"]
+                and finite_number(row["market_price"]) > 0
                 else None,
                 "valuation_quality": targets.get(item.id, {}).get("valuation_quality"),
                 "catalysts": " / ".join(
-                    t.get("catalysts", "")
+                    TEXT.validate_python(t["catalysts"], strict=True)
                     for t in theses
                     if t["instrument_id"] == item.id and t.get("catalysts")
                 ),
@@ -193,32 +247,35 @@ def equity(session: Database):
         )
     from .terminal_analytics import quotes
 
-    universe = []
-    for quote in quotes(session):
-        target = targets.get(quote["id"], {})
+    universe: list[dict[str, JsonValue]] = []
+    for quote in JSON_ROWS.validate_python(quotes(session), strict=True):
+        target = targets.get(TEXT.validate_python(quote["id"], strict=True), {})
         universe.append(
             {
                 **quote,
                 **target,
-                "upside": float(target["fair_value"]) / quote["price"] - 1
-                if target and quote.get("price") and quote["price"] > 0
+                "upside": finite_number(target["fair_value"]) / finite_number(quote["price"]) - 1
+                if target and quote.get("price") and finite_number(quote["price"]) > 0
                 else None,
             }
         )
-    return {
-        "coverage": coverage,
-        "theses": theses,
-        "universe": universe,
-        "summary": {
-            "holdings": len(coverage),
-            "without_thesis": sum(row["thesis_count"] == 0 for row in coverage),
-            "review_due": sum(bool(row.get("review_due")) for row in theses),
-            "saved_valuations": len(targets),
+    return JSON_OBJECT.validate_python(
+        {
+            "coverage": coverage,
+            "theses": theses,
+            "universe": universe,
+            "summary": {
+                "holdings": len(coverage),
+                "without_thesis": sum(row["thesis_count"] == 0 for row in coverage),
+                "review_due": sum(bool(row.get("review_due")) for row in theses),
+                "saved_valuations": len(targets),
+            },
+            "source": data["source"],
+            "quality": data["quality"],
+            "as_of": data["as_of"],
         },
-        "source": data["source"],
-        "quality": data["quality"],
-        "as_of": data["as_of"],
-    }
+        strict=True,
+    )
 
 
 class CandidateConfiguration(BaseModel):
@@ -240,7 +297,7 @@ class CandidateConfiguration(BaseModel):
     test_end: date | None = None
 
     @model_validator(mode="after")
-    def chronological(self):
+    def chronological(self) -> Self:
         dates = [
             self.training_start,
             self.training_end,
@@ -266,7 +323,9 @@ class CandidateRequest(BaseModel):
 
 
 @router.post("/candidates")
-def create_candidate(payload: CandidateRequest, request: Request, session: Database):
+def create_candidate(
+    payload: CandidateRequest, request: Request, session: Database
+) -> dict[str, JsonValue]:
     if session.get(models.DatasetVersion, payload.dataset_version_id) is None:
         raise HTTPException(422, "A persisted dataset version is required")
     if payload.strategy_id and session.get(models.StrategyDefinition, payload.strategy_id) is None:
@@ -307,7 +366,7 @@ class CandidateReview(BaseModel):
 @router.post("/candidates/{candidate_id}/review")
 def review_candidate(
     candidate_id: str, payload: CandidateReview, request: Request, session: Database
-):
+) -> dict[str, JsonValue]:
     row = session.get(models.ResearchCandidate, candidate_id)
     if row is None:
         raise HTTPException(404, "Candidate not found")
@@ -316,7 +375,7 @@ def review_candidate(
             422,
             "Promotion requires verified OOS and paper-validation gates; no automated promotion is enabled",
         )
-    linked = []
+    linked: list[JsonValue] = []
     for run_id in payload.analysis_run_ids:
         run = session.get(models.AnalysisRun, run_id)
         if (
@@ -325,20 +384,17 @@ def review_candidate(
             or run.kind not in {"backtest", "model", "alpha", "monte_carlo"}
         ):
             raise HTTPException(422, "Candidate evidence must reference completed research runs")
-        versions = {run.parameters.get("dataset_version_id")}
-        versions.update(
-            value.get("dataset_version_id")
-            for value in run.parameters.get("_datasets", {}).values()
-        )
-        parent_id = run.parameters.get("backtest_run_id")
-        if parent_id:
-            parent = session.get(models.AnalysisRun, parent_id)
-            if parent and parent.kind == "backtest" and parent.status == "SUCCEEDED":
-                versions.add(parent.parameters.get("dataset_version_id"))
-                versions.update(
-                    value.get("dataset_version_id")
-                    for value in parent.parameters.get("_datasets", {}).values()
+        try:
+            versions = dataset_versions(run.parameters)
+            parent_id = run.parameters.get("backtest_run_id")
+            if parent_id:
+                parent = session.get(
+                    models.AnalysisRun, TEXT.validate_python(parent_id, strict=True)
                 )
+                if parent and parent.kind == "backtest" and parent.status == "SUCCEEDED":
+                    versions.update(dataset_versions(parent.parameters))
+        except ValueError as exc:
+            raise HTTPException(422, "Recorded research dataset lineage is invalid") from exc
         if row.dataset_version_id not in versions:
             raise HTTPException(422, "Evidence must use the candidate's exact dataset version")
         linked.append(
@@ -349,19 +405,21 @@ def review_candidate(
             }
         )
     actor = identity(request, session)
-    row.state = payload.state
-    review = {
+    history = JSON_ROWS.validate_python(row.review.get("history", []), strict=True)
+    evidence = JSON_ROWS.validate_python(row.review.get("evidence", []), strict=True)
+    review: dict[str, JsonValue] = {
         "state": payload.state,
         "note": payload.note,
         "actor": actor,
         "at": datetime.now(UTC).isoformat(),
         "evidence": linked,
     }
+    row.state = payload.state
     row.review = {
         **row.review,
         "note": payload.note,
-        "history": [*row.review.get("history", []), review],
-        "evidence": [*row.review.get("evidence", []), *linked],
+        "history": [*history, review],
+        "evidence": [*evidence, *linked],
     }
     audit(
         session,

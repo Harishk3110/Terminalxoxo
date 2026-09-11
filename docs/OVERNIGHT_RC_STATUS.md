@@ -3,8 +3,9 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current verified parent: 68698d8, pushed and deployed locally; broker-contract batch
-follows this commit. Dated-source/options/risk, ledger/factor, local
+Current HEAD: c906ef0, pushed. The persistent Docker stack carries 68698d8;
+the research-desk/connection-lifetime/health timestamp batch is in progress.
+Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
 Factor request/loading improvements are committed and deployed locally. Typed alpha
@@ -31,12 +32,29 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Research desk: 39 affected tests pass; source and new contract tests pass strict
+  types. Quant and Equity views exactly match the prior implementation on an
+  in-memory copy of populated browser data. Whole strict 21: 1,281 diagnostics /
+  97 files / 273 sources; API 647 / 29 files. The history-list type is corrected;
+  35 follow-up tests and the focused desk/test type check pass. Whole strict 22
+  remains at 1,281 diagnostics (API 646); no assertions were relaxed.
+- Full browser 12 finished: 42 passed, one ECONNRESET during the post-correction GET,
+  zero retries, 16.7m, native exit 1. Failure artifacts are preserved locally.
+  The write and revision-history assertions passed first. Its trace places reuse
+  5,999.536ms after the prior response, matching the six-second server idle cutoff.
+  Production/test/Windows startup now specify a 70-second keep-alive timeout;
+  its new regression and the ledger correction pass in the focused old-build run.
+- System Health screenshot review found missing times rendered as Invalid Date.
+  Its browser negative control fails on the old build. The formatter fix passes
+  12 unit tests; all 303 terminal unit tests, TypeScript, ESLint and Node 22 build
+  pass. Rebuilt browser evidence is active. Full backend 24 passed 1,396 tests,
+  122 warnings, 487.64s, native exit 0; coverage 11,080/12,509 (88.5762%).
 - Broker snapshot/fill contracts: 62 affected tests pass, three focused modules
   pass strict types, and 200 broker views match the prior implementation exactly.
   Stored malformed fills now fail before ledger writes; recorded decimal strings,
   date and account/execution duplicate identity are retained. Whole strict 19:
   1,441 diagnostics / 99 files / 272 sources, API 738 / 30 files; subsequent test
-  consumer fixes are included in checkpoint 20, not yet reported here.
+  consumer fixes yield checkpoint 20: 1,372 diagnostics / 98 files / 272 sources.
 - Docker build and health-gated refresh to 68698d8 passed. Ten services are healthy,
   MinIO init succeeded, and /overview reaches login with HTTP 200. The deployed
   broker source hash matches 68698d8, not the later broker worktree.
@@ -207,13 +225,13 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `corepack pnpm dlx node@22 node_modules/@playwright/test/cli.js test tests/e2e --workers=1 --retries=0`.
-Run full browser 12 with isolated run ID overnight-full-12 and
-PLAYWRIGHT_PYTHON=C:/Dev/.venv-release/Scripts/python.exe, then continue engine/API
-contracts and the full backend checkpoint. The clean
+Exact next command: `Get-Content logs/overnight-health-positive-01.log -Tail 12`.
+Finish the rebuilt connection-lifetime, correction and missing-health-time
+selection, then run the full browser suite without retries.
+Continue remaining engine/API contracts after that checkpoint. The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 19 remains red at 1,441 errors.
+in the clean environment. Whole strict checkpoint 21 remains red at 1,281 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

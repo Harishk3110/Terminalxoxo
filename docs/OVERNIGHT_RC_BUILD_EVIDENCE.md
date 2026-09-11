@@ -943,3 +943,71 @@ The type checkpoint exposed new test consumer narrowing needs; the affected brok
 view and approval assertions now validate their JSON shape without weakening the
 financial assertions. Checkpoint 20 is running after those fixes. Existing broader
 agent/reconciliation typing remains open. Full backend/browser gates are next.
+
+## Research Desk Contracts And Browser 12 Follow-Up
+
+2026-09-12 06:24-06:38 SGT, c906ef0 plus worktree. Browser 12 loaded the c906ef0
+API and the earlier final research frontend build before these edits. It remains
+active with zero retries; no complete browser pass is claimed.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Whole strict checkpoint 20 | 1 | overnight-whole-types-20/: 1,372 diagnostics, 98 files, 272 sources |
+| Initial candidate/operating pytest | 0 | overnight-desks-tests-01.log: seven passed, three warnings, 38.81s |
+| Research contracts/candidate/operating/equity pytest | 0 | overnight-desks-tests-02.log: 39 passed, three warnings, 17.42s |
+| Focused strict source/tests | 0 | overnight-desks-types-02.log: two files |
+| Ruff and formatting affected Python | 0 each | All checks passed; three files already formatted |
+| Read-only populated-view parity attempt | 1 | overnight-desks-parity.log: valuation cache miss attempted a write and SQLite correctly rejected it; active test data unchanged |
+| Populated-view parity on SQLite in-memory backup | 0 | overnight-desks-parity-02.log: exact Quant (2,674,839 serialized characters) and Equity (13,268 characters) equality; only in-memory copy writable |
+| Whole strict checkpoint 21 | 1 | overnight-whole-types-21/: 1,281 diagnostics, 97 files, 273 sources; API 647 in 29 files |
+| Incorrect broker-action script path | 1 | MODULE_NOT_FOUND for scripts/check-no-execution.mjs; no scanner pass inferred |
+| Actual package-declared broker-action scan | 0 | node tests/security/no-execution-methods.mjs; overnight-broker-no-execution.log |
+| Timestamp unit tests | 0 | overnight-timestamp-tests.log: 12 passed; missing/malformed values remain Not observed, UTC/offset conversion retained |
+| Frontend TypeScript | 0 | overnight-health-ui-types.log; default Node 20 CLI emitted engine warning, command passed |
+
+The research desk validates persisted result rows, OOS scalars and dataset maps.
+Candidate reviews validate saved history before state mutation. The existing
+financial and chronological assertions remain intact. A new type annotation on
+run_payload exposes one history-list variance error to fix after backend 24;
+checkpoint 21 is not a static-quality pass.
+
+Browser-12 ledger correction failed only at the direct GET after confirmed revision
+2/history. Trace response end 174660.791ms and next GET start 180660.327ms yield
+5,999.536ms idle time. Node 22.23.2 reports Keep-Alive timeout=5; its documented
+one-second server buffer gives a six-second close boundary. This timing strongly
+indicates connection reuse racing server expiry, rather than a rejected ledger
+write. No retry was added. Startup is changed to --keepAliveTimeout 70000 in the
+package script, Windows launcher and browser harness; new browser verification is
+pending. References: [Node HTTP timeout buffer](https://nodejs.org/api/http.html#serverkeepalivetimeoutbuffer)
+and [Next production keep-alive guidance](https://nextjs.org/docs/app/api-reference/cli/next).
+
+Further 1366px screenshots reviewed: data drop/catalogue, health, Excel/Deck,
+macro, portfolio and GEX. Health showed Invalid Date for unobserved provider/worker
+times; the typed formatter correction is pending a rebuilt browser check. GEX
+million-scale negative y-axis labels appear clipped and remain an open visual
+task. Neither observation was hidden by accepting a visual baseline.
+
+## Completed Backend And Browser Checkpoint
+
+2026-09-12 06:41-06:47 SGT, c906ef0 plus research-desk worktree.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Clean Python full pytest tests/sprint services/api/tests with API coverage | 0 | overnight-backend-24.log/xml: 1,396 passed, 122 warnings, 487.64s; overnight-coverage-24.json: 11,080 / 12,509 statements (88.5762%) |
+| Full Node 22 Playwright tests/e2e, one worker, zero retries | 1 | overnight-browser-full-12.log / overnight-full-12-results.json: 42 passed, one ledger ECONNRESET, 16.7m; all five viewport sweeps passed; trace copied to overnight-full-12-failures |
+| Follow-up pytest desk/candidate/equity including history serialization | 0 | overnight-desks-tests-03.log: 35 passed, one warning, 6.06s |
+| Focused mypy --strict --follow-imports=silent --explicit-package-bases desks_api and new desk tests | 0 | overnight-desks-types-03.log: two files; imported dependencies are not certified by this focused check |
+| Whole strict checkpoint 22 | 1 | overnight-whole-types-22/: 1,281 distinct diagnostics, 97 files, 273 sources; API 646 in 29 files |
+| Changed Python Ruff / format --check | 0 each | three files already formatted, no lint errors |
+| Secret / no-execution scans | 0 each | overnight-desks-secrets.log / overnight-desks-no-execution.log |
+| Old-build health negative + connection/correction browser selection | 1 | overnight-health-negative-01.log/json: two passed, health failed on Invalid Date; zero retries, 57.3s; trace preserved in overnight-health-negative-01-failures |
+| Full terminal Vitest from apps/terminal-web on Node 22 | 0 | overnight-health-full-ui-tests.log: 303 passed, 23 files, 95.78s |
+| Frontend TypeScript / ESLint | 0 each | overnight-health-ui-types.log / overnight-health-ui-lint.log |
+| Node 22 Next production build with test API environment | 0 | overnight-health-next-build.log |
+
+The history list copy follows backend 24 and has separate follow-up test evidence.
+Whole checkpoint 22 removes its variance diagnostic but another distribution now
+reports an existing services.py PriceProvenance default error. That diagnostic is
+retained; the whole gate remains red. The rebuilt focused browser selection is
+active, not yet a pass. No financial tolerance, security assertion or retry count
+was weakened. Persistent Docker remains on 68698d8 with all data preserved.

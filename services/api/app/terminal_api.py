@@ -15,7 +15,7 @@ from typing import NotRequired, TypedDict
 from zipfile import BadZipFile, ZipFile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
@@ -222,7 +222,7 @@ def factors(
         raise HTTPException(422, str(exc)) from exc
 
 
-def run_payload(run):
+def run_payload(run: models.AnalysisRun) -> dict[str, JsonValue]:
     return {
         "id": run.id,
         "kind": run.kind,
@@ -230,7 +230,7 @@ def run_payload(run):
         "status": run.status,
         "parameters": {k: v for k, v in run.parameters.items() if not k.startswith("_")},
         "result": run.result,
-        "history": run.history,
+        "history": [entry for entry in run.history],
         "error": run.error,
         "created_at": run.created_at.isoformat(),
         "started_at": run.started_at.isoformat() if run.started_at else None,
