@@ -1,5 +1,30 @@
 # Build Evidence
 
+## Final Master Build: 2026-09-11
+
+Baseline `597f346b75033a7f1c322188751db3dc6b365a90`; remote
+https://github.com/Harishk3110/Terminalxoxo.git. The following records supersede
+archived claims below. Commands execute in C:\Dev unless stated otherwise.
+Rows identify the checked-out commit; `+ worktree` means the changes being tested
+were not committed yet. No full final-acceptance pass is claimed.
+
+| Date | Commit | Command | Exit | Result |
+| --- | --- | --- | --- | --- |
+| 2026-09-11 | 597f346 | git status; git branch --show-current; git rev-parse HEAD; git log --oneline -15; git remote -v (separate invocations) | 0 each | PASS: clean main, expected remote. |
+| 2026-09-11 | 597f346 | git tag -a pre-final-knk-terminal-build -m "Recovery baseline before final KnK terminal production build" | 0 | PASS |
+| 2026-09-11 | 597f346 | git push origin pre-final-knk-terminal-build | 0 | PASS: new tag pushed. |
+| 2026-09-11 | 597f346 + worktree | .venv-sprint/Scripts/python.exe -m pytest tests/sprint/test_final_loc_report.py tests/sprint/test_loc_counter.py -q | 0 | PASS: 71 tests, one dependency warning. |
+| 2026-09-11 | 597f346 + worktree | .venv-sprint/Scripts/python.exe scripts/loc_report.py | 0 | PASS: 47,617 eligible lines; source 34,861, tests 12,756. Mixed sprint suites conservatively grouped as integration. |
+| 2026-09-11 | 597f346 + worktree | corepack pnpm dlx node@22 node_modules/next/dist/bin/next build (apps/terminal-web; NEXT_PUBLIC_APP_ENV=test, KNK_API_URL=http://127.0.0.1:8000) | 0 | PASS: Next 15.5.24, private dynamic catchall/backend routes, login/static robots only. |
+| 2026-09-11 | 597f346 | docker info --format '{{.ServerVersion}}' (initial) | 1 | FAIL: daemon pipe absent. |
+| 2026-09-11 | 597f346 + worktree | docker info --format '{{.ServerVersion}}' (after hidden Docker Desktop startup) | 0 | PASS: daemon 29.4.2. This is not Compose health. |
+| 2026-09-11 | 597f346 + worktree | docker ps -a --format '{{.Names}} {{.Status}} {{.Ports}}'; docker volume ls --format '{{.Name}}' (separate invocations) | 0 each | No containers; two unrelated anonymous volumes. Neither removed. |
+
+Final backend lint/type/coverage, Docker build/startup/health, migration roundtrip,
+backup/restore and complete browser acceptance remain NOT RUN for this directive.
+
+## Archived V1 Evidence
+
 This is the archived V1 evidence. Current terminal V2 results are in STATUS.md and docs/VISUAL_ACCEPTANCE.md.
 
 Date: 2026-09-05

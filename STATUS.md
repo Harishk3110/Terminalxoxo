@@ -1,5 +1,19 @@
 # Terminal Status
 
+## Final Master Build, 2026-09-11
+
+The 2026-09-11 master directive supersedes prior scope. Baseline `597f346` was
+clean; recovery tag `pre-final-knk-terminal-build` is pushed. Current audit:
+docs/FINAL_GAP_AUDIT.md. Final acceptance is not complete.
+
+Fresh runtime inspection: Docker Linux engine unavailable and no local terminal,
+API, PostgreSQL, Redis or MinIO listeners. Previous September 7 startup evidence
+is historical, not a claim that services are still running. TOTP enrollment and
+recovery login are missing despite existing storage tables. These are being fixed.
+Docker Desktop was subsequently started hidden and daemon 29.4.2 responds; no
+containers are running yet. Next production build passed. Both LOC suites passed
+(71 tests); eligible total 47,617, not a product-completion measure.
+
 Controlling scope: PRD_TERMINAL_ONLY.md, 2026-09-07. The previous second-frontend
 scope is cancelled. The 25K line-count target is not a completion certification.
 

@@ -1,4 +1,28 @@
-# Terminal-only Tasks
+# Final Master Build Tasks
+
+Controlling directive: 2026-09-11 final master build. Baseline `597f346`.
+Historical completed work below is preserved, not equivalent to final acceptance.
+
+- [x] M0: inspect baseline, push pre-final-knk-terminal-build tag and record FINAL_GAP_AUDIT.
+- [x] M0: verify current terminal build and meaningful categorized LOC report (71 counter tests; Next production build passed).
+- [ ] M1: repair Compose/monitoring/startup; verify clean migrations and full Docker health.
+- [ ] M1: complete TOTP enrollment/recovery/password/session security workflows.
+- [ ] M2: complete security-master lifecycle, immutable remote storage and source conflict policies.
+- [ ] M3: rerun full 100K ledger/NAV/corporate-action/FX and restart acceptance without resetting user data.
+- [ ] M4: complete alpha attribution and certify performance coverage.
+- [ ] M5: complete liquidity/derivatives risk and full before/after trade reconciliation.
+- [ ] M6: complete nonlinear stress and constrained manual rebalance.
+- [ ] M7: certify local-agent and Data Drop full acceptance with preserved Parquet lineage.
+- [ ] M8: finish provider adapters, SEC curation/revisions, FX/news/AI contract tests.
+- [ ] M9: finish corporate-action backtests, strategy walk-forward, fundamental factors and quant sandbox.
+- [ ] M10: finish equity segments/ROIC/historical valuation/estimates/earnings.
+- [ ] M11: finish multi-expiry payoff, full portfolio Greeks and supported options history.
+- [ ] M12: finish isolated report workbooks/decks/PDF and Pine acceptance.
+- [ ] M13: verify complete registry, linked desks, source/timestamp/loading/error states.
+- [ ] M14: full lint/types/coverage, visual/performance, PostgreSQL backup/restore and deployment gates.
+- [ ] M15: pass every applicable step in docs/FINAL_ACCEPTANCE.md, commit and push.
+
+## Previous Terminal-only Checkpoints
 
 Recovery tag: pre-terminal-only-cleanup. Milestones follow the user's priority order.
 
