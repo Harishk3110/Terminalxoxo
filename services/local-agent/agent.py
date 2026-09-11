@@ -10,10 +10,14 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
+from typing import TypedDict
+from urllib.parse import quote, urlparse
+from uuid import uuid4
 
 import httpx
 import keyring
+from keyring.backend import KeyringBackend
+from keyring.core import load_keyring
 
 VERSION = "1.0.0"
 SERVICE = "KnK Capital Data Drop"
@@ -34,20 +38,70 @@ FOLDERS = [
     "quarantine",
     "logs",
 ]
+TERMINAL_STATES = {"IMPORTED", "ARCHIVED", "DUPLICATE", "REJECTED", "QUARANTINED"}
+SERVER_STATES = TERMINAL_STATES | {
+    "DETECTED",
+    "HASHING",
+    "UPLOADING",
+    "UPLOAD_FAILED",
+    "STORED_RAW",
+    "PREVIEWING",
+    "SCHEMA_DETECTED",
+    "MAPPING_REQUIRED",
+    "MAPPED",
+    "VALIDATING",
+    "VALIDATED",
+    "VALIDATED_WITH_WARNINGS",
+    "VALIDATION_FAILED",
+    "AWAITING_APPROVAL",
+    "IMPORTING",
+    "IMPORT_FAILED",
+}
 
 
-def safe_path(root, value):
+class FileStatus(TypedDict):
+    id: str
+    hash: str
+    state: str
+
+
+def file_status(value: object) -> FileStatus:
+    if not isinstance(value, dict):
+        raise ValueError("Invalid file acknowledgement")
+    identifier, digest, state = value.get("id"), value.get("hash"), value.get("state")
+    if (
+        not isinstance(identifier, str)
+        or not identifier
+        or len(identifier) > 200
+        or not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+        or not isinstance(state, str)
+        or state not in SERVER_STATES
+    ):
+        raise ValueError("Invalid file acknowledgement")
+    return {"id": identifier, "hash": digest, "state": state}
+
+
+def safe_path(root: Path, value: str | Path) -> Path:
     resolved = Path(value).resolve()
     if not resolved.is_relative_to(root.resolve()):
         raise ValueError("Path escapes configured data-drop root")
     return resolved
 
 
-def validate_endpoint(url, allow_local):
-    parsed = urlparse(url)
+def validate_endpoint(url: str, allow_local: bool) -> str:
+    try:
+        parsed = urlparse(url)
+        port = parsed.port
+    except ValueError:
+        raise ValueError("Invalid API server origin") from None
     if (
-        parsed.username
-        or parsed.password
+        not parsed.hostname
+        or port == 0
+        or any(character.isspace() for character in url)
+        or parsed.username is not None
+        or parsed.password is not None
         or parsed.query
         or parsed.fragment
         or parsed.path not in {"", "/"}
@@ -62,11 +116,9 @@ def validate_endpoint(url, allow_local):
     return url.rstrip("/")
 
 
-def credential_backend():
+def credential_backend() -> KeyringBackend:
     if sys.platform == "win32":
-        from keyring.backends.Windows import WinVaultKeyring
-
-        backend = WinVaultKeyring()
+        backend = load_keyring("keyring.backends.Windows.WinVaultKeyring")
     else:
         backend = keyring.get_keyring()
         if "fail" in type(backend).__module__ or "plaintext" in type(backend).__module__.lower():
@@ -75,7 +127,7 @@ def credential_backend():
 
 
 class Agent:
-    def __init__(self, root, url, token):
+    def __init__(self, root: Path, url: str, token: str) -> None:
         self.root, self.url = root.resolve(), url
         for folder in FOLDERS:
             safe_path(self.root, self.root / folder).mkdir(parents=True, exist_ok=True)
@@ -83,6 +135,8 @@ class Agent:
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS files (path TEXT PRIMARY KEY, hash TEXT NOT NULL, file_id TEXT, state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, retry_at REAL NOT NULL DEFAULT 0)"
         )
+        if "archive_path" not in {row[1] for row in self.db.execute("PRAGMA table_info(files)")}:
+            self.db.execute("ALTER TABLE files ADD COLUMN archive_path TEXT")
         self.db.commit()
         self.client = httpx.Client(
             base_url=url,
@@ -90,7 +144,7 @@ class Agent:
             timeout=30,
             follow_redirects=False,
         )
-        self.observed = {}
+        self.observed: dict[str, tuple[int, int]] = {}
         self.errors = 0
         self.auto_upload = os.environ.get("KNK_DATA_DROP_AUTO_UPLOAD", "true").lower() == "true"
         self.archive_processed = (
@@ -102,7 +156,7 @@ class Agent:
             format="%(asctime)s %(message)s",
         )
 
-    def scan(self):
+    def scan(self) -> None:
         for path in (self.root / "inbox").rglob("*"):
             if (
                 path.is_symlink()
@@ -150,7 +204,7 @@ class Agent:
                 )
         self.db.commit()
 
-    def upload(self):
+    def upload(self) -> None:
         rows = self.db.execute(
             "SELECT path,hash,attempts FROM files WHERE state='QUEUED' AND retry_at<=?",
             (time.time(),),
@@ -164,7 +218,7 @@ class Agent:
                 original = path.name.split("-", 1)[1]
                 response = self.client.post("/agent/v1/files", files={"file": (original, content)})
                 response.raise_for_status()
-                payload = response.json()
+                payload = file_status(response.json())
                 if payload["hash"] != digest:
                     raise ValueError("Upload acknowledgement hash mismatch")
                 if payload["state"] == "UPLOAD_FAILED":
@@ -173,13 +227,7 @@ class Agent:
                     "UPDATE files SET file_id=?,state=? WHERE path=?",
                     (payload["id"], payload["state"], filename),
                 )
-                if payload["state"] not in {
-                    "IMPORTED",
-                    "ARCHIVED",
-                    "DUPLICATE",
-                    "REJECTED",
-                    "QUARANTINED",
-                }:
+                if payload["state"] not in TERMINAL_STATES:
                     destination = safe_path(self.root, self.root / "review" / path.name)
                     if not destination.exists():
                         path.rename(destination)
@@ -196,50 +244,85 @@ class Agent:
                 logging.warning("upload retry hash=%s attempt=%s", digest[:12], attempts + 1)
             self.db.commit()
 
-    def sync(self):
-        response = self.client.get("/agent/v1/files")
-        response.raise_for_status()
-        for item in response.json()["items"]:
-            record = self.db.execute(
-                "SELECT path,state FROM files WHERE file_id=?", (item["id"],)
-            ).fetchone()
-            if not record:
-                continue
-            filename, state = record
-            if state == "LOCAL_ARCHIVED":
-                continue
-            remote = item["state"]
-            if remote in {"IMPORTED", "ARCHIVED", "DUPLICATE", "REJECTED", "QUARANTINED"}:
-                if not self.archive_processed:
-                    continue
-                path = safe_path(self.root, filename)
-                folder = (
-                    "quarantine"
-                    if remote == "QUARANTINED"
-                    else "rejected"
-                    if remote == "REJECTED"
-                    else datetime.now().strftime("processed/%Y/%m")
-                )
-                target = safe_path(self.root, self.root / folder / path.name)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                if path.exists() and not target.exists():
-                    path.rename(target)
-                elif path.exists():
-                    target = safe_path(
-                        self.root, target.with_name(f"{time.time_ns()}-{target.name}")
-                    )
-                    path.rename(target)
-                if remote == "IMPORTED":
-                    self.client.post(f"/agent/v1/files/{item['id']}/archived").raise_for_status()
-                self.db.execute(
-                    "UPDATE files SET path=?,state='LOCAL_ARCHIVED' WHERE file_id=?",
-                    (str(target), item["id"]),
-                )
-            else:
-                self.db.execute("UPDATE files SET state=? WHERE file_id=?", (remote, item["id"]))
+    def _archive(self, item: FileStatus, filename: str, digest: str, planned: str | None) -> None:
+        path = safe_path(self.root, filename)
+        if item["hash"] != digest:
+            raise ValueError("Remote file identity changed")
+        if planned is None:
+            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError("Local file changed before archive")
+            folder = (
+                "quarantine"
+                if item["state"] == "QUARANTINED"
+                else "rejected"
+                if item["state"] == "REJECTED"
+                else datetime.now().strftime("processed/%Y/%m")
+            )
+            target = safe_path(self.root, self.root / folder / path.name)
+            if target.exists():
+                target = safe_path(self.root, target.with_name(f"{uuid4().hex}-{path.name}"))
+            # Commit intent before the filesystem move. A restart can then find
+            # either source or destination without guessing a new archive month.
+            self.db.execute(
+                "UPDATE files SET archive_path=?,state='ARCHIVE_PENDING' WHERE path=?",
+                (str(target), filename),
+            )
+            self.db.commit()
+        else:
+            target = safe_path(self.root, planned)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError("Local file changed during archive")
+            path.rename(target)
+        if hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+            raise ValueError("Archived file integrity check failed")
+        if item["state"] == "IMPORTED":
+            response = self.client.post(f"/agent/v1/files/{quote(item['id'], safe='')}/archived")
+            response.raise_for_status()
+            acknowledgement: object = response.json()
+            if not isinstance(acknowledgement, dict) or acknowledgement.get("status") != "ARCHIVED":
+                raise ValueError("Invalid archive acknowledgement")
+        self.db.execute(
+            "UPDATE files SET path=?,state='LOCAL_ARCHIVED',archive_path=NULL,attempts=0,retry_at=0 WHERE path=?",
+            (str(target), filename),
+        )
         self.db.commit()
 
-    def tick(self):
+    def sync(self) -> None:
+        response = self.client.get("/agent/v1/files")
+        response.raise_for_status()
+        payload: object = response.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise ValueError("Invalid remote file list")
+        items = [file_status(value) for value in payload["items"]]
+        for item in items:
+            records = self.db.execute(
+                "SELECT path,state,hash,archive_path,attempts,retry_at FROM files WHERE file_id=?",
+                (item["id"],),
+            ).fetchall()
+            for filename, state, digest, planned, attempts, retry_at in records:
+                if state == "LOCAL_ARCHIVED" or retry_at > time.time():
+                    continue
+                try:
+                    if item["state"] in TERMINAL_STATES:
+                        if self.archive_processed:
+                            self._archive(item, filename, digest, planned)
+                    elif state != "ARCHIVE_PENDING":
+                        self.db.execute(
+                            "UPDATE files SET state=? WHERE path=?", (item["state"], filename)
+                        )
+                except (httpx.HTTPError, OSError, ValueError):
+                    self.errors += 1
+                    self.db.execute(
+                        "UPDATE files SET attempts=?,retry_at=? WHERE path=?",
+                        (attempts + 1, time.time() + min(300, 2 ** min(attempts + 1, 8)), filename),
+                    )
+                    logging.warning("archive retry hash=%s attempt=%s", digest[:12], attempts + 1)
+                self.db.commit()
+        self.db.commit()
+
+    def tick(self) -> None:
         paused = (self.root / "PAUSE").exists()
         queued = self.db.execute("SELECT COUNT(*) FROM files WHERE state='QUEUED'").fetchone()[0]
         self.client.post(
@@ -252,12 +335,12 @@ class Agent:
                 self.upload()
             self.sync()
 
-    def close(self):
+    def close(self) -> None:
         self.client.close()
         self.db.close()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["pair", "run", "rescan", "pause", "resume"])
     parser.add_argument("--root", default=os.environ.get("KNK_DATA_DROP_ROOT"))
@@ -288,7 +371,13 @@ def main():
         with httpx.Client(base_url=url, timeout=30, follow_redirects=False) as client:
             response = client.post("/agent/v1/pair", json={"code": code, "name": args.name})
             response.raise_for_status()
-            payload = response.json()
+            payload: object = response.json()
+        if (
+            not isinstance(payload, dict)
+            or not isinstance(payload.get("token"), str)
+            or not payload["token"]
+        ):
+            raise ValueError("Invalid pairing acknowledgement")
         backend.set_password(SERVICE, url, payload["token"])
         print("Agent paired. Scoped token stored in the operating-system credential vault.")
         return
@@ -300,9 +389,9 @@ def main():
         while True:
             try:
                 agent.tick()
-            except httpx.HTTPError:
+            except (httpx.HTTPError, OSError, ValueError):
                 agent.errors += 1
-                logging.warning("server unavailable; queued files retained")
+                logging.warning("scan or synchronization failed; queued files retained")
             if args.command == "rescan":
                 time.sleep(2)
                 agent.tick()

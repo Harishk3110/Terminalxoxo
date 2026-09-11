@@ -217,8 +217,21 @@ def test_agent_queue_retry_archive_and_pause(tmp_path):
                 },
             )
         if request.url.path == "/agent/v1/files":
-            return httpx.Response(200, json={"items": [{"id": "file1", "state": "IMPORTED"}]})
-        return httpx.Response(200, json={"status": "OK"})
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "id": "file1",
+                            "state": "IMPORTED",
+                            "hash": hashlib.sha256(data).hexdigest(),
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(
+            200, json={"status": "ARCHIVED" if request.url.path.endswith("/archived") else "OK"}
+        )
 
     agent.client.close()
     agent.client = httpx.Client(base_url=agent.url, transport=httpx.MockTransport(transport))

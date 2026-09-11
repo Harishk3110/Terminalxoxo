@@ -3,9 +3,10 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD at verification: a3a5d79, pushed. Dated-source, typed-options, risk
-empty-state, ledger refresh and factor performance changes are verified for this
-batch and ready to push. Full release acceptance remains open.
+Current HEAD: 364503e, pushed. Dated-source, typed-options, risk empty-state,
+ledger refresh and factor performance changes are committed. The local-agent
+archive/reader contract batch has passed its full backend verification. The next
+ASGI concurrency fix is being tested. Full release remains open.
 Recovery tag: pre-overnight-rc-closure, pushed before code changes.
 
 M1 pipeline: owned SQL report jobs, pinned input, write-once outputs, authenticated
@@ -16,15 +17,23 @@ recalculation. Remaining financial-model/deck depth is PARTIAL.
 
 Next milestone: M2 static cleanup and source precedence, then full browser closure. First unchecked report
 subtask: complete financial model/deck content and actual rendered-artifact review.
-Current code batch: dated market/FX source selection, typed history and options
-results, historical option-contract identity, explicit risk empty states,
-initial-read cancellation after ledger writes and shared/vectorized factor reads.
+Verified agent batch: durable local archive journal, validated acknowledgements,
+typed reader contracts, nonzero broker client IDs and explicit derivative
+multiplier availability. Existing queue records are preserved. Current code batch:
+keep blocking database access out of the asynchronous request middleware.
 Next batch: remaining engine/API contracts and source-adapter completeness.
 Dated stress/hedge selection is implemented. Historical valuations no longer rewrite
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-sprint/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Agent/reader focused selection: 30 passed; both source modules and both new test
+  modules pass strict types. Ruff/format/pip check pass. Full backend run 19:
+  1,244 passed, 13 warnings, 447.09s; 10,875/12,341 statements covered (88.1209%).
+  Whole type checkpoint 13 still fails; local-agent has no diagnostics.
+- Docker image build and health-gated refresh for 364503e passed. The full browser
+  run 09 is active on that build; the quant journey hit SQLite lock errors in
+  workspace saving and factor reads. The ASGI fix is not yet deployed.
 - Full backend run 18: 1,214 passed, 13 warnings, 469.49s; 10,871/12,341
   statements covered. This includes the final factor read/calculation changes.
 - FX/market/history/research/type-runner selection: 46 passed. Options selection:
@@ -74,10 +83,10 @@ Current evidence:
 
 First-party Ruff passes. The latest format command includes services, packages,
 scripts, tests, typings, infrastructure and migrations: 276 formatted files.
-Mypy is NOT green: checkpoint 12 has 913 API errors in 33 files; the whole runner
-reports 1,667 distinct diagnostic lines in 119 files across nine distributions,
-with 260 inventoried files. Checkpoint 11 had 1,732 diagnostics; factor result
-contracts removed another 65. The source-only checkpoint 09 had 1,859 diagnostics.
+Mypy is NOT green: checkpoint 13 has 913 API errors in 33 files; the whole runner
+reports 1,619 distinct diagnostic lines in 117 files across nine distributions,
+with 262 inventoried files. Checkpoint 12 had 1,667 diagnostics; agent contracts
+removed another 48. The source-only checkpoint 09 had 1,859 diagnostics.
 The runner
 now pins PYTHONHASHSEED to keep diagnostic ordering stable. Pandas 2.2.3 stubs were
 updated to their compatible May 2025 revision; runtime pandas was not changed.
@@ -113,7 +122,7 @@ release-candidate acceptance are not claimed.
 
 Ten long-running Docker services, including reports, are healthy; MinIO init exited
 0. Runtime carries the dated-source/options/risk-availability batch based on
-a3a5d79. The newer ledger/factor fix is not yet deployed. API/worker/report/UI
+a3a5d79 and now the ledger/factor fix from 364503e. API/worker/report/UI
 builds and refresh passed. The
 earlier frontend refresh returned healthy, but the PowerShell command wrapper
 reported exit 1 on Docker stderr progress. An explicit native-exit-code verification
@@ -136,6 +145,7 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `docker compose --env-file .env.compose.local -p knk-final-local build terminal-web api worker-data worker-quant report-engine`.
-After refreshing the images: full browser rerun, then remaining engine/API and
-local-agent contracts. The local-agent archive acknowledgement crash path is open.
+Exact next command: `Get-Content logs/overnight-backend-19.log -Tail 8`.
+Finish the agent verification/push and full browser run 09, then continue remaining
+engine/API contracts. Agent startup installation, structured logs, paging beyond
+the latest 500 statuses and separate file/broker credential profiles remain open.

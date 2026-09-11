@@ -563,3 +563,42 @@ interactive Factor Lab. The corrected build is under targeted verification.
 Additional original screenshots inspected: macro at 1366px and GEX at 2560px.
 Secret scan passed for 587 text files with zero findings; the broker-action scan
 passed. Both receipts have prefix overnight-ledger-factor-.
+
+## Local Agent Recovery and Paper Reader Contracts
+
+2026-09-12 SGT, baseline 364503e plus the agent contract batch.
+
+Archive intent is committed before a local rename. Interrupted acknowledgements
+resume the recorded target even after a month change or process restart. Missing
+or changed local bytes cannot be acknowledged as archived. Existing SQLite queue
+records receive an additive archive_path column and are preserved. Upload and
+archive responses are validated before changing local state; invalid server
+origins are rejected without including credential fragments in errors.
+
+Recovery negative controls: 15 failed / three passed before implementation.
+The expanded recovery suite passes 23 tests, native exit 0 in
+overnight-local-agent-recovery-after-02.log. Paper reader negative controls: five failed /
+two passed. All 30 combined new tests then passed in 7.92s, native exit 0;
+the receipt is overnight-agent-reader-after.log. Tests use temporary files,
+mock HTTP transport and recorded SDK-shaped values, not a broker connection.
+
+Reader settings and responses are typed. Nonpositive/out-of-range client IDs are
+rejected before constructing the SDK client. This excludes client ID zero's
+special order-binding behavior in the pinned SDK. Missing option/futures
+multipliers are rejected; the stock identity multiplier and actual zero cash
+remain valid. Missing marks remain unavailable, not zero.
+
+requirements-dev.txt now installs the existing pinned broker requirements,
+including ib_async 2.1.0, so SDK contract tests are repeatable. Installation and
+pip check exit 0. Both agent source files and both new test files pass strict
+types; Ruff and formatting pass. Whole strict checkpoint 13 remains red:
+1,619 distinct diagnostic lines in 117 files, 262 inventoried sources. The
+local-agent distribution has zero diagnostics; API remains 913 in 33 files.
+
+Full backend 19: 1,244 passed, 13 warnings, 447.09s, native exit 0. Coverage is
+10,875/12,341 statements (88.1209%), 1,466 missing. Receipts:
+overnight-backend-19.log / overnight-backend-19.xml /
+overnight-coverage-19.json. These results precede the separate ASGI concurrency
+fix under investigation. Browser run 09 is still active and has exposed SQLite
+lock errors during workspace persistence and factor reads. No full browser or
+27-stage release pass is claimed for this checkpoint.

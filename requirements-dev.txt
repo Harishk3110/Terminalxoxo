@@ -7,3 +7,4 @@ types-reportlab==4.4.10.20260508
 boto3-stubs[s3]==1.35.90
 types-openpyxl==3.1.5.20260827
 pypdfium2==5.13.0
+-r services/local-agent/broker-requirements.txt
