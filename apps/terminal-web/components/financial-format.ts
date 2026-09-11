@@ -49,6 +49,18 @@ export function number(value: unknown, places = 2): string {
   return decimal === null ? "--" : formatted(decimal, places);
 }
 
+export function significant(value: unknown, digits = 6): string {
+  const decimal = parsed(value);
+  if (
+    decimal === null ||
+    !Number.isInteger(digits) ||
+    digits < 1 ||
+    digits > MAX_PLACES
+  )
+    return "--";
+  return decimal.isZero() ? "0" : decimal.toPrecision(digits);
+}
+
 export function pct(value: unknown): string {
   const decimal = parsed(value);
   if (decimal === null) return "--";

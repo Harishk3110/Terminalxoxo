@@ -37,7 +37,7 @@ milestone remain open unless explicitly verified below.
 - [x] M3: full single-run browser suite, 37 passed in run 07 with zero retries; financial/layout assertions retained.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [x] M3: 19 populated 390px screenshots inspected from full browser 11.
-- [ ] M3: fix desktop Equity collapsed grid rows and preserve small alpha inference values; both new browser regressions fail against the old build.
+- [x] M3: fix desktop Equity collapsed rows, preserve small alpha inference values and contain stress chart labels; all three negative controls fail on prior builds and final browser selection passes, zero retries. Corrected screenshots inspected.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.
 - [ ] M4: BUY/partial SELL/dividend -> downstream risk/review and restart persistence.
 - [x] M4: real isolated PostgreSQL/API/worker restart preserves BUY/partial SELL/dividend, saved NAV, session and private report hashes.

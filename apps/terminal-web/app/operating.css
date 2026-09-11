@@ -155,6 +155,10 @@
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
   grid-template-rows: minmax(0, 1fr);
 }
+.equity-desk-grid {
+  grid-template-rows: repeat(2, minmax(210px, 1fr));
+  min-height: 426px;
+}
 .risk-trade-dashboard-grid {
   min-height: 190px;
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
@@ -282,6 +286,10 @@
   }
   .data-drop-operating-grid {
     grid-template-rows: 250px 450px 360px;
+  }
+  .equity-desk-grid {
+    grid-template-rows: repeat(3, minmax(300px, 1fr));
+    min-height: 0;
   }
   .data-drop-operating-grid > :nth-child(2) {
     grid-column: auto;

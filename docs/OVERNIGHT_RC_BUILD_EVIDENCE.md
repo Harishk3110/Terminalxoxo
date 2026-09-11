@@ -875,3 +875,34 @@ native exit 1, zero retries). The Equity coverage table is hidden; alpha's
 rendered coefficient becomes zero. Traces/screenshots are preserved under
 logs/overnight-research-layout-before-artifacts. No baseline was auto-accepted.
 Corrective frontend work is separate from the verified backend batch above.
+
+## Research Layout And Statistical Precision
+
+2026-09-12 06:00-06:15 SGT, f381f8e plus research UI worktree. Equity now has
+explicit two-row desktop / three-row mobile grid tracks. Alpha coefficients,
+standard errors, p-values and confidence bounds use six significant digits,
+preserving true zero, missing values and very small nonzero values. Stress chart
+tracks reserve room for the canvas, axis labels and source footer.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Node 22 Playwright research-layout against old build, zero retries | 1 | overnight-research-layout-before.log/json: two failures reproduce hidden Equity table and nonzero alpha rendered as zero; traces retained |
+| Node 22 Vitest financial-format selection | 0 | overnight-statistical-format-unit.log: 72 passed, including 21 new precision cases |
+| Terminal TypeScript / ESLint | 0 each | overnight-research-ui-types.log / overnight-research-ui-lint.log |
+| Node 22 Vitest terminal suite from repository root | 1 | overnight-research-ui-full.log: wrong cwd omitted terminal Vitest JSX configuration; harness invocation error, not a product negative control |
+| Node 22 Vitest terminal suite from apps/terminal-web | 0 | overnight-research-ui-full-02.log: 291 passed in 22 files, 62.95s |
+| Node 22 Vitest shared suites | 0 | overnight-research-shared-unit.log: five passed in two files |
+| Node 22 Next build with explicit local test API environment | 0 | overnight-research-next-build.log |
+| Node 22 Playwright research-layout after Equity/alpha fixes, zero retries | 0 | overnight-research-layout-after.log/json: two passed |
+| Node 22 Playwright stress chart containment before CSS fix, zero retries | 1 | overnight-stress-chart-before.log/json: canvas/footer geometry fails; trace retained |
+| Node 22 Next build including stress correction | 0 | overnight-research-next-build-02.log |
+| Node 22 Playwright all three research-layout cases, zero retries | 0 | overnight-research-layout-final.log/json: three passed in 1.0m; 21.3s Equity, 12.8s alpha, 6.6s stress |
+| Broker-action scan | 0 | overnight-research-no-execution.log |
+| Clean-environment OpenAPI generation | 0 | overnight-clean-openapi.log: 170 paths, 77 schemas |
+| Observe-only watchdog | 0 | overnight-research-watchdog.log at 2026-09-11T22:09:25Z: all ten services healthy; MinIO initialization succeeded |
+
+Corrected Equity screenshots were reviewed at 1366/1440/1920/2560/390px; alpha
+and stress at 1366/390px. Evidence remains local under logs/research-screenshots.
+No visual baselines were accepted, and the full visual matrix is not certified.
+The persistent Docker stack still carries 6edb4e2 until the next explicit refresh.
+Full browser 12 and all 27 release stages remain unverified for this batch.

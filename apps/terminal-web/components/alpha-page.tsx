@@ -18,6 +18,7 @@ import {
   pct,
 } from "./ui";
 import type { Row, Run } from "./types";
+import { significant } from "./financial-format";
 
 interface Regression {
   state: string;
@@ -398,17 +399,37 @@ export function AlphaWorkspace() {
             rows={result?.coefficients ?? []}
             columns={[
               { key: "factor", label: "Factor", size: 110 },
-              { key: "coefficient", label: "Coefficient", numeric: true },
-              { key: "standard_error", label: "Std error", numeric: true },
+              {
+                key: "coefficient",
+                label: "Coefficient",
+                numeric: true,
+                format: (value) => significant(value),
+              },
+              {
+                key: "standard_error",
+                label: "Std error",
+                numeric: true,
+                format: (value) => significant(value),
+              },
               { key: "t_statistic", label: "t", numeric: true },
               {
                 key: "p_value",
                 label: "p-value",
                 numeric: true,
-                format: (value) => number(value, 5),
+                format: (value) => significant(value),
               },
-              { key: "lower", label: "Lower", numeric: true },
-              { key: "upper", label: "Upper", numeric: true },
+              {
+                key: "lower",
+                label: "Lower",
+                numeric: true,
+                format: (value) => significant(value),
+              },
+              {
+                key: "upper",
+                label: "Upper",
+                numeric: true,
+                format: (value) => significant(value),
+              },
             ]}
           />
         </Panel>

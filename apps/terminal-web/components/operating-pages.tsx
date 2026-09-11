@@ -1291,7 +1291,9 @@ export function OperatingDeskPage({
           ]}
         />
       )}
-      <div className="page-grid operation-two-column">
+      <div
+        className={`page-grid operation-two-column ${desk === "equity" ? "equity-desk-grid" : ""}`}
+      >
         {desk === "equity" ? (
           <>
             <Panel

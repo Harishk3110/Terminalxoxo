@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD: 9c7428c, pushed. Dated-source/options/risk, ledger/factor, local
+Current verified parent: f381f8e, pushed; research UI batch follows this commit. Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
 Factor request/loading improvements are committed and deployed locally. Typed alpha
@@ -41,10 +41,12 @@ Current evidence:
   environment, 1,500 old/new outputs match exactly, and three affected files pass
   strict types. Whole strict checkpoint 18 in the clean environment reports
   1,489 diagnostics / 100 files / 271 sources; API is 838 diagnostics in 31 files.
-- Visual follow-up: all 19 mobile screenshots were inspected. Desktop review found
-  collapsed Equity coverage/thesis panels at 1366px and rounded-to-zero alpha
-  inference values. Two new browser checks fail against the prior frontend as
-  expected; corrective grid/formatting changes are in progress, not yet certified.
+- Visual follow-up: all 19 mobile screenshots were inspected. The collapsed Equity
+  grid, rounded-to-zero alpha values and clipped stress chart now have verified
+  fixes. Three final browser regressions pass with zero retries; Equity screenshots
+  at all five sizes and alpha/stress at 1366px/390px were inspected. Terminal units:
+  291 passed; shared: five passed; TypeScript, ESLint and Node 22 build pass.
+  Full browser verification of this latest batch is next, not yet claimed.
 - Full backend 22: 1,300 passed, 13 warnings, 427.31s; coverage remains
   10,901/12,366 statements (88.1530%). This precedes the typed-alpha batch.
 - Typed alpha selection: 20 passed. Nine complete and four unavailable results
@@ -195,11 +197,12 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-browser-full-11.log -Tail 8`.
-Complete full browser 11 and continue engine/API contracts. Align and verify the
-scientific dependency stacks: Windows currently uses NumPy 2.2.1/SciPy 1.14.1;
-Docker uses NumPy 2.5.3/SciPy 1.18.1. Both use statsmodels 0.15.0. No cross-runtime
-numerical equivalence or dependency alignment is claimed yet.
+Exact next command: `docker compose --env-file .env.compose.local -p knk-final-local build api worker-data worker-quant report-engine terminal-web`.
+Refresh the healthy stack to the verified research UI batch, then run full browser
+12 with the clean Python environment and continue engine/API contracts. The clean
+Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
+environment is preserved but is not used for release gates. Full backend 23 passes
+in the clean environment. Whole strict checkpoint 18 remains red at 1,489 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

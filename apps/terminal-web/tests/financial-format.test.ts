@@ -1,8 +1,41 @@
 import { describe, expect, it } from "vitest";
 import Decimal from "decimal.js";
-import { money, number, pct, tone } from "../components/financial-format";
+import {
+  money,
+  number,
+  pct,
+  significant,
+  tone,
+} from "../components/financial-format";
 
 describe("decimal-preserving financial display", () => {
+  it.each([
+    ["0.000275346", "0.000275346"],
+    ["-0.000275346", "-0.000275346"],
+    ["1.234565", "1.23456"],
+    ["1.234575", "1.23458"],
+    ["1e-10000", "1.00000e-10000"],
+    ["-1e-10000", "-1.00000e-10000"],
+    ["1e100000", "1.00000e+100000"],
+    ["0", "0"],
+    ["-0", "0"],
+    [null, "--"],
+    [undefined, "--"],
+    [Infinity, "--"],
+    [true, "--"],
+    [[], "--"],
+    ["", "--"],
+  ])("retains statistical significance for %s", (value, expected) => {
+    expect(significant(value)).toBe(expected);
+  });
+
+  it.each([0, -1, 1.5, 13, Infinity, NaN])(
+    "rejects invalid significant precision %s",
+    (digits) => {
+      expect(significant(1.23, digits)).toBe("--");
+    },
+  );
+
   it.each([
     ["9999999999999999.12345678", 8, "9,999,999,999,999,999.12345678"],
     ["-9999999999999999.12345678", 8, "-9,999,999,999,999,999.12345678"],
