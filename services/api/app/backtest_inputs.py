@@ -1,49 +1,66 @@
 """Pin instruments and prior-published FX fixings before an offline run is queued."""
 
+from collections.abc import Mapping
 from datetime import UTC, datetime, time, timedelta
+from decimal import Decimal
 
+from pydantic import JsonValue, TypeAdapter
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
 from .price_sources import FxRateResolver
-from .quant_data import dataset_rows
+from .quant_data import DatasetProvenance, dataset_rows
 from .research_inputs import ResearchInput, bars_frame, pin_input
 from .terminal_analytics import instrument
 
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+SYMBOLS = TypeAdapter(list[str])
+TEXT = TypeAdapter(str)
 
-def pin_backtest_inputs(session, params):
-    symbols = params.get("symbols") or [params.get("symbol", "SPY")]
+
+def pin_backtest_inputs(session: Session, params: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
+    selected = params.get("symbols") or [params.get("symbol", "SPY")]
     if (
-        not isinstance(symbols, list)
-        or not 1 <= len(symbols) <= 12
-        or any(not isinstance(symbol, str) for symbol in symbols)
-        or len(set(symbols)) != len(symbols)
+        not isinstance(selected, list)
+        or not 1 <= len(selected) <= 12
+        or any(not isinstance(symbol, str) for symbol in selected)
     ):
+        raise ValueError("Select a unique list of one to twelve securities")
+    symbols = SYMBOLS.validate_python(selected, strict=True)
+    if len(set(symbols)) != len(symbols):
         raise ValueError("Select a unique list of one to twelve securities")
     base = params.get("base_currency", "SGD")
     if not isinstance(base, str) or len(base) != 3 or not base.isalpha():
         raise ValueError("A three-letter base currency is required")
     base = base.upper()
-    pinned, fixings, sectors = {}, {}, {}
+    pinned: dict[str, DatasetProvenance] = {}
+    fixings: dict[str, JsonValue] = {}
+    sectors: dict[str, str | None] = {}
     resolver = FxRateResolver(session)
     for symbol in symbols:
         item = instrument(session, symbol)
         if item.asset_class not in ("Equity", "ETF"):
             raise ValueError("This offline simulator supports equity and ETF research only")
         sectors[symbol] = item.sector
-        request = ResearchInput(
-            **{
-                key: params[key]
-                for key in ResearchInput.model_fields
-                if params.get(key) and key != "symbol"
-            },
-            symbol=symbol,
+        request = ResearchInput.model_validate(
+            {
+                **{
+                    key: params[key]
+                    for key in ResearchInput.model_fields
+                    if params.get(key) and key != "symbol"
+                },
+                "symbol": symbol,
+            }
         )
         evidence = pin_input(session, request)
         rows, _ = dataset_rows(session, evidence["dataset_version_id"])
         frame = bars_frame(rows, symbol, request.start, request.end)
         currencies = {
-            row.get("currency", evidence["schema"].get("currency", item.currency))
+            TEXT.validate_python(
+                row.get("currency", evidence["schema"].get("currency", item.currency)),
+                strict=True,
+            )
             for row in rows
             if row.get("symbol", symbol) == symbol
         }
@@ -63,9 +80,11 @@ def pin_backtest_inputs(session, params):
             if request.source_mode == "DEMO_RESEARCH"
             else []
         )
-        daily = {}
+        daily: dict[str, JsonValue] = {}
         for day in frame.index:
             cutoff = datetime.combine(day.date(), time.min, UTC) - timedelta(microseconds=1)
+            value: Decimal | int | None
+            provenance: dict[str, JsonValue]
             if item.currency == base:
                 value, provenance = (
                     1,
@@ -88,25 +107,29 @@ def pin_backtest_inputs(session, params):
                     },
                 )
             else:
-                value, provenance = resolver.resolve(item.currency, base, cutoff)
-                if value is None or provenance.get("stale"):
+                value, resolved = resolver.resolve(item.currency, base, cutoff)
+                provenance = JSON_OBJECT.validate_python(resolved, strict=True)
+                if value is None or resolved.get("stale"):
                     raise ValueError(
                         f"Prior published FX fixing missing or stale for {item.currency}/{base} on {day.date()}"
                     )
-                if "DEMO" in provenance.get("data_state", "") and "DEMO" not in evidence["quality"]:
+                if "DEMO" in resolved["data_state"] and "DEMO" not in evidence["quality"]:
                     raise ValueError("Non-demo research cannot silently use synthetic FX")
-            if float(value) <= 0:
+            if value is None or float(value) <= 0:
                 raise ValueError("FX fixings must be positive")
             daily[day.date().isoformat()] = {"rate": str(value), "provenance": provenance}
         fixings[symbol] = daily
-    return {
-        **params,
-        "symbol": symbols[0],
-        "symbols": symbols,
-        "base_currency": base,
-        "_datasets": pinned,
-        "_fx": fixings,
-        "_sectors": sectors,
-        "dataset_version_id": pinned[symbols[0]]["dataset_version_id"],
-        "dataset_id": pinned[symbols[0]]["dataset_id"],
-    }
+    return JSON_OBJECT.validate_python(
+        {
+            **params,
+            "symbol": symbols[0],
+            "symbols": symbols,
+            "base_currency": base,
+            "_datasets": pinned,
+            "_fx": fixings,
+            "_sectors": sectors,
+            "dataset_version_id": pinned[symbols[0]]["dataset_version_id"],
+            "dataset_id": pinned[symbols[0]]["dataset_id"],
+        },
+        strict=True,
+    )

@@ -1,10 +1,14 @@
+from typing import Literal
+
 import numpy as np
 import pytest
 from app.monte_carlo import MonteCarloSettings, monte_carlo
 
 
 @pytest.mark.parametrize("method", ["BOOTSTRAP", "BLOCK_BOOTSTRAP", "NORMAL", "SHUFFLE"])
-def test_seeded_paths_probabilities_and_fan(method):
+def test_seeded_paths_probabilities_and_fan(
+    method: Literal["BOOTSTRAP", "BLOCK_BOOTSTRAP", "NORMAL", "SHUFFLE"],
+) -> None:
     returns = np.random.default_rng(18).normal(0.0002, 0.01, 300)
     settings = MonteCarloSettings(method=method, paths=100, horizon=50)
     result = monte_carlo(returns, settings)
@@ -24,4 +28,4 @@ def test_constant_returns_and_ineligible_history() -> None:
     assert data["metrics"]["drawdown_probability"] == 0
     for values in ([0.01] * 59, [0.01] * 60 + [None], [-1] * 60):
         with pytest.raises(ValueError):
-            monte_carlo(values, MonteCarloSettings())
+            monte_carlo(np.asarray(values, dtype=object), MonteCarloSettings())

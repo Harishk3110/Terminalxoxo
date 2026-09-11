@@ -1,5 +1,6 @@
 from app.alpha_api import AlphaRequest, analyse
 from app.monte_carlo import monte_carlo_result, pin_monte_carlo
+from pydantic import JsonValue, TypeAdapter
 from sqlalchemy.orm import Session
 from test_portfolio_accounting import accounting_session as accounting_session
 
@@ -22,7 +23,11 @@ def test_portfolio_monte_carlo_pins_eligible_net_returns(
     accounting_session: Session, seeded_market_clock: None
 ) -> None:
     params = pin_monte_carlo(accounting_session, {"settings": {"paths": 100, "horizon": 10}})
-    assert params["_evidence"]["valuation_run_id"]
+    objects = TypeAdapter(dict[str, JsonValue])
+    assert objects.validate_python(params["_evidence"], strict=True)["valuation_run_id"]
     result = monte_carlo_result(params)
-    assert result["observations"] >= 60
-    assert result["inputs"]["cost_basis"] == "NET ledger returns"
+    observations = result["observations"]
+    assert isinstance(observations, int) and observations >= 60
+    assert (
+        objects.validate_python(result["inputs"], strict=True)["cost_basis"] == "NET ledger returns"
+    )

@@ -1,10 +1,59 @@
 """Seeded conditional return-path analysis, not a forecast or trade executor."""
 
-from typing import Literal
+from collections.abc import Mapping
+from typing import Literal, Self, TypedDict
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from numpy.typing import ArrayLike, NDArray
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, model_validator
+from sqlalchemy.orm import Session
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+TEXT = TypeAdapter(str)
+
+
+class FanPoint(TypedDict):
+    date: str
+    p05: float
+    p25: float
+    p50: float
+    p75: float
+    p95: float
+
+
+class DistributionBin(TypedDict):
+    bin_low: float
+    bin_high: float
+    count: int
+
+
+class MonteCarloResult(TypedDict):
+    settings: dict[str, JsonValue]
+    observations: int
+    metrics: dict[str, float]
+    fan: list[FanPoint]
+    terminal_distribution: list[DistributionBin]
+    calculation_version: str
+    warnings: list[str]
+
+
+class ReturnSample(BaseModel):
+    model_config = ConfigDict(strict=True)
+    end: str
+    value: float | str | None
+
+
+class MetricState(BaseModel):
+    state: str
+
+
+class PerformanceInput(BaseModel):
+    summary: dict[str, MetricState]
+    series: list[ReturnSample]
+    valuation_run_id: str
+    source_quality: str
 
 
 class MonteCarloSettings(BaseModel):
@@ -20,13 +69,13 @@ class MonteCarloSettings(BaseModel):
     ruin_fraction: float = Field(default=0.5, gt=0, lt=1, allow_inf_nan=False)
 
     @model_validator(mode="after")
-    def bounded_memory(self):
+    def bounded_memory(self) -> Self:
         if self.paths * self.horizon > 5_000_000:
             raise ValueError("Monte Carlo is bounded to five million path steps")
         return self
 
 
-def monte_carlo(returns, settings: MonteCarloSettings):
+def monte_carlo(returns: ArrayLike, settings: MonteCarloSettings) -> MonteCarloResult:
     observed = np.asarray(returns, dtype=float)
     if (
         observed.ndim != 1
@@ -88,10 +137,11 @@ def monte_carlo(returns, settings: MonteCarloSettings):
         "fan": [
             {
                 "date": str(i),
-                **{
-                    key: float(quantiles[j, i])
-                    for j, key in enumerate(("p05", "p25", "p50", "p75", "p95"))
-                },
+                "p05": float(quantiles[0, i]),
+                "p25": float(quantiles[1, i]),
+                "p50": float(quantiles[2, i]),
+                "p75": float(quantiles[3, i]),
+                "p95": float(quantiles[4, i]),
             }
             for i in range(settings.horizon + 1)
         ],
@@ -110,26 +160,37 @@ def monte_carlo(returns, settings: MonteCarloSettings):
     }
 
 
-def _histogram(values):
+def _histogram(
+    values: NDArray[np.float64],
+) -> tuple[NDArray[np.intp], NDArray[np.float64], NDArray[np.float64]]:
     counts, edges = np.histogram(values, bins=30)
     return counts, edges[:-1], edges[1:]
 
 
-def pin_monte_carlo(session, params):
+def pin_monte_carlo(session: Session, params: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
     from . import models
     from .performance_domain.contracts import PerformanceSettings
     from .portfolio_performance import PortfolioPerformanceService
 
-    settings = MonteCarloSettings(**params.get("settings", {}))
+    settings = MonteCarloSettings.model_validate(params.get("settings", {}))
+    values: NDArray[np.float64]
+    evidence: dict[str, JsonValue]
     if params.get("backtest_run_id"):
-        run = session.get(models.AnalysisRun, params["backtest_run_id"])
+        run = session.get(
+            models.AnalysisRun, TEXT.validate_python(params["backtest_run_id"], strict=True)
+        )
         if not run or run.kind != "backtest" or run.status != "SUCCEEDED" or not run.result:
             raise ValueError("A completed backtest is required")
-        curve = pd.DataFrame(run.result["equity_curve"])
+        curve = pd.DataFrame(JSON_ROWS.validate_python(run.result["equity_curve"], strict=True))
+        if not {"date", "equity"} <= set(curve):
+            raise ValueError("Saved backtest requires dated equity observations")
         dates = pd.DatetimeIndex(pd.to_datetime(curve.date, errors="raise"))
         if dates.hasnans or not dates.is_unique or not dates.is_monotonic_increasing:
             raise ValueError("Saved backtest dates must be valid, unique and chronological")
-        values = pd.to_numeric(curve.equity, errors="raise").pct_change(fill_method=None).iloc[1:]
+        values = np.asarray(
+            pd.to_numeric(curve.equity, errors="raise").pct_change(fill_method=None).iloc[1:],
+            dtype=float,
+        )
         evidence = {
             "backtest_run_id": run.id,
             "source": run.result["source"],
@@ -138,23 +199,30 @@ def pin_monte_carlo(session, params):
             "cost_basis": "Saved strategy net curve",
         }
     else:
-        report = PortfolioPerformanceService(session).calculate(
-            params.get("portfolio", "KNK_MAIN"),
-            PerformanceSettings(),
-            params.get("valuation_run_id"),
+        report = PerformanceInput.model_validate(
+            PortfolioPerformanceService(session).calculate(
+                TEXT.validate_python(params.get("portfolio", "KNK_MAIN"), strict=True),
+                PerformanceSettings(),
+                TEXT.validate_python(params["valuation_run_id"], strict=True)
+                if params.get("valuation_run_id") is not None
+                else None,
+            )
         )
-        if report["summary"]["volatility"]["state"] != "AVAILABLE":
+        if report.summary["volatility"].state != "AVAILABLE":
             raise ValueError("Portfolio history is not eligible for statistical analysis")
-        values = [
-            float(row["value"]) if row["value"] is not None else np.nan
-            for row in report["series"]
-            if pd.Timestamp(row["end"]).weekday() < 5
-        ]
+        values = np.asarray(
+            [
+                float(row.value) if row.value is not None else np.nan
+                for row in report.series
+                if pd.Timestamp(row.end).weekday() < 5
+            ],
+            dtype=float,
+        )
         evidence = {
-            "valuation_run_id": report["valuation_run_id"],
+            "valuation_run_id": report.valuation_run_id,
             "source": "Pinned internal portfolio returns",
-            "quality": report["source_quality"],
-            "as_of": report["series"][-1]["end"] if report["series"] else None,
+            "quality": report.source_quality,
+            "as_of": report.series[-1].end if report.series else None,
             "cost_basis": "NET ledger returns",
         }
     values = np.asarray(values, dtype=float)
@@ -168,6 +236,8 @@ def pin_monte_carlo(session, params):
     }
 
 
-def monte_carlo_result(params):
-    result = monte_carlo(params["_returns"], MonteCarloSettings(**params["settings"]))
-    return {**result, **params["_evidence"], "inputs": params["_evidence"]}
+def monte_carlo_result(params: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
+    returns = TypeAdapter(list[float]).validate_python(params["_returns"], strict=True)
+    evidence = JSON_OBJECT.validate_python(params["_evidence"], strict=True)
+    result = monte_carlo(returns, MonteCarloSettings.model_validate(params["settings"]))
+    return JSON_OBJECT.validate_python({**result, **evidence, "inputs": evidence}, strict=True)

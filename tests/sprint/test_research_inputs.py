@@ -7,6 +7,7 @@ from app.model_runs import model_result
 from app.object_storage import ObjectStorage
 from app.quant_data import dataset_rows
 from app.research_inputs import ResearchInput, bars_frame, pin_input
+from pydantic import JsonValue, TypeAdapter
 from sqlalchemy.orm import Session
 
 
@@ -129,7 +130,14 @@ def test_fx_snapshot_uses_only_prior_fixings(
     pinned = pin_backtest_inputs(
         ledger_session, {"symbol": "SPY", "source_mode": "DEMO_RESEARCH", "base_currency": "SGD"}
     )
-    for day, fixing in pinned["_fx"]["SPY"].items():
-        assert fixing["provenance"]["as_of"] < day
-        assert float(fixing["rate"]) > 0
-    assert pinned["_datasets"]["SPY"]["content_hash"]
+    objects = TypeAdapter(dict[str, JsonValue])
+    fixings = objects.validate_python(pinned["_fx"], strict=True)
+    for day_key, raw in objects.validate_python(fixings["SPY"], strict=True).items():
+        fixing = objects.validate_python(raw, strict=True)
+        provenance = objects.validate_python(fixing["provenance"], strict=True)
+        observed, rate = provenance["as_of"], fixing["rate"]
+        assert isinstance(observed, str) and isinstance(rate, str)
+        assert observed < day_key
+        assert float(rate) > 0
+    datasets = objects.validate_python(pinned["_datasets"], strict=True)
+    assert objects.validate_python(datasets["SPY"], strict=True)["content_hash"]

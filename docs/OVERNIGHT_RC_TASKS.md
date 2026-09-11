@@ -57,6 +57,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2/M9/M10: validated research desk result/lineage reads, exact parent dataset linkage, immutable review failure behavior, latest valuation and superseded-thesis contracts; 39 affected tests and populated old/new view parity pass.
 - [x] M3: longer production HTTP keep-alive lifetime after browser-12 six-second connection-reset race; idle-boundary and ledger correction regressions pass without retries.
 - [x] M3: rebuilt System Health missing timestamps; negative control fails, 12 formatter tests and desktop/mobile browser regression pass.
+- [x] M2/M9: typed Monte Carlo outputs and pinned simulation inputs; missing returns remain unavailable, dataset/FX provenance retained; 59 affected tests, 80 seeded-output and 17 persisted-input/result parity checks pass.
 - [ ] M3/M11: options gamma-profile negative million-scale axis label containment found in 1366px review; inspect and correct without changing values.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.
 - [ ] M10: segments/ROIC/multiples/normalization/estimates/research linkage and DCF.

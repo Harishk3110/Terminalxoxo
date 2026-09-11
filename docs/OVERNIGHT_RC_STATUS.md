@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the health commit: 74fe9e5, pushed. The persistent Docker
-stack carries 68698d8; the verified connection-lifetime/health batch is next.
+Current HEAD before the simulation commit: cbb2cf1, pushed and deployed locally.
+Monte Carlo/backtest pinning contracts pass focused checks; full backend 25 is active.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,17 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Pinned simulation contracts: 59 affected tests pass, followed by ten passing
+  consumer regressions. Four focused modules pass strict types. Eight complete
+  backtest input maps, 80 seeded Monte Carlo outputs and nine saved-backtest
+  pin/result pairs equal the prior implementation exactly. Whole strict 24:
+  1,260 diagnostics / 94 files / 274 sources; API 630 / 27 files. Backend 25 is active.
+- Docker build and final health-gated refresh carry cbb2cf1. All ten services are
+  healthy, MinIO init succeeded, and /overview reaches login with HTTP 200 and
+  Keep-Alive timeout=70. Source hashes verify that later simulation edits are not
+  yet deployed. The watchdog remains active; no data or volumes were reset.
+- Full browser 13 is active, zero retries. Ledger correction, quant, reports and
+  health workflows have passed. The new options-axis visual test is not in this run.
 - Research desk: 39 affected tests pass; source and new contract tests pass strict
   types. Quant and Equity views exactly match the prior implementation on an
   in-memory copy of populated browser data. Whole strict 21: 1,281 diagnostics /
@@ -226,13 +237,13 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `corepack pnpm dlx node@22 node_modules/@playwright/test/cli.js test tests/e2e --workers=1 --retries=0`.
-Use a fresh PLAYWRIGHT_RUN_ID and the clean Python environment; refresh persistent
-Docker with the verified backend and health commits, without resetting volumes.
+Exact next command: `Get-Content logs/overnight-browser-full-13.log -Tail 12`.
+Finish browser 13 and backend 25. Run the new options-axis negative control on
+the existing frontend build, correct its spacing, rebuild and verify without retries.
 Continue remaining engine/API contracts after that checkpoint. The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 21 remains red at 1,281 errors.
+in the clean environment. Whole strict checkpoint 24 remains red at 1,260 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

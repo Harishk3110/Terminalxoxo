@@ -1020,3 +1020,36 @@ Both corrected health screenshots (1366px and 390px) were inspected from
 logs/health-screenshots; table content remains horizontally scrollable on mobile,
 with no document overflow. Research contracts were pushed as 74fe9e5.
 The complete browser suite and later strict/deployment gates remain open.
+
+## Simulation Input Contracts And Health Deployment
+
+2026-09-12 06:48-07:00 SGT, cbb2cf1 plus simulation worktree. Existing seeded
+NumPy calculations are unchanged. Persisted input shape is validated before
+simulation; malformed dates, missing returns and uncompleted backtests cannot
+become eligible samples. Backtest pinning preserves dataset IDs, exact daily FX
+rate strings, prior-fixing cutoffs, provenance and original request parameters.
+
+| Command / check | Exit | Evidence |
+| --- | --- | --- |
+| Node 22 Docker production build | 0 | overnight-health-docker-build.log: all five application images built |
+| Health-gated Docker up, then final up after completed image export | 0 each | overnight-health-docker-up.log / overnight-health-docker-up-final.log; initial up began while frontend image export was finishing, so only final up is deployment evidence |
+| Observe-only watchdog | 0 | overnight-health-watchdog.log, 2026-09-11T22:53:08Z: ten healthy services and successful MinIO init |
+| HTTP /overview and deployed source hash checks | 0 | HTTP 200 after login routing, Keep-Alive timeout=70; container Monte Carlo/desks source hashes equal cbb2cf1 |
+| Clean pytest Monte Carlo/backtest engine | 0 | overnight-research-input-tests-01.log: 22 passed, one warning, 30.60s |
+| Expanded pinning/research/portfolio tests | 0 | overnight-research-input-tests-02.log: 42 passed, seven warnings, 48.80s |
+| All affected simulation/research/portfolio tests | 0 | overnight-research-input-tests-03.log: 59 passed, seven warnings, 51.60s |
+| Final consumer regression pytest | 0 | overnight-research-input-tests-04.log: ten passed, one warning, 10.71s |
+| Strict focused simulation source/new tests | 0 | overnight-research-input-types-02.log: three files; -03.log: four files after existing test annotation correction; imports silent only in these focused checks |
+| Exact prior/current Monte Carlo comparison | 0 | overnight-mc-parity.log: 80 seeded cases across four methods, nine persisted backtest pin/result pairs; prior source cbb2cf1 |
+| Exact prior/current backtest input comparison | 0 | overnight-backtest-pin-parity.log: eight populated maps including daily FX/provenance; source database and objects read-only, comparison database in memory |
+| Whole strict checkpoint 23 | 1 | overnight-whole-types-23/: 1,263 diagnostics, 95 files, 274 sources; API 630 in 27 files |
+| Whole strict checkpoint 24 | 1 | overnight-whole-types-24/: 1,260 diagnostics, 94 files, 274 sources; three test consumer diagnostics corrected, no suppressions added |
+| Changed-source Ruff | 1 then 0 | Literal import was accidentally placed below test definitions (seven diagnostics); moved to imports before test execution; all six files then pass |
+| Changed-source format check | 0 | six files already formatted |
+| Secret and broker-action scans | 0 each | overnight-simulation-secrets.log / overnight-simulation-no-execution.log |
+
+Backend 25 is active on the final simulation source. Browser 13 uses the cbb2cf1
+frontend and its initially loaded API, with later worker processes able to import
+the simulation worktree; it is not a uniform final-release source certification.
+The new options-axis canvas regression is added but has not run yet. No visual
+baseline was accepted. Cloud and live-provider verification remain external.
