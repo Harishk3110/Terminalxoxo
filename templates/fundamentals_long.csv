@@ -1,0 +1,4 @@
+symbol,period,frequency,metric,value,unit,scale,actual_estimate,report_date
+SAMPLE_EQ,2025,ANNUAL,revenue,100,SGD,1000000,ACTUAL,2026-01-08
+SAMPLE_EQ,2025,ANNUAL,net income,12,SGD,1000000,ACTUAL,2026-01-08
+SAMPLE_EQ,2025,ANNUAL,shares,10,SHARES,1000000,ACTUAL,2026-01-08

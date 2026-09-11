@@ -1,0 +1,3 @@
+underlying,option_symbol,expiry,expiry_time_utc,strike,right,multiplier,exercise_style,currency,timestamp,iv_unit,iv,bid,ask,last,volume,open_interest,greek_units
+SAMPLE_EQ,FICTIONAL-SAMPLE-C100,2026-03-20,20:00:00,100,CALL,100,EUROPEAN,SGD,2026-01-09T20:00:00Z,DECIMAL,0.25,4.50,4.80,4.65,10,100,UNSPECIFIED
+SAMPLE_EQ,FICTIONAL-SAMPLE-P100,2026-03-20,20:00:00,100,PUT,100,EUROPEAN,SGD,2026-01-09T20:00:00Z,DECIMAL,0.25,3.50,3.80,3.65,8,80,UNSPECIFIED

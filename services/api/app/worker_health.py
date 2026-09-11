@@ -1,17 +1,29 @@
 """Observed, expiring process heartbeats; job state alone is not worker health."""
 
 import threading
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from typing import Literal, TypedDict
 
+from pydantic import JsonValue
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
 from .database import SessionLocal
 from .price_sources import utc
 
 
-def record_heartbeat(component, state, details=None):
+class WorkerState(TypedDict):
+    state: Literal["RUNNING", "OFFLINE", "NO_ACTIVE_RUNS", "UNVERIFIED"]
+    as_of: str | datetime | None
+    detail: str
+
+
+def record_heartbeat(
+    component: str, state: str, details: dict[str, JsonValue] | None = None
+) -> None:
     with SessionLocal() as session:
         row = session.scalar(
             select(models.SystemHealthSnapshot)
@@ -27,18 +39,18 @@ def record_heartbeat(component, state, details=None):
 
 
 @contextmanager
-def heartbeat(run_id):
+def heartbeat(run_id: str) -> Iterator[None]:
     stop = threading.Event()
     component = "analytical-worker:" + run_id
 
-    def beat():
+    def beat() -> None:
         try:
             record_heartbeat(component, "RUNNING", {"run_id": run_id})
         except Exception:
             # A failed write must not interrupt research or fabricate a healthy state.
             pass
 
-    def loop():
+    def loop() -> None:
         while not stop.wait(15):
             beat()
 
@@ -56,7 +68,7 @@ def heartbeat(run_id):
             pass
 
 
-def dispatcher_state(session, kind):
+def dispatcher_state(session: Session, kind: str) -> WorkerState:
     row = session.scalar(
         select(models.SystemHealthSnapshot)
         .where(models.SystemHealthSnapshot.component == "analytical-worker:" + kind + "-dispatcher")
@@ -75,7 +87,7 @@ def dispatcher_state(session, kind):
     }
 
 
-def worker_state(session, runs):
+def worker_state(session: Session, runs: Sequence[models.AnalysisRun]) -> WorkerState:
     if not runs:
         return {
             "state": "NO_ACTIVE_RUNS",

@@ -58,3 +58,21 @@ def test_capital_upgrade_never_overwrites_user_portfolios(ledger_session, change
     ledger_session.commit()
     assert not upgrade_demo_capital(ledger_session, portfolio, profile)
     assert ledger_session.scalar(select(func.count(models.TransactionRevision.id))) == 0
+
+
+@pytest.mark.parametrize("operation", ["ensure_main", "reset_main_demo"])
+def test_missing_profile_parent_fails_before_archive_or_seed(
+    ledger_session, monkeypatch, operation
+):
+    from app import portfolio_seed
+
+    profile = models.PortfolioProfile(
+        id="orphan-profile", portfolio_id="missing", code="KNK_MAIN", is_demo=True
+    )
+    monkeypatch.setattr(portfolio_seed, "profile_for", lambda *_: profile)
+    before = ledger_session.scalar(select(func.count(models.PortfolioTransaction.id)))
+    with pytest.raises(ValueError, match="missing portfolio"):
+        getattr(portfolio_seed, operation)(ledger_session)
+    assert profile.code == "KNK_MAIN"
+    assert not ledger_session.new and not ledger_session.dirty
+    assert ledger_session.scalar(select(func.count(models.PortfolioTransaction.id))) == before

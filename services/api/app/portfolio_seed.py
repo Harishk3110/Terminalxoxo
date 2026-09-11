@@ -7,6 +7,7 @@ import uuid
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
+from pydantic import JsonValue
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
@@ -41,7 +42,7 @@ ANCHORS = {
 }
 
 
-def profile_for(session, key=None):
+def profile_for(session: Session, key: str | None = None) -> models.PortfolioProfile | None:
     query = select(models.PortfolioProfile)
     if key:
         query = query.where(
@@ -52,17 +53,19 @@ def profile_for(session, key=None):
     return session.scalar(query)
 
 
-def ensure_main(session, *, demo_only=False):
+def ensure_main(session: Session, *, demo_only: bool = False) -> models.Portfolio:
     existing = profile_for(session)
     if existing:
         portfolio = session.get(models.Portfolio, existing.portfolio_id)
+        if portfolio is None:
+            raise ValueError("Main portfolio profile references a missing portfolio")
         if upgrade_demo_capital(session, portfolio, existing):
             session.commit()
         return portfolio
     instruments = {r.symbol: r for r in session.scalars(select(models.Instrument)).all()}
     if not {"AAPL", "MSFT", "SPY", "D05"}.issubset(instruments):
         raise ValueError("Seed the security master before the main portfolio")
-    values = {}
+    values: dict[tuple[str, date], Decimal] = {}
     has_prices = session.scalar(
         select(models.MarketObservation.id)
         .where(models.MarketObservation.source == DEMO_SOURCE)
@@ -162,9 +165,17 @@ def ensure_main(session, *, demo_only=False):
     session.add(profile)
     session.flush()
 
-    def add(kind, day, symbol=None, qty="0", amount="0", fee="0", metadata=None):
+    def add(
+        kind: str,
+        day: date,
+        symbol: str | None = None,
+        qty: str = "0",
+        amount: str = "0",
+        fee: str = "0",
+        metadata: dict[str, JsonValue] | None = None,
+    ) -> tuple[models.PortfolioTransaction, models.TransactionDetail]:
         native = "SGD" if not symbol else instruments[symbol].currency
-        price = values.get((symbol, day), Decimal("0"))
+        price = values.get((symbol, day), Decimal("0")) if symbol else Decimal("0")
         fx = values[("FX", day)] if native == "USD" else Decimal("1")
         quantity = Decimal(qty)
         gross = Decimal(amount) if Decimal(amount) else quantity * price
@@ -333,6 +344,8 @@ def reset_main_demo(session: Session, actor: str | None = None) -> models.Portfo
     if not old or not old.is_demo:
         raise ValueError("Only the demonstration portfolio can be reset")
     portfolio = session.get(models.Portfolio, old.portfolio_id)
+    if portfolio is None:
+        raise ValueError("Main portfolio profile references a missing portfolio")
     old.code = f"ARCHIVE_{old.id[:12]}"
     portfolio.is_default = False
     portfolio.name = f"{portfolio.name} / archived"

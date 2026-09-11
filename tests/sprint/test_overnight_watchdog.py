@@ -45,3 +45,61 @@ def test_observe_only_does_not_restart(monkeypatch):
     )
     result = watchdog.cycle(".env.compose.local", {}, False)
     assert all(row["action"] == "NONE" for row in result)
+
+
+def test_starting_services_are_not_restarted_or_declared_healthy(monkeypatch):
+    calls = []
+    rows = [
+        {"Service": name, "State": "running", "Health": "starting"} for name in watchdog.SERVICES
+    ]
+
+    def command(args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "\n".join(json.dumps(row) for row in rows), "")
+
+    monkeypatch.setattr(watchdog, "command", command)
+    failures = {"api": 1}
+    for _ in range(4):
+        observed = watchdog.cycle(".env.compose.local", failures, True)
+    assert not any("restart" in call for call in calls)
+    assert failures == {"api": 1}
+    assert all(row["state"] == "STARTING" for row in observed if row["service"] != "minio-init")
+
+
+def test_prometheus_upstream_failure_never_restarts_healthy_monitor(monkeypatch):
+    calls = []
+    rows = [
+        {"Service": name, "State": "running", "Health": "healthy"} for name in watchdog.SERVICES
+    ]
+
+    def command(args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "\n".join(json.dumps(row) for row in rows), "")
+
+    monkeypatch.setattr(watchdog, "command", command)
+    monkeypatch.setattr(watchdog, "probe", lambda service, url: service != "prometheus")
+    failures = {}
+    for _ in range(4):
+        observed = watchdog.cycle(".env.compose.local", failures, True)
+    assert not any("restart" in call for call in calls)
+    prometheus = next(row for row in observed if row["service"] == "prometheus")
+    assert prometheus["state"] == "UPSTREAM_UNHEALTHY"
+    assert prometheus["action"] == "MANUAL_ATTENTION"
+
+
+def test_api_probes_both_liveness_and_readiness(monkeypatch):
+    calls = []
+    rows = [{"Service": "api", "State": "running", "Health": "healthy"}]
+    monkeypatch.setattr(
+        watchdog,
+        "command",
+        lambda args: subprocess.CompletedProcess(args, 0, json.dumps(rows[0]), ""),
+    )
+
+    def probe(service, url):
+        calls.append(url)
+        return True
+
+    monkeypatch.setattr(watchdog, "probe", probe)
+    watchdog.cycle(".env.compose.local", {}, False)
+    assert calls == ["http://127.0.0.1:8000/health/live", "http://127.0.0.1:8000/health/ready"]

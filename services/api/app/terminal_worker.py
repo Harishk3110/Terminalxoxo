@@ -72,7 +72,7 @@ def backtest_result(session, params):
     return result
 
 
-def execute_run(run_id: str):
+def execute_run(run_id: str) -> None:
     from .worker_health import heartbeat
 
     with SessionLocal() as session:
@@ -88,7 +88,7 @@ def execute_run(run_id: str):
         _execute_run(run_id)
 
 
-def _execute_run(run_id: str):
+def _execute_run(run_id: str) -> None:
     with SessionLocal() as session:
         run = session.get(models.AnalysisRun, run_id)
         if not run or run.status != "RUNNING":

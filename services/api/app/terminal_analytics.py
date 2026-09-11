@@ -23,7 +23,7 @@ def safe_number(value):
     return float(value) if value is not None and math.isfinite(float(value)) else None
 
 
-def instrument(session: Session, key: str):
+def instrument(session: Session, key: str) -> models.Instrument:
     item = session.get(models.Instrument, key)
     if item is None:
         item = session.scalar(

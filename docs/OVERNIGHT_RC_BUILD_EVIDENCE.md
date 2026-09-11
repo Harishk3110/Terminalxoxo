@@ -115,3 +115,46 @@ The browser harness now detects any TCP listener on all three isolated service
 ports, including HTTP error responses, without terminating foreign listeners.
 Two focused tests cover this guard. Stronger persisted model types expose more
 unchecked callers; the global mypy gate remains open, not silently excluded.
+
+## M2 Consumers And Watchdog Recovery, Third Batch
+
+Based on 63a9db4 + worktree. Provider responses, durable queue dispatch, seed
+lookups and hash-verified research JSON now have explicit contracts. No financial
+formula, demo observation date, authentication gate or execution policy was relaxed.
+
+| Check | Result |
+| --- | --- |
+| Second M2 runtime refresh, first attempt | Exit 1; API exited 137 after watchdog interrupted normal startup, not an OOM |
+| Watchdog diagnosis | Receipts recorded API restart during health=starting and Prometheus restart for a down report target |
+| Watchdog correction | Starting stays STARTING without restart; healthy Prometheus reports upstream failure without restart; API live and ready both checked |
+| Watchdog unit / recovery | Six passed; recover Compose exit 0, all ten services observed healthy; old owned processes stopped and corrected hidden launcher PID 24200 started |
+| Strict mypy, eight consumers/watchdog | Exit 0; overnight-mypy-consumers-05.log |
+| Full API mypy | Still fails: 1,119 errors / 37 files; overnight-mypy-m2d.log |
+| Focused regression, first attempt | 1 failed / 54 passed; PriceObservation revalidation rejected the adapter's derived date alias |
+| Alias handling corrected, expanded regression | 96 passed, 10.87s; overnight-consumers-tests-02.log |
+| Full backend, isolated SQLite/objects | 1,029 passed, 13 warnings, 336.48s; overnight-backend-06.log |
+| Statement coverage | 10,267/11,752 = 87.36385296119809%; 1,485 missing, 23 existing exclusions |
+| OpenAPI generation | Exit 0; 170 paths, 73 schemas, typed provider response schemas included |
+| Four production backend images | Exit 0; overnight-m2d-docker-build.log; refresh pending |
+| Whole Ruff / format | Exit 0 each; scope includes infrastructure and migrations, 254 files before template tests |
+| Execution-method / secret scans | Exit 0 each; 536 eligible text files, zero secret findings before templates |
+| Full Playwright, no retries | In progress in overnight-browser-full-01.log; hedge failure reproduced; no full-pass claim |
+
+The exact-one-observation guard prevents a response-less provider success record.
+Non-finite values and malformed metadata are rejected even when a dataset hash
+matches. SEC nested facts cannot overwrite their enclosing taxonomy/concept/unit.
+Queue actor types fail before network access. Missing portfolio parents fail before
+archive or seed mutations. Additional tests cover these boundaries.
+
+## Fictional Onboarding Templates
+
+Seven CSV files and field definitions were added under templates. They use a
+fictional SAMPLE_EQ security and fixed historical dates, not user financial data.
+The first normalization run had six passes and one failure because the options
+profile expects an underlying column. The template header was corrected to that
+existing alias; all seven parser/profile tests passed on the second run, recorded
+in overnight-import-templates-tests-02.log. These seven tests were added after
+the full 1,029-test run started and are separately verified, not included in it.
+No template was imported into KNK_MAIN or the active local database.
+Post-template whole Ruff/format and secret scans passed: 255 formatted Python/stub
+files and 545 eligible text files with zero secret findings. Diff check also passed.

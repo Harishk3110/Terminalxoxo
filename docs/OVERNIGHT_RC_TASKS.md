@@ -16,12 +16,14 @@ milestone remain open unless explicitly verified below.
 - [x] M2: first-party Ruff and formatting, OpenAPI generation (170 paths).
 - [x] M2: typed provider transport, JSON validation, SEC filing shapes, option-pricing and storage boundaries.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
-- [ ] M2: seed, worker, provider consumers and remaining engine/API types.
+- [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
+- [ ] M2: remaining engine/API types and all first-party strict invocation.
 - [ ] M3: full single-run browser suite, zero retries masking failures.
 - [ ] M3: 16 requested pages at four desktop sizes and 390px, inspected screenshots.
 - [ ] M4: all 19 ledger types, lot/cash/FX/NAV/performance/alpha/attribution certification.
 - [ ] M4: BUY/partial SELL/dividend -> downstream risk/review and restart persistence.
 - [ ] M5: all formats/profiles/types, immutable raw/curated versions and consumers.
+- [x] M5: seven fictional CSV templates, field definitions and parser/profile regression tests.
 - [ ] M6: Windows outbound watcher/pairing/revocation/credentials/logs/startup.
 - [ ] M7: full FRED/SEC/OpenFIGI/vendor/FX/options adapters and source conflicts.
 - [ ] M8: complete paper read-only broker contract/reconnect/dedup tests.
@@ -36,6 +38,7 @@ milestone remain open unless explicitly verified below.
 - [ ] CI: every critical test/build/security/report/backup gate blocks deployment.
 - [x] Operations: bounded watchdog code, three tests and live observe-only check.
 - [x] Operations: hidden background watchdog started and healthy observations verified.
+- [x] Operations: startup grace and upstream-scrape handling, API live/ready probes, six watchdog tests.
 - [ ] Operations: background watchdog startup and one-pass release scripts.
 - [ ] Release: make release-candidate and PowerShell command pass all 27 stages.
 - [ ] Handoff: seven fictional import templates and onboarding/deploy/smoke scripts.

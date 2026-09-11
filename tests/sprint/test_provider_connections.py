@@ -15,6 +15,74 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {"facts": []},
+        {"facts": {"us-gaap": []}},
+        {"facts": {"us-gaap": {"Revenue": None}}},
+        {"facts": {"us-gaap": {"Revenue": {"units": []}}}},
+        {"facts": {"us-gaap": {"Revenue": {"units": {"USD": {}}}}}},
+        {"facts": {"us-gaap": {"Revenue": {"units": {"USD": [None]}}}}},
+        {"facts": {"us-gaap": {"Revenue": {"label": [], "units": {"USD": []}}}}},
+    ],
+)
+def test_sec_facts_reject_malformed_nested_shapes(payload):
+    with pytest.raises(ProviderError, match="SEC company facts"):
+        provider_api.fact_rows(payload)
+
+
+def test_sec_fact_cannot_override_its_taxonomy_concept_or_unit():
+    observation = {"val": 100, "taxonomy": "other", "concept": "other", "unit": "other"}
+    rows = provider_api.fact_rows(
+        {"facts": {"us-gaap": {"Revenue": {"label": "Revenue", "units": {"USD": [observation]}}}}}
+    )
+    assert rows == [
+        {"val": 100, "taxonomy": "us-gaap", "concept": "Revenue", "unit": "USD", "label": "Revenue"}
+    ]
+
+
+@pytest.mark.parametrize("latency", [None, "12", True, -1, 1.5, 0, 12])
+@pytest.mark.anyio
+async def test_fred_probe_requires_observed_latency(ledger_session, monkeypatch, latency):
+    from app.provider_data import connection
+    from app.provider_probe import probe
+    from app.providers.fred import FredProvider
+
+    settings = Settings(fred_enabled=True, fred_api_key="mock-fred-key")
+    adapter = FredProvider(settings)
+    row = connection(ledger_session, "fred", settings)
+
+    async def metadata(*args):
+        return {"_knk_latency_ms": latency, "seriess": []}
+
+    monkeypatch.setattr(adapter, "series_metadata", metadata)
+    outcome = await probe(ledger_session, row, "fred", adapter)
+    valid = isinstance(latency, int) and not isinstance(latency, bool) and latency >= 0
+    assert outcome["connection_state"] == ("CONNECTED" if valid else "FAILED")
+    assert (row.last_success is not None) is valid
+    assert (row.last_failure is not None) is not valid
+
+
+@pytest.mark.parametrize("both", [False, True])
+def test_provider_result_requires_exactly_one_observation(ledger_session, both):
+    from app.provider_data import connection, record_result
+    from app.providers.http import Response
+
+    row = connection(ledger_session, "sec", Settings(sec_user_agent="KnK test@example.test"))
+    ledger_session.commit()
+    with pytest.raises(ValueError, match="exactly one"):
+        record_result(
+            ledger_session,
+            row,
+            response=Response({}, b"{}", "test", 1, None) if both else None,
+            error=ProviderError("test failure") if both else None,
+        )
+    assert row.last_success is None and row.last_failure is None
+    assert not ledger_session.new
+
+
 @pytest.fixture
 def anyio_backend():
     return "asyncio"

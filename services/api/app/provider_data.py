@@ -3,19 +3,56 @@
 import hashlib
 import json
 import uuid
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from typing import Literal, TypedDict
 
+from pydantic import JsonValue
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from . import models
+from .config import Settings
 from .object_storage import ObjectStorage
 from .portfolio_operations import audit
 from .price_sources import utc
 from .providers.fred import FredProvider
+from .providers.http import ProviderError, Response
 from .providers.market import JsonMarketProvider
 from .providers.reference import OpenFigiProvider, SecProvider
 
-NAMES = {
+ProviderKey = Literal["fred", "sec", "openfigi", "market", "options"]
+ProviderAdapter = FredProvider | SecProvider | OpenFigiProvider | JsonMarketProvider
+
+
+class ProviderAdapters(TypedDict):
+    fred: FredProvider
+    sec: SecProvider
+    openfigi: OpenFigiProvider
+    market: JsonMarketProvider
+    options: JsonMarketProvider
+
+
+class ProviderPayload(TypedDict):
+    key: str | None
+    name: str
+    type: str
+    configured: bool
+    enabled: bool
+    connection_state: str
+    capabilities: list[str]
+    last_success: datetime | None
+    last_failure: datetime | None
+    last_error: str | None
+    last_data_sync: datetime | None
+    data_freshness: str
+    latency_ms: int | None
+    rate_limit: str
+    rate_remaining: int | None
+    latest_dataset_version_id: str | None
+
+
+NAMES: dict[ProviderKey, str] = {
     "fred": "FRED",
     "sec": "SEC EDGAR",
     "openfigi": "OpenFIGI",
@@ -24,7 +61,13 @@ NAMES = {
 }
 
 
-def adapters(settings):
+def provider_key(value: str) -> ProviderKey:
+    if value not in NAMES:
+        raise ValueError("Unsupported provider")
+    return value
+
+
+def adapters(settings: Settings) -> ProviderAdapters:
     return {
         "fred": FredProvider(settings),
         "sec": SecProvider(settings),
@@ -34,17 +77,22 @@ def adapters(settings):
     }
 
 
-def connection(session, key, settings):
-    if key not in NAMES:
-        raise ValueError("Unsupported provider")
-    adapter = adapters(settings)[key]
-    name = NAMES[key]
+def connection(session: Session, key: str, settings: Settings) -> models.ProviderConnection:
+    selected = provider_key(key)
+    adapter = adapters(settings)[selected]
+    name = NAMES[selected]
     configured = bool(settings.fred_api_key) if key == "fred" else adapter.configured
     row = session.scalar(
         select(models.ProviderConnection).where(models.ProviderConnection.provider_name == name)
     )
     if row is None:
-        enabled = getattr(settings, key + "_enabled")
+        enabled = {
+            "fred": settings.fred_enabled,
+            "sec": settings.sec_enabled,
+            "openfigi": settings.openfigi_enabled,
+            "market": settings.market_enabled,
+            "options": settings.options_enabled,
+        }[key]
         row = models.ProviderConnection(
             provider_name=name,
             provider_type={
@@ -70,7 +118,9 @@ def connection(session, key, settings):
     return row
 
 
-def provider_payload(session, row, key=None):
+def provider_payload(
+    session: Session, row: models.ProviderConnection, key: str | None = None
+) -> ProviderPayload:
     health = session.scalar(
         select(models.ProviderHealthSnapshot)
         .where(models.ProviderHealthSnapshot.provider_name == row.provider_name)
@@ -113,7 +163,17 @@ def provider_payload(session, row, key=None):
     }
 
 
-def record_result(session, row, *, response=None, error=None, action="test", actor=None):
+def record_result(
+    session: Session,
+    row: models.ProviderConnection,
+    *,
+    response: Response | None = None,
+    error: ProviderError | None = None,
+    action: str = "test",
+    actor: str | None = None,
+) -> None:
+    if (response is None) == (error is None):
+        raise ValueError("Record exactly one observed provider response or error")
     now = datetime.now(UTC)
     state = error.state if error else "CONNECTED"
     row.connection_state = state
@@ -168,7 +228,17 @@ def record_result(session, row, *, response=None, error=None, action="test", act
     session.flush()
 
 
-def persist_dataset(session, response, rows, *, provider, name, kind, request, actor):
+def persist_dataset(
+    session: Session,
+    response: Response,
+    rows: Sequence[Mapping[str, JsonValue]],
+    *,
+    provider: str,
+    name: str,
+    kind: str,
+    request: dict[str, JsonValue],
+    actor: str | None,
+) -> tuple[models.DatasetVersion, bool]:
     raw_hash = hashlib.sha256(response.content).hexdigest()
     dataset = session.scalar(
         select(models.Dataset).where(

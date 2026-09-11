@@ -21,7 +21,7 @@ ACCOUNT_SECURITY.md, PROVIDER_CONNECTIONS.md, EQUITY_RESEARCH.md, OPTIONS_DATA.m
 | Reports | PARTIAL | Owned queued exports verified; full financial-model content and rendered artifacts pending |
 | MFA/auth | PARTIAL | Trusted devices, provisioning and concurrency closure |
 | Monitoring/backup | PARTIAL | Ten dashboards and PostgreSQL/remote object restore |
-| Python quality | PARTIAL | Ruff/format pass; full API mypy still 1,248 errors in 44 files after stronger model contracts |
+| Python quality | PARTIAL | Ruff/format pass; full API mypy still 1,119 errors in 37 files |
 | Browser release | BROKEN | Prior full run 28/35; six unresolved after targeted backtest fix |
 | Release command / hosted deployment | MISSING | Script implementation / external account access |
 

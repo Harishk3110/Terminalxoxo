@@ -4,8 +4,11 @@ import argparse
 import asyncio
 import time
 from datetime import UTC, datetime
+from decimal import Decimal
+from typing import Literal, NotRequired, TypedDict
 
 import structlog
+from pydantic import JsonValue
 from sqlalchemy import select, update
 
 from . import models
@@ -19,23 +22,30 @@ from .worker_health import dispatcher_state, heartbeat
 logger = structlog.get_logger()
 
 
-async def execute_provider_job(job_id):
+async def execute_provider_job(job_id: str) -> None:
     with SessionLocal() as session:
         result = session.execute(
             update(models.IngestionJob)
             .where(models.IngestionJob.id == job_id, models.IngestionJob.status == "QUEUED")
             .values(status="RUNNING", started_at=datetime.now(UTC), worker_id="data-dispatcher")
+            .returning(models.IngestionJob.id)
         )
+        claimed = result.scalar_one_or_none()
         session.commit()
-        if result.rowcount != 1:
+        if claimed is None:
             return
         job = session.get(models.IngestionJob, job_id)
+        if job is None:
+            return
         try:
             if job.job_type != "provider_health_check":
                 raise ValueError(
                     "Unsupported queued data job; approved data imports use the private API"
                 )
-            outcomes = []
+            actor_id = (job.parameters or {}).get("actor_id")
+            if actor_id is not None and not isinstance(actor_id, str):
+                raise ValueError("Provider job actor must be a user identifier")
+            outcomes: list[dict[str, JsonValue]] = []
             settings = get_settings()
             instances = adapters(settings)
             for key in NAMES:
@@ -46,7 +56,7 @@ async def execute_provider_job(job_id):
                         row,
                         key,
                         instances[key],
-                        (job.parameters or {}).get("actor_id"),
+                        actor_id,
                         job.correlation_id,
                     )
                     outcomes.append(
@@ -72,13 +82,20 @@ async def execute_provider_job(job_id):
         except Exception as exc:
             session.rollback()
             job = session.get(models.IngestionJob, job_id)
+            if job is None:
+                return
             job.status, job.error_category = "FAILED", type(exc).__name__
             job.error_message = "Data job failed; inspect private provider status and configuration"
-        job.finished_at, job.progress = datetime.now(UTC), 1
+        job.finished_at, job.progress = datetime.now(UTC), Decimal("1")
         session.commit()
 
 
-def run_once(kind):
+class QueueResult(TypedDict):
+    state: Literal["NO_QUEUED_JOBS", "JOB_HANDLED"]
+    id: NotRequired[str]
+
+
+def run_once(kind: Literal["data", "quant"]) -> QueueResult:
     model = models.IngestionJob if kind == "data" else models.AnalysisRun
     with SessionLocal() as session:
         statement = (
@@ -94,7 +111,7 @@ def run_once(kind):
     return {"state": "JOB_HANDLED", "id": identifier}
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--kind", choices=["data", "quant"], required=True)
     parser.add_argument("--daemon", action="store_true")

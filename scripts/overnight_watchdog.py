@@ -22,11 +22,11 @@ SERVICES = (
     "grafana",
 )
 PROBES = {
-    "api": "http://127.0.0.1:8000/health/ready",
-    "report-engine": "http://127.0.0.1:8010/health/ready",
-    "terminal-web": "http://127.0.0.1:3001/login",
-    "prometheus": "http://127.0.0.1:9090/api/v1/targets",
-    "grafana": "http://127.0.0.1:3003/api/health",
+    "api": ("http://127.0.0.1:8000/health/live", "http://127.0.0.1:8000/health/ready"),
+    "report-engine": ("http://127.0.0.1:8010/health/ready",),
+    "terminal-web": ("http://127.0.0.1:3001/login",),
+    "prometheus": ("http://127.0.0.1:9090/api/v1/targets",),
+    "grafana": ("http://127.0.0.1:3003/api/health",),
 }
 
 
@@ -72,9 +72,22 @@ def cycle(env_file: str, failures: dict[str, int], restart: bool) -> list[dict[s
         return [{"service": "docker", "state": "UNAVAILABLE", "action": "NONE"}]
     for service in SERVICES:
         row = containers.get(service, {})
-        healthy = row.get("State") == "running" and row.get("Health") == "healthy"
+        # Docker bounds its starting period; do not interrupt migrations or warmup.
+        if row.get("State") == "running" and row.get("Health") == "starting":
+            observed.append(
+                {
+                    "service": service,
+                    "state": "STARTING",
+                    "consecutive_failures": failures.get(service, 0),
+                    "action": "NONE",
+                }
+            )
+            continue
+        container_healthy = row.get("State") == "running" and row.get("Health") == "healthy"
+        healthy = container_healthy
         if healthy and service in PROBES:
-            healthy = probe(service, PROBES[service])
+            healthy = all(probe(service, url) for url in PROBES[service])
+        upstream_failure = service == "prometheus" and container_healthy and not healthy
         action = "NONE"
         if healthy:
             failures[service] = 0
@@ -82,7 +95,7 @@ def cycle(env_file: str, failures: dict[str, int], restart: bool) -> list[dict[s
             failures[service] = min(3, failures.get(service, 0) + 1)
             if failures[service] >= 3:
                 action = "MANUAL_ATTENTION"
-            elif restart and row.get("State") in ("running", "exited"):
+            elif restart and not upstream_failure and row.get("State") in ("running", "exited"):
                 try:
                     repaired = command([*compose, "restart", service])
                     action = "RESTART_REQUESTED" if repaired.returncode == 0 else "RESTART_FAILED"
@@ -91,7 +104,11 @@ def cycle(env_file: str, failures: dict[str, int], restart: bool) -> list[dict[s
         observed.append(
             {
                 "service": service,
-                "state": "HEALTHY" if healthy else "FAILED",
+                "state": "HEALTHY"
+                if healthy
+                else "UPSTREAM_UNHEALTHY"
+                if upstream_failure
+                else "FAILED",
                 "consecutive_failures": failures[service],
                 "action": action,
             }

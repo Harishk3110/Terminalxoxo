@@ -1,0 +1,4 @@
+transaction_type,trade_date,settle_date,symbol,quantity,price,amount,currency,fx_rate_to_base,fee,commission,tax,external_reference
+DEPOSIT,2026-01-05,2026-01-05,,0,0,100000,SGD,1,0,0,0,FICTIONAL-DEPOSIT-001
+BUY,2026-01-08,2026-01-09,SAMPLE_EQ,10,100,1000,SGD,1,0,1,0,FICTIONAL-BUY-001
+SELL,2026-01-09,2026-01-12,SAMPLE_EQ,2,101,202,SGD,1,0,1,0,FICTIONAL-SELL-001

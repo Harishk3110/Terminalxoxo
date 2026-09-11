@@ -1,14 +1,28 @@
-from .provider_data import provider_payload, record_result
+from sqlalchemy.orm import Session
+
+from . import models
+from .provider_data import ProviderAdapter, ProviderPayload, provider_payload, record_result
+from .providers.fred import FredProvider
 from .providers.http import ProviderError, Response
 
 
-async def probe(session, row, key, adapter, actor=None, correlation_id="provider-test"):
+async def probe(
+    session: Session,
+    row: models.ProviderConnection,
+    key: str,
+    adapter: ProviderAdapter,
+    actor: str | None = None,
+    correlation_id: str = "provider-test",
+) -> ProviderPayload:
     if not row.enabled or not row.configured or row.connection_state == "REVOKED":
         raise ValueError("Provider is disabled, revoked or not configured")
     try:
-        if key == "fred":
+        if isinstance(adapter, FredProvider):
             payload = await adapter.series_metadata("GDP", correlation_id)
-            response = Response(payload, b"", "", payload.get("_knk_latency_ms", 0), None)
+            latency = payload.get("_knk_latency_ms")
+            if isinstance(latency, bool) or not isinstance(latency, int) or latency < 0:
+                raise ProviderError("Provider response lacks a valid observed latency")
+            response = Response(payload, b"", "", latency, None)
         else:
             response = await adapter.test()
         record_result(session, row, response=response, actor=actor)

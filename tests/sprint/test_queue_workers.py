@@ -79,3 +79,39 @@ async def test_unknown_data_job_fails_without_simulated_success(monkeypatch, led
     await queue_worker.execute_provider_job(job.id)
     ledger_session.refresh(job)
     assert job.status == "FAILED" and job.records_accepted == 0
+
+
+@pytest.mark.anyio
+async def test_invalid_provider_job_actor_fails_before_network_call(monkeypatch, ledger_session):
+    sessions(monkeypatch, ledger_session)
+    job = models.IngestionJob(
+        job_type="provider_health_check",
+        status="QUEUED",
+        parameters={"actor_id": {"unexpected": "object"}},
+        correlation_id="test",
+    )
+    ledger_session.add(job)
+    ledger_session.commit()
+
+    def unexpected(*args):
+        pytest.fail("Malformed jobs must not construct network adapters")
+
+    monkeypatch.setattr(queue_worker, "adapters", unexpected)
+    await queue_worker.execute_provider_job(job.id)
+    ledger_session.refresh(job)
+    assert job.status == "FAILED" and job.records_received == 0
+    assert job.finished_at is not None and job.progress == 1
+
+
+@pytest.mark.anyio
+async def test_missing_or_finished_data_jobs_are_not_claimed(monkeypatch, ledger_session):
+    sessions(monkeypatch, ledger_session)
+    job = models.IngestionJob(
+        job_type="provider_health_check", status="SUCCEEDED", parameters={}, correlation_id="test"
+    )
+    ledger_session.add(job)
+    ledger_session.commit()
+    await queue_worker.execute_provider_job("does-not-exist")
+    await queue_worker.execute_provider_job(job.id)
+    ledger_session.refresh(job)
+    assert job.status == "SUCCEEDED" and job.started_at is None

@@ -3,10 +3,10 @@
 import hashlib
 import json
 from datetime import UTC, date, datetime
-from typing import Literal
+from typing import Literal, TypedDict
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from sqlalchemy import select
 
 from . import models
@@ -16,13 +16,16 @@ from .portfolio_operations import audit
 from .portfolio_resource_api import Database
 from .provider_data import (
     NAMES,
+    ProviderPayload,
     adapters,
     connection,
     persist_dataset,
+    provider_key,
     provider_payload,
     record_result,
 )
 from .providers.http import ProviderError
+from .providers.market import PriceObservation
 from .providers.reference import MappingJob, cik_value, filing_rows
 from .quant_data import dataset_rows
 from .terminal_analytics import instrument
@@ -30,15 +33,23 @@ from .terminal_analytics import instrument
 router = APIRouter(prefix="/api/v1/connections", tags=["private-providers"])
 
 
-def require_enabled(row):
+def require_enabled(row: models.ProviderConnection) -> None:
     if not row.enabled or row.connection_state == "REVOKED":
         raise ValueError("Provider is disabled or locally revoked")
     if not row.configured:
         raise ValueError("Server-side provider configuration is required")
 
 
+class ConnectionsResponse(TypedDict):
+    items: list[ProviderPayload]
+
+
+class ControlResponse(ProviderPayload):
+    revocation_scope: str
+
+
 @router.get("")
-def list_connections(session: Database):
+def list_connections(session: Database) -> ConnectionsResponse:
     result = [
         provider_payload(session, connection(session, key, get_settings()), key) for key in NAMES
     ]
@@ -57,7 +68,7 @@ class Control(BaseModel):
 
 
 @router.post("/{key}/control")
-def control(key: str, payload: Control, request: Request, session: Database):
+def control(key: str, payload: Control, request: Request, session: Database) -> ControlResponse:
     actor = identity(request, session, admin=True)
     row = connection(session, key, get_settings())
     if payload.action == "ENABLE" and not row.configured:
@@ -81,11 +92,11 @@ def control(key: str, payload: Control, request: Request, session: Database):
 
 
 @router.post("/{key}/test")
-async def test_connection(key: str, request: Request, session: Database):
+async def test_connection(key: str, request: Request, session: Database) -> ProviderPayload:
     actor = identity(request, session, admin=True)
     row = connection(session, key, get_settings())
     require_enabled(row)
-    adapter = adapters(get_settings())[key]
+    adapter = adapters(get_settings())[provider_key(key)]
     from .provider_probe import probe
 
     return await probe(
@@ -99,22 +110,38 @@ class SecImport(BaseModel):
     kind: Literal["submissions", "company_facts"] = "submissions"
 
 
-def fact_rows(payload):
+def fact_rows(payload: JsonValue) -> list[dict[str, JsonValue]]:
+    if not isinstance(payload, dict):
+        raise ProviderError("SEC company facts response must be an object")
     facts = payload.get("facts")
     if not isinstance(facts, dict):
         raise ProviderError("SEC company facts object is missing")
-    rows = []
+    rows: list[dict[str, JsonValue]] = []
     for taxonomy, concepts in facts.items():
+        if not isinstance(concepts, dict):
+            raise ProviderError("SEC company facts taxonomy must contain named concepts")
         for concept, values in concepts.items():
-            for unit, observations in values.get("units", {}).items():
+            if not isinstance(values, dict) or not isinstance(values.get("units"), dict):
+                raise ProviderError("SEC company facts concept requires named units")
+            units = values["units"]
+            if not isinstance(units, dict):
+                raise ProviderError("SEC company facts units must be an object")
+            label = values.get("label")
+            if label is not None and not isinstance(label, str):
+                raise ProviderError("SEC company facts label must be text")
+            for unit, observations in units.items():
+                if not isinstance(observations, list):
+                    raise ProviderError("SEC company facts observations must be an array")
                 for observation in observations:
+                    if not isinstance(observation, dict):
+                        raise ProviderError("SEC company facts observation must be an object")
                     rows.append(
                         {
+                            **observation,
                             "taxonomy": taxonomy,
                             "concept": concept,
-                            "label": values.get("label"),
+                            "label": label,
                             "unit": unit,
-                            **observation,
                         }
                     )
                     if len(rows) > 100000:
@@ -125,18 +152,40 @@ def fact_rows(payload):
 
 
 @router.post("/sec/import")
-async def import_sec(payload: SecImport, request: Request, session: Database):
+async def import_sec(
+    payload: SecImport, request: Request, session: Database
+) -> dict[str, JsonValue]:
     actor = identity(request, session)
     row = connection(session, "sec", get_settings())
     require_enabled(row)
     nested = session.begin_nested()
     try:
         response = await adapters(get_settings())["sec"].read(payload.cik, payload.kind)
-        rows = (
-            filing_rows(response.payload)
+        rows: list[dict[str, JsonValue]] = (
+            [
+                {
+                    "cik": filing["cik"],
+                    "accession": filing["accession"],
+                    "filing_date": filing["filing_date"],
+                    "form": filing["form"],
+                    "document": filing["document"],
+                    "url": filing["url"],
+                }
+                for filing in filing_rows(response.payload)
+            ]
             if payload.kind == "submissions"
             else fact_rows(response.payload)
         )
+        filings_object = (
+            response.payload.get("filings") if isinstance(response.payload, dict) else None
+        )
+        historical_files = (
+            filings_object.get("files", []) if isinstance(filings_object, dict) else []
+        )
+        if not isinstance(historical_files, list) or any(
+            not isinstance(item, dict) for item in historical_files
+        ):
+            raise ProviderError("SEC historical filing references must be an array of objects")
         version, created = persist_dataset(
             session,
             response,
@@ -158,7 +207,7 @@ async def import_sec(payload: SecImport, request: Request, session: Database):
             "scope": "RECENT_FILINGS"
             if payload.kind == "submissions"
             else "RAW_XBRL_FACTS_NOT_CURATED_FINANCIALS",
-            "historical_files": response.payload.get("filings", {}).get("files", []),
+            "historical_files": historical_files,
         }
     except (ProviderError, ValueError, TypeError, KeyError, OSError) as exc:
         nested.rollback()
@@ -172,7 +221,7 @@ async def import_sec(payload: SecImport, request: Request, session: Database):
 
 
 @router.get("/sec/filings")
-def filings(session: Database, cik: str | None = None):
+def filings(session: Database, cik: str | None = None) -> dict[str, JsonValue]:
     versions = session.scalars(
         select(models.DatasetVersion)
         .join(models.Dataset)
@@ -180,12 +229,16 @@ def filings(session: Database, cik: str | None = None):
         .order_by(models.DatasetVersion.created_at.desc())
     ).all()
     selected = cik_value(cik) if cik else None
-    seen, items = set(), []
+    seen: set[str] = set()
+    items: list[dict[str, JsonValue]] = []
     for version in versions:
         rows, provenance = dataset_rows(session, version.id)
         for row in rows:
-            if (not selected or row["cik"] == selected) and row["accession"] not in seen:
-                seen.add(row["accession"])
+            accession = row.get("accession")
+            if not isinstance(accession, str) or not isinstance(row.get("filing_date"), str):
+                raise ProviderError("Persisted filing requires accession and filing date text")
+            if (not selected or row["cik"] == selected) and accession not in seen:
+                seen.add(accession)
                 items.append(
                     {
                         **row,
@@ -194,7 +247,11 @@ def filings(session: Database, cik: str | None = None):
                         "ingested_at": version.created_at.isoformat(),
                     }
                 )
-    return {"items": sorted(items, key=lambda r: r["filing_date"], reverse=True)[:2000]}
+    return {
+        "items": [
+            item for item in sorted(items, key=lambda r: str(r["filing_date"]), reverse=True)[:2000]
+        ]
+    }
 
 
 class MapRequest(BaseModel):
@@ -203,7 +260,9 @@ class MapRequest(BaseModel):
 
 
 @router.post("/openfigi/mapping")
-async def map_figi(payload: MapRequest, request: Request, session: Database):
+async def map_figi(
+    payload: MapRequest, request: Request, session: Database
+) -> dict[str, JsonValue]:
     actor = identity(request, session)
     row = connection(session, "openfigi", get_settings())
     require_enabled(row)
@@ -211,7 +270,9 @@ async def map_figi(payload: MapRequest, request: Request, session: Database):
     nested = session.begin_nested()
     try:
         response = await adapters(get_settings())["openfigi"].mapping(jobs)
-        rows = [
+        if not isinstance(response.payload, list):
+            raise ProviderError("OpenFIGI response must be an array")
+        rows: list[dict[str, JsonValue]] = [
             {"request": job, "result": result}
             for job, result in zip(jobs, response.payload, strict=True)
         ]
@@ -223,13 +284,17 @@ async def map_figi(payload: MapRequest, request: Request, session: Database):
             provider=row.provider_name,
             name="OpenFIGI mapping " + request_hash,
             kind="reference_mapping",
-            request={"jobs": jobs},
+            request={"jobs": [job for job in jobs]},
             actor=actor,
         )
         record_result(session, row, response=response, action="mapping", actor=actor)
         row.last_data_sync = datetime.now(UTC)
         nested.commit()
-        return {"state": "REVIEW_REQUIRED", "dataset_version_id": version.id, "items": rows}
+        return {
+            "state": "REVIEW_REQUIRED",
+            "dataset_version_id": version.id,
+            "items": [item for item in rows],
+        }
     except (ProviderError, ValueError, OSError) as exc:
         nested.rollback()
         error = (
@@ -251,15 +316,25 @@ class AcceptMapping(BaseModel):
 
 
 @router.post("/openfigi/accept")
-def accept_mapping(payload: AcceptMapping, request: Request, session: Database):
+def accept_mapping(
+    payload: AcceptMapping, request: Request, session: Database
+) -> dict[str, JsonValue]:
     actor = identity(request, session, admin=True)
     if not payload.confirm:
         raise ValueError("Explicit mapping approval is required")
     rows, provenance = dataset_rows(session, payload.dataset_version_id)
     if provenance["source"] != "OpenFIGI" or payload.job_index >= len(rows):
         raise ValueError("Select an OpenFIGI result from a persisted mapping dataset")
-    candidates = rows[payload.job_index]["result"].get("data", [])
-    selected = next((row for row in candidates if row.get("figi") == payload.figi), None)
+    result = rows[payload.job_index].get("result")
+    candidates = result.get("data", []) if isinstance(result, dict) else None
+    if not isinstance(candidates, list):
+        raise ValueError("Persisted OpenFIGI result requires a candidate array")
+    if any(not isinstance(candidate, dict) for candidate in candidates):
+        raise ValueError("Persisted OpenFIGI candidate must be an object")
+    selected = next(
+        (row for row in candidates if isinstance(row, dict) and row.get("figi") == payload.figi),
+        None,
+    )
     held = session.get(models.Instrument, payload.instrument_id)
     if selected is None or held is None:
         raise ValueError("Instrument or mapping candidate not found")
@@ -305,7 +380,7 @@ class MarketImport(BaseModel):
 @router.post("/{key}/backfill")
 async def market_backfill(
     key: Literal["market", "options"], payload: MarketImport, request: Request, session: Database
-):
+) -> dict[str, JsonValue]:
     actor = identity(request, session)
     row = connection(session, key, get_settings())
     require_enabled(row)
@@ -330,21 +405,23 @@ async def market_backfill(
             actor=actor,
         )
         if key == "market" and created:
-            from decimal import Decimal
-
             for record in rows:
+                # The adapter adds a date alias after validating the vendor contract.
+                bar = PriceObservation.model_validate(
+                    {name: value for name, value in record.items() if name != "date"}
+                )
                 session.add(
                     models.MarketObservation(
                         instrument_id=security.id,
-                        timestamp=datetime.fromisoformat(record["timestamp"]),
-                        price=Decimal(record["close"]),
-                        currency=record["currency"],
+                        timestamp=bar.timestamp,
+                        price=bar.close,
+                        currency=bar.currency,
                         source=row.provider_name,
                         source_category="PROVIDER",
-                        data_state=record["data_state"],
+                        data_state=bar.data_state,
                         dataset_version_id=version.id,
-                        adjustment_state=record["adjustment_state"],
-                        fields={**record, "date": record["timestamp"][:10]},
+                        adjustment_state=bar.adjustment_state,
+                        fields={**record, "date": bar.timestamp.date().isoformat()},
                     )
                 )
         record_result(session, row, response=response, action="sync", actor=actor)
