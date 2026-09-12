@@ -21,6 +21,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2/M3/M10/M15: a5b0830 validates saved thesis/DCF links and immutable history receipts; file-backed SQLite readers no longer block workspace commits. Patched runtime and unchanged package pins, 203 affected tests, 67 launcher/release checks, three strict files and both equity browser workflows pass; four screenshots inspected. Whole strict 47 remains red at 661 diagnostics.
 - [x] M2/M11/M12 checkpoint 31: full frozen backend passes 1,842 tests at 89.5491% coverage on cc91f85. Options/Pine batches pushed and deployed, ten services healthy, private /overview responding. Whole release remains open.
 - [x] M2/M11: typed options discovery/chain/API contracts, honest spot-assumption provenance, reserved saved-receipt fields and pre-write demo-price guards. 120 affected tests, five strict modules, two browser workflows and exact valid-output comparisons pass; twelve screenshots inspected. Whole strict 43 remains red at 714 diagnostics.
 - [x] M2/M4/M9 checkpoint 30: full backend passes 1,799 tests at 89.4451% coverage on fdfb688; model and risk batches deployed locally, ten services healthy. Whole release remains open.

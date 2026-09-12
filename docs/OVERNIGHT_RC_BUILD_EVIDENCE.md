@@ -14,6 +14,67 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Thesis Receipts And Local SQLite Concurrency
+
+Verified application a5b0830, parent 403b49a, pushed on 2026-09-12. Thesis parents
+must be completed same-security receipts with positive integer versions; missing
+legacy versions still start at one. DCF links validate saved security identity.
+History rejects malformed JSON/symbols and stored receipt-ID overrides. No old
+receipt is rewritten. Exact comparisons match 403b49a for 40 saved responses and
+120 unfiltered/filtered histories, including hashes, decimal strings and legacy
+references: overnight-thesis-parity-01.log, native 0. The comparison harness emits
+identity-map warnings while reusing fixed IDs under rolled-back savepoints.
+
+Browser 05 failed before the thesis screen: concurrent workspace commits and
+comparables reads hit SQLite lock errors. It returned one failed/one passed,
+native 1; overnight-thesis-browser-05.log and e2e-overnight-thesis-05-api.log retain
+the failure. The SQLite connection factory now enables WAL before serving
+file-backed local requests, preserving FULL synchronization, automatic
+checkpoints and the default 5-second timeout. Memory URLs and PostgreSQL retain
+their previous behavior; URI flags are parsed as booleans, and an unsupported
+journal mode disposes the engine and fails. No retries/timeouts/assertions were
+relaxed. Online backup tests preserve committed, uncheckpointed data while a
+separate read transaction retains its older snapshot.
+
+The original SQLite 3.49.1 and the first old-uv Python 3.12.13 download's SQLite
+3.50.4 are affected by the upstream [WAL-reset bug](https://sqlite.org/wal.html).
+uv was updated from 0.11.7 to 0.12.13; its managed CPython 3.12.13 build dated
+2026-08-07 includes SQLite 3.53.1. A new `.venv-rc` has the exact same 121 package
+pins as `.venv-release`; no NumPy/SciPy/model dependency was changed. Older
+affected SQLite libraries cannot enable file-backed WAL through the factory.
+The old environments and watchdog were preserved. CI uses the managed runtime;
+the Windows release wrapper and Makefile prefer `.venv-rc`. The PowerShell list
+command selects that interpreter for all 27 gates. Native GNU make execution and
+remote CI execution were not available/verified in this checkpoint.
+
+Commands below used `.venv-rc/Scripts/python.exe` after the runtime upgrade;
+earlier thesis/SQLite negative controls used `.venv-release` where applicable.
+All receipts are under logs/ and are excluded from Git.
+
+| Check | Native Exit | Receipt / Result |
+| --- | --- | --- |
+| Thesis negative controls, corrected writer spy | 1 | overnight-thesis-negative-02.log: 15 failed / eight passed, 25.64s, no teardown errors |
+| SQLite regression against unchanged engine policy extracted into a factory | 1 | overnight-sqlite-negative-01.log: four failed / three passed, 16.93s; both held-reader workspace writes reproduce locked commits |
+| SQLite WAL/runtime/backup contracts | 0 | overnight-sqlite-contracts-02.log/xml: 18 passed, 20.75s |
+| URI classification negative controls | 1 | overnight-sqlite-uri-negative-02.log: three failed / one passed, 5.34s; -01 also had one event-listener teardown harness failure, corrected without changing application code |
+| Affected SQLite, backups, migrations, middleware, equity and research suite | 0 | overnight-thesis-sqlite-contracts-05.log/xml: 203 passed / three warnings, 85.18s; preceding -04 had 199 passed before four added cases |
+| Database + release launcher/repository tests after typed table setup correction | 0 | overnight-sqlite-launchers-03.log/xml: 67 passed / one warning, 13.41s |
+| Three focused strict files | 0 | overnight-thesis-sqlite-focused-types-05.log: database.py and both new/updated test modules; -04 found two FromClause fixture errors, fixed via typed metadata table lookup |
+| Whole strict 45 / 46 / 47 | 1 | Corresponding manifests/logs retained; final 47: 661 distinct diagnostics / 68 files / 313 sources / nine distributions; API 348 errors / 15 files / 121 sources |
+| Equity browser after WAL fix | 0 | overnight-thesis-browser-06.log/results.json: two passed, 138.549s, zero retries; no API errors |
+| Final equity browser after URI guard and fixture/launcher corrections | 0 | overnight-thesis-browser-07.log/results.json: two passed, 51.523s, zero failed/skipped/flaky/retried or top-level errors; no API 500/lock errors |
+| OpenAPI and CI YAML inspection | 0 | overnight-thesis-sqlite-openapi-02.log: 170 paths, ThesisHistory response and managed-runtime CI step |
+| Whole Ruff / formatting | 0 | All checks pass / 334 files formatted |
+| Secret / no-execution scans | 0 | 655 text files, zero findings / no forbidden broker action methods |
+
+Both browser runs use Node 22, the existing production frontend build, isolated
+SQLite/object/key paths and disabled external providers. Final screenshots
+reviewed: portfolio-screenshots/dcf-1440.png, dcf-390.png, thesis-390.png and
+security-m5.png. Layout, charts, saved thesis versions and source badges remain
+visible. No frontend source changed. Full backend 31 is still the most recent
+whole-suite result; full backend 32 and the backend Docker refresh are next.
+This is not a 27-gate release pass.
+
 ## Full Backend 31 And Pine Runtime Refresh
 
 Frozen cc91f85, isolated database/storage/key, no source edits during the run:
