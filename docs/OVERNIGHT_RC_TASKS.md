@@ -21,6 +21,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2/M4/M9 checkpoint 30: full backend passes 1,799 tests at 89.4451% coverage on fdfb688; model and risk batches deployed locally, ten services healthy. Whole release remains open.
 - [x] M2/M4: typed risk-limit evidence/responses, shared disabled-ID validation before configuration mutation or valuation replay, and nullable legacy audit rows. 315 affected tests, five strict modules, three browser workflows and 1,296 exact numerical comparisons pass. Whole strict 42 remains red at 749 diagnostics.
 - [x] M2/M9: typed model metrics, predictions, purged folds and artifacts; pinned scikit-learn/joblib runtime contracts, pre-read request validation and pre-training currency validation. 82 affected tests, seven strict modules and three browser workflows pass; ten engine/artifact and 60 full worker comparisons are exact. Whole strict 40 remains red at 797 diagnostics.
 - [x] M2/M3/M9: full backend 29 passes 1,599 tests at 89.3172% coverage; stress browser submissions tracked by exact returned run IDs, all three focused stress/quant workflows pass without retries. Verified backtest batch deployed locally, ten services healthy.

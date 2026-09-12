@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the typed risk-limit batch: 1a69ea5, pushed.
-Docker API/workers/reports are 1a69ea5; frontend is 612da19.
+Current verified application HEAD: fdfb688, pushed.
+Docker API/workers/reports are fdfb688; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -33,6 +33,12 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Full backend 30 on frozen fdfb688: 1,799 passed, zero failed/skipped,
+  123 warnings, 421.23s, native exit 0. Coverage: 11,703 / 13,084 statements
+  (89.4451238%), 1,381 missing, 31 existing excluded. Risk Docker build/up both
+  pass; four risk/valuation hashes match source. Observe-only watchdog at
+  2026-09-12T04:38:52.966960Z reports ten healthy services and no actions;
+  /overview responds HTTP 200 at private sign-in, Keep-Alive 70s.
 - Typed risk-limit inputs/results and HTTP responses: 315 affected tests pass
   (39.00s), five focused strict modules pass, all three risk/hedge browser checks
   pass with zero retries (55.178s). All 1,296 metric type/value/Decimal-string

@@ -14,6 +14,23 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Full Backend 30 And Risk Runtime Refresh
+
+Frozen fdfb688, isolated database/storage/key, no Python source edits during the
+run: 1,799 passed, zero failed/skipped, 123 warnings, 421.23s, native exit 0.
+Coverage: 11,703 / 13,084 statements = 89.44512381534699%, 1,381 missing,
+31 existing excluded. Receipts: logs/overnight-backend-30.log/xml and
+logs/overnight-coverage-30.json. This includes the model and risk-limit batches.
+
+Risk Docker build/up exit 0 without resetting runtime data:
+logs/overnight-risk-limit-docker-{build,up}.log. Deployed risk_limits,
+risk_contracts, risk_api and portfolio_valuation SHA256 values match fdfb688.
+Observe-only watchdog at 2026-09-12T04:38:52.966960Z exits 0: ten healthy services,
+MinIO init SUCCEEDED, no repair actions (overnight-risk-limit-watchdog.log).
+Private /overview returns HTTP 200 at sign-in with Keep-Alive 70s.
+Whole strict remains red at 749 diagnostics and other release requirements remain
+open; this full backend checkpoint is not a 27-gate release pass.
+
 ## Typed Risk Limits And Validated Configuration
 
 Source 1a69ea5 plus risk batch. Typed valuation evidence and limit/monitor response
