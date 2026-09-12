@@ -48,6 +48,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2/M5: typed six-format parser/normalizer, finite previews, nonempty headers, validated aliases and immutable quarantined raw bytes; 55 affected tests and 127 exact valid-result parity cases pass.
 - [x] M2/M5: typed DataDrop service and detached response containers; invalid saved mapping/defaults/missing references reject before transitions; 77 affected tests and exact seven-file payload parity pass.
 - [x] M2/M5: typed DataDrop HTTP responses, explicit missing-resource/profile errors and finite request defaults; 125 affected tests, ten exact HTTP parity checks and OpenAPI checks pass. Whole strict 33 remains red at 931 distinct diagnostics.
+- [x] M2/M6: exact financial serialization and separate numeric performance/availability contracts; 113 affected tests, 96 complete metric summaries and two exact full valuation comparisons pass. Main valuation/position/risk typing remains open; whole strict 34 has 891 distinct diagnostics.
 - [ ] M6: Windows outbound watcher/pairing/revocation/credentials/logs/startup.
 - [x] M6/M8: durable archive journal, acknowledgement integrity and typed paper reader guards; 30 new focused tests and full backend 19 (1,244 tests) pass.
 - [x] M3/M13: keep blocking database checks off the ASGI loop; two concurrency negative controls reproduce the blocked-loop behavior. Full browser 11 passes all 40 tests with zero retries after factor request/projection corrections.

@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the DataDrop-API commit: 7074ef3, pushed.
+Current HEAD before the valuation-value commit: d8e76c1, pushed.
 Docker runtime is e5a366d. Full backend 26 and browser 14 passed before this batch.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -32,6 +32,14 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Valuation values/metrics: 113 affected tests pass, five warnings, 19.78s;
+  two helper modules and two new test modules pass focused strict types.
+  Ten negative controls reproduced invalid financial JSON before correction.
+  Exact decimals, zero, missing values and valid dates remain preserved; 96
+  metric summaries and two complete valuation outputs equal d8e76c1 exactly.
+  Whole strict 34: 891 diagnostics / 87 files / 284 sources; API 475 / 24 files.
+  Serialization, summary and fingerprint contracts are typed; the main valuation
+  calculation/position/risk contracts remain open. No financial tolerance changed.
 - DataDrop API contracts: 125 affected tests pass, three warnings, 54.54s;
   API/new tests pass focused strict types. Missing broker profile and unknown
   reject/archive files return explicit client errors; pairing ownership, token
@@ -314,7 +322,7 @@ browser checkpoints on stable source. No full test process is currently active.
 The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 33 remains red at 931 errors.
+in the clean environment. Whole strict checkpoint 34 remains red at 891 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

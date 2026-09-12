@@ -1369,3 +1369,36 @@ tokens remain hashed, and broker scopes retain the selected portfolio identity.
 No application or test edits occurred during whole strict 33. Full backend 26
 and browser 14 precede this batch and are not final-source certification.
 Persistent Docker remains at e5a366d; no active database or volume was reset.
+
+## Exact Valuation Values And Performance Summary
+
+2026-09-12, d8e76c1 plus valuation worktree. Financial serialization now validates
+recursive JSON values, preserves decimal strings and ISO dates, and rejects
+non-finite results, non-string keys and unsupported objects. Numeric display
+projection still preserves genuine zero and maps non-finite results to null.
+Performance values and per-metric availability are separate internal contracts;
+the existing exact-field-before-legacy-field rule is unchanged, including an
+explicit exact null. Date/quality/value validation occurs before calculations.
+The unused cash-flow argument was removed from this private helper, not from
+money-weighted-return calculations. Cache fingerprint logic is unchanged and typed.
+
+| Check | Exit | Evidence |
+| --- | --- | --- |
+| Old serializer negative control | 1 | overnight-valuation-values-negative-01.log: ten intended failures, 12 preservation passes |
+| First corrected affected tests | 0 | overnight-valuation-values-positive-01.log: 101 passed, five warnings, 109.94s |
+| Final affected valuation/accounting/performance tests | 0 | overnight-valuation-values-positive-02.log: 113 passed, five warnings, 19.78s |
+| Focused helpers/tests strict | 0 | overnight-valuation-values-types-02.log: four modules; initial three-module check also passed |
+| Exact financial parity | 0 | overnight-valuation-values-parity.log: 96 complete metric maps/state maps/warning lists across empty, short and complete curves and two risk-free rates; two complete valuation payloads equal d8e76c1 under a fixed clock |
+| Whole strict checkpoint 34 | 1 | overnight-whole-types-34/: 891 distinct diagnostics, 87 files, 284 sources; API 475 / 24 files |
+| Ruff / formatting / secrets / no-execution | 0 each | five changed Python files; 623 scanned text files with zero findings |
+| Observe-only watchdog | 0 | overnight-valuation-values-watchdog.log: 2026-09-12T02:20:41Z, ten healthy services and successful init, no restarts |
+
+The initial verification commands experienced a long wall-clock delay while
+Windows had about 1 GB free physical memory. Both completed normally; no process
+was killed and no test retried. Parity used an in-memory copy of a source DB
+opened read-only. No source/test edits occurred during whole strict 34.
+Additional full-14 screenshots inspected at 1440px: performance, risk, alpha,
+hedge, quant dashboard, backtests, options, Data Drop and Data Catalogue. Panels,
+controls and data-state labels are readable; wide tables retain their scrollable
+content. This does not certify the complete 95-image matrix or current-source
+browser behavior. Full backend/browser verification after this batch is pending.

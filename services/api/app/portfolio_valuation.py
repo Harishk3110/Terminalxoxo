@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import math
 from collections import defaultdict
 from dataclasses import asdict
 from datetime import UTC, date, datetime
@@ -37,25 +36,12 @@ from .portfolio_exposure import exposure_service
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .transaction_context import context_payload
+from .valuation_metrics import metric_summary
+from .valuation_values import jsonable as jsonable
+from .valuation_values import number as number
 
 VERSION = "knk-nav-4.9"
 METHOD = "Policy-selected cost basis; trade-date recognition and settlement cash; recorded transaction FX; beginning-of-day external flows; chain-linked daily returns"
-
-
-def jsonable(value):
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, (date, datetime)):
-        return value.isoformat()
-    if isinstance(value, dict):
-        return {k: jsonable(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [jsonable(v) for v in value]
-    return value
-
-
-def number(value):
-    return float(value) if value is not None and math.isfinite(float(value)) else None
 
 
 def load_entries(session: Session, portfolio_id: str) -> tuple[list[Entry], list[dict[str, Any]]]:
@@ -154,69 +140,6 @@ def load_entries(session: Session, portfolio_id: str) -> tuple[list[Entry], list
     return apply_revisions(session, portfolio_id, entries, payloads)
 
 
-def metric_summary(curve, cash_flows, end, risk_free=0):
-    from .performance_domain.contracts import (
-        FeeBasis,
-        Frequency,
-        PerformanceSettings,
-        ReturnObservation,
-    )
-    from .performance_domain.drawdowns import drawdowns
-    from .performance_domain.metrics import measured, period_returns, sample_statistics
-    from .performance_domain.money_weighted import money_weighted
-    from .performance_domain.series import periods
-
-    def value(row, exact, legacy):
-        item = row.get(exact, row.get(legacy))
-        return Decimal(str(item)) if item is not None else None
-
-    rows = [
-        ReturnObservation(
-            date.fromisoformat(row["date"]),
-            value(row, "net_return_exact", "return"),
-            value(row, "opening_nav_exact", "opening_nav"),
-            value(row, "nav_exact", "equity"),
-            value(row, "external_flow_exact", "external_flow"),
-            value(row, "pnl_exact", "daily_pnl"),
-            value(row, "fee_expense_exact", "fee_expense_exact"),
-            value(row, "benchmark_return_exact", "benchmark_return"),
-            row["quality"],
-        )
-        for row in curve
-    ]
-    settings = PerformanceSettings(risk_free_rate=Decimal(str(risk_free)))
-    daily = periods(rows, Frequency.DAILY, FeeBasis.NET)
-    metrics = {
-        **period_returns(rows, settings),
-        **sample_statistics(daily, rows, settings),
-        **money_weighted(rows, None, FeeBasis.NET),
-    }
-    dd = drawdowns(daily)
-    metrics["max_drawdown"] = measured(dd["maximum"], len(rows))
-    metrics["current_drawdown"] = measured(dd["current"], len(rows))
-    cagr = metrics["cagr"].value
-    metrics["calmar"] = measured(
-        float(cagr) / abs(float(dd["maximum"])) if cagr is not None and dd["maximum"] else None,
-        len(rows),
-        "RATIO",
-    )
-    result = {key: number(metric.value) for key, metric in metrics.items()}
-    volatility = result["volatility"]
-    result["daily_volatility"] = volatility / math.sqrt(252) if volatility is not None else None
-    result["observations"] = sum(row.day.weekday() < 5 for row in rows)
-    result["calendar_days"] = (end - rows[0].day).days if rows else 0
-    result["metric_states"] = {
-        key: {"state": metric.state, "reason": metric.reason, "observations": metric.observations}
-        for key, metric in metrics.items()
-    }
-    warnings = list(
-        dict.fromkeys(
-            f"{metric.state}: {metric.reason}" for metric in metrics.values() if metric.reason
-        )
-    )
-    return result, warnings
-
-
 class PortfolioValuationService:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -233,7 +156,7 @@ class PortfolioValuationService:
             raise ValueError("Portfolio record is unavailable")
         return portfolio, profile
 
-    def fingerprint(self, portfolio_id, end):
+    def fingerprint(self, portfolio_id: str, end: date) -> str:
         now = datetime.now(UTC)
         freshness_epoch = now.strftime("%Y-%m-%dT%H:%M") if end >= now.date() else "HISTORICAL"
         parts = [VERSION, portfolio_id, end.isoformat(), freshness_epoch]
@@ -686,9 +609,10 @@ class PortfolioValuationService:
                 selected_sources = sources
                 final_totals = totals
 
-        performance, performance_warnings = metric_summary(
-            curve, state.flow_events, end, float(profile.configuration.get("risk_free_rate", 0))
-        )
+        risk_free = profile.configuration.get("risk_free_rate", 0)
+        if isinstance(risk_free, bool) or not isinstance(risk_free, (float, int, str)):
+            raise ValueError("Configured risk-free rate must be numeric")
+        performance, states, performance_warnings = metric_summary(curve, end, float(risk_free))
         warnings.extend(performance_warnings)
         risk, correlations = self.risk(
             histories,
@@ -889,7 +813,6 @@ class PortfolioValuationService:
                     else None,
                 }
             )
-        states = performance.pop("metric_states")
         metric_metadata = {
             key: {
                 "value": value,
