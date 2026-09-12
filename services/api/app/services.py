@@ -36,6 +36,7 @@ from .macro_contracts import (
     MacroSeriesPayload,
 )
 from .object_storage import ObjectStorage
+from .pine_results import PineStrategy, PineTemplate
 from .providers.fred import (
     FredObservationsResponse,
     FredProvider,
@@ -2505,10 +2506,10 @@ class ReportService:
 
 
 class PineService:
-    def generate(self, strategy_type: str = "moving_average_crossover") -> dict:
+    def generate(self, strategy_type: str = "moving_average_crossover") -> PineTemplate:
         from .pine_research import PineSettings, generate
 
-        strategies = {
+        strategies: dict[str, PineStrategy] = {
             "moving_average_crossover": "SMA",
             "rsi": "RSI",
             "macd": "MACD",

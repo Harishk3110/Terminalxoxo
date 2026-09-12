@@ -4,18 +4,19 @@ import csv
 import hashlib
 import io
 from datetime import date
-from typing import Literal
+from typing import Literal, Self
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .backtest_engine import BacktestSettings, signals_for
+from .pine_results import PineComparison, PineStrategy, PineTemplate, SignalComparison
 
 
 class PineSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
-    strategy: Literal["SMA", "RSI", "MACD", "BREAKOUT"] = "SMA"
+    strategy: PineStrategy = "SMA"
     fast: int = Field(default=20, ge=2, le=250)
     slow: int = Field(default=50, ge=3, le=500)
     direction: Literal["LONG_ONLY", "LONG_SHORT"] = "LONG_ONLY"
@@ -33,7 +34,7 @@ class PineSettings(BaseModel):
     activation_ticks: int = Field(default=1, ge=1, le=100000)
 
     @model_validator(mode="after")
-    def consistent(self):
+    def consistent(self) -> Self:
         if self.fast >= self.slow or self.end <= self.start:
             raise ValueError("Fast must precede slow; end must follow start")
         if self.start.year < 1970 or self.end.year > 2100:
@@ -43,7 +44,7 @@ class PineSettings(BaseModel):
         return self
 
 
-def generate(settings: PineSettings):
+def generate(settings: PineSettings) -> PineTemplate:
     formulas = {
         "SMA": "fast = ta.sma(close, fastLength)\nslow = ta.sma(close, slowLength)\nrawSignal = fast / slow - 1",
         "RSI": "rsi = ta.rsi(close, fastLength)\nrawSignal = (math.max(30 - rsi, 0) - math.max(rsi - 70, 0)) / 100",
@@ -109,7 +110,7 @@ plot(rawDirection, "KNK_SIGNAL", display=display.data_window)
     }
 
 
-def compare_export(raw: bytes, settings: PineSettings):
+def compare_export(raw: bytes, settings: PineSettings) -> PineComparison:
     if len(raw) > 10_000_000:
         raise ValueError("Signal export exceeds 10 MB")
     reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig")))
@@ -131,10 +132,10 @@ def compare_export(raw: bytes, settings: PineSettings):
         if stamp.tzinfo is None:
             raise ValueError("Timestamps need an explicit timezone or Unix seconds")
         close = float(row["close"])
-        signal = None if row["KNK_SIGNAL"] in ("", "NaN", "na") else float(row["KNK_SIGNAL"])
-        if not np.isfinite(close) or close <= 0 or signal not in (None, -1, 0, 1):
+        direction = None if row["KNK_SIGNAL"] in ("", "NaN", "na") else float(row["KNK_SIGNAL"])
+        if not np.isfinite(close) or close <= 0 or direction not in (None, -1, 0, 1):
             raise ValueError(f"Invalid close or directional signal at row {index + 2}")
-        rows.append({"time": stamp.tz_convert("UTC"), "close": close, "signal": signal})
+        rows.append({"time": stamp.tz_convert("UTC"), "close": close, "signal": direction})
     if len(rows) < settings.slow + 10:
         raise ValueError("More bars are required for slow-window and MACD warm-up")
     frame = pd.DataFrame(rows).set_index("time")
@@ -144,19 +145,26 @@ def compare_export(raw: bytes, settings: PineSettings):
         {"EXPORT": frame},
         BacktestSettings(strategy=settings.strategy, fast=settings.fast, slow=settings.slow),
     )
-    compared, missing, warmup, mismatches = [], 0, 0, []
-    for stamp, raw_signal in signal.EXPORT.items():
+    compared: list[SignalComparison] = []
+    mismatches: list[SignalComparison] = []
+    missing, warmup = 0, 0
+    directions: pd.Series[float] = signal["EXPORT"]
+    observed_directions: pd.Series[float] = frame["signal"]
+    closes: pd.Series[float] = frame["close"]
+    for comparison_stamp, raw_signal in directions.items():
+        if not isinstance(comparison_stamp, pd.Timestamp):
+            raise ValueError("Signal comparison requires timestamp-indexed bars")
         if pd.isna(raw_signal):
             warmup += 1
             continue
-        observed = frame.loc[stamp, "signal"]
+        observed = observed_directions.at[comparison_stamp]
         if pd.isna(observed):
             missing += 1
             continue
         expected = int(np.sign(raw_signal))
-        item = {
-            "time": stamp.isoformat(),
-            "close": float(frame.loc[stamp, "close"]),
+        item: SignalComparison = {
+            "time": comparison_stamp.isoformat(),
+            "close": float(closes.at[comparison_stamp]),
             "knk": expected,
             "tradingview": int(observed),
             "match": bool(expected == observed),
@@ -170,7 +178,7 @@ def compare_export(raw: bytes, settings: PineSettings):
         "state": "MISMATCHES" if mismatches else "MATCHED_OBSERVED_BARS",
         "source": "USER_TRADINGVIEW_CSV / KnK Backtest signals_for",
         "quality": "USER PROVIDED / UNVERIFIED EXTERNAL EXPORT",
-        "as_of": frame.index[-1].isoformat(),
+        "as_of": pd.Timestamp(frame.index[-1]).isoformat(),
         "source_hash": hashlib.sha256(raw).hexdigest(),
         "row_count": len(rows),
         "compared": len(compared),

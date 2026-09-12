@@ -8,13 +8,14 @@ from app.config import get_settings
 from app.database import get_session
 from app.pine_api import router
 from app.pine_research import PineSettings, compare_export, generate
+from app.pine_results import PineStrategy
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 
-def export_file(signal="1", periods=80):
+def export_file(signal: str = "1", periods: int = 80) -> bytes:
     import pandas as pd
 
     output = io.StringIO()
@@ -26,7 +27,7 @@ def export_file(signal="1", periods=80):
 
 
 @pytest.mark.parametrize("strategy", ["SMA", "RSI", "MACD", "BREAKOUT"])
-def test_template_constants_and_honest_compatibility(strategy):
+def test_template_constants_and_honest_compatibility(strategy: PineStrategy) -> None:
     result = generate(PineSettings(strategy=strategy, trailing_ticks=10))
     assert result["source"].startswith("//@version=6")
     assert "commission_value=input" not in result["source"]
@@ -47,9 +48,9 @@ def test_template_constants_and_honest_compatibility(strategy):
         {"end": "2010-01-01"},
     ],
 )
-def test_invalid_template_inputs(payload):
+def test_invalid_template_inputs(payload: dict[str, object]) -> None:
     with pytest.raises(ValueError):
-        PineSettings(**payload)
+        PineSettings.model_validate(payload)
 
 
 def test_comparison_reports_only_observed_post_warmup() -> None:
@@ -72,7 +73,7 @@ def test_comparison_reports_only_observed_post_warmup() -> None:
         b"date,price,signal\n",
     ],
 )
-def test_invalid_or_empty_comparison(raw):
+def test_invalid_or_empty_comparison(raw: bytes) -> None:
     with pytest.raises(ValueError):
         compare_export(raw, PineSettings())
 
@@ -97,6 +98,7 @@ def test_saved_template_comparison_auth_and_ledger_unchanged(
         )
         assert result.status_code == 201, result.text
         saved = ledger_session.get(models.AnalysisRun, result.json()["id"])
+        assert saved is not None
         assert saved.parameters["template_hash"] == template["source_hash"]
         assert saved.kind == "pine_compare"
         assert (

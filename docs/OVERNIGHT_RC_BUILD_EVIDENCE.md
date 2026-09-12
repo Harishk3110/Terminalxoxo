@@ -14,6 +14,37 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Typed Pine Evidence And Pre-Read Validation
+
+Source 9f0addf plus Pine batch. Typed generated templates, per-bar comparisons and
+aggregate results preserve the four existing strategies and the actual generated
+Pine source. Persisted settings, source text/hash and recorded settings are checked
+before reading an uploaded comparison. A missing/damaged source or mismatched
+settings cannot reach comparison computation or object storage. No compiler, live
+TradingView feed or broker execution is claimed or added.
+
+| Check | Result / evidence |
+| --- | --- |
+| Negative controls | Nine damaged-template cases fail on 9f0addf by reaching the prohibited upload reader (5.24s); three settings-linkage cases fail before their guard (5.51s). overnight-pine-negative-01.log and overnight-pine-settings-negative-01.log, native 1 |
+| Affected backend | 46 passed, one warning, 6.58s, native 0; overnight-pine-contracts-03.log/xml |
+| Focused strict | Five modules pass, native 0; overnight-pine-focused-types-03.log |
+| Exact baseline | 12 generated template payloads/source bytes/hashes, 60 signal comparisons or exact unavailable errors, four legacy-service outputs and eight saved API responses match 9f0addf; overnight-pine-parity-01.log, native 0. Saved responses compared canonically, not by object-key order. |
+| Browser | One passed, zero failures/skips/flakes/retries, 25.422s, native 0; overnight-pine-browser-04.log and matching results JSON. Both 1440/390 screenshots inspected. |
+| OpenAPI | 170 paths, unchanged four-strategy enum/default and two response schemas verified; overnight-pine-openapi-01.log, native 0 |
+| Whole strict 44 | 683 distinct diagnostics / 69 files / 312 sources / nine distributions, native 1; API 365 / 15 files / 121 sources. logs/overnight-whole-types-44/manifest.json |
+| Static/security | Six files pass Ruff/format; 653 text files, zero secret findings; no forbidden broker action methods; diff --check passes |
+
+The initial focused type run found a reused timestamp local and a test dictionary
+annotation, corrected before the final checks. Only the PineService method and its
+result imports changed in services.py; unrelated service diagnostics remain open.
+
+Options Docker build/up passed without resetting data, and all four deployed
+options/equity file hashes match 9f0addf. Observe-only watchdog at
+2026-09-12T04:56:31.606274Z reports ten healthy services, MinIO init SUCCEEDED and
+no repair actions; overnight-options-watchdog.log. Main /overview is HTTP 200 at
+private sign-in with Keep-Alive 70s. Pine runtime refresh and full backend 31 remain
+pending. These checks are not a complete release pass.
+
 ## Options API And Saved-Receipt Contracts
 
 Source eb43e37 plus this batch. Saved analyses accept finite JSON objects and

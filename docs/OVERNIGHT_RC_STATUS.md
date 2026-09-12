@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current verified application HEAD: fdfb688, pushed.
-Docker API/workers/reports are fdfb688; frontend is 612da19.
+Current verified application HEAD: 9f0addf, pushed; verified Pine batch follows.
+Docker API/workers/reports are 9f0addf; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -33,6 +33,16 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Typed Pine templates/comparisons and pre-read saved-source/settings validation:
+  46 affected tests, five strict modules and the real browser upload workflow pass;
+  desktop/mobile screenshots inspected. Twelve generated templates/source bytes,
+  60 comparisons or unavailable errors, four legacy responses and eight saved API
+  responses match 9f0addf. Nine source/parameter and three settings-linkage negative
+  controls fail before their guards. Whole strict 44 remains red at 683 diagnostics
+  / 69 files / 312 sources; API 365 / 15 files. Full backend 31 pending.
+- Options Docker refresh passes; four source hashes verified. Watchdog at
+  2026-09-12T04:56:31.606274Z reports ten healthy services with no actions;
+  /overview returns HTTP 200 at private sign-in, Keep-Alive 70s. Data preserved.
 - Options API and shared saved-receipt contracts: 120 affected tests pass (9.41s),
   five focused strict modules pass and two browser workflows pass without retries
   (35.735s); all twelve screenshots inspected. Thirty synthetic contract records,

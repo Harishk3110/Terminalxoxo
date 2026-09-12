@@ -81,6 +81,7 @@ milestone remain open unless explicitly verified below.
 - [ ] M10: segments/ROIC/multiples/normalization/estimates/research linkage and DCF.
 - [ ] M11: full options unit/expiry/coverage/history/portfolio acceptance.
 - [ ] M12: Pine compatibility/equivalence/download/webhook, compilation honest.
+- [x] M2/M12: typed Pine templates/comparisons and saved source/hash/settings validation before upload reads. 46 affected tests, five strict modules, the browser upload workflow and exact baseline comparisons pass; compilation remains unverified. Whole strict 44 remains red at 683 diagnostics.
 - [ ] M13: trusted devices, production bootstrap, forced MFA, concurrency/security.
 - [ ] M14: all ten monitoring dashboards and real metrics/probes.
 - [x] M15: PostgreSQL snapshot, referenced/all retained objects, verification and new-database/new-bucket restore.
