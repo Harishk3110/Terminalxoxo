@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the GEX label-fit batch: bd7247d, pushed.
-Docker API/workers/reports are bd7247d; frontend remains a516add until refreshed.
+Current HEAD before the typed backtest batch: 612da19, pushed.
+Docker API/workers/reports are bd7247d; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -33,6 +33,19 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Typed offline backtest engine/results and pinned-input consumer: 124 affected
+  tests pass, seven focused strict modules pass, and the Backtrader interface is
+  checked against actual feeds, order callbacks, commissions and closed trades.
+  Five covariance failures, ten invalid/missing FX failures and two numeric-range
+  failures were reproduced before correction. Eighteen complete simulations,
+  96 allocation vectors and six full worker outputs exactly match 612da19.
+  Raw decimal strings, extra source evidence and JSON field order are preserved.
+  Whole strict 38: 820 diagnostics / 83 files / 293 sources on the final batch;
+  focused strict checks pass. Whole release remains open.
+- GEX frontend Docker refresh passed build and health-gated up without data reset;
+  deployed options-page SHA256 matches 612da19. Observe-only watchdog at
+  2026-09-12T03:46:28.386917Z reports ten healthy services, no repair actions;
+  /overview returns HTTP 200.
 - GEX label fit: shorter, equivalent "Largest contract share" label; no numeric or
   layout change. The strengthened browser check reproduced the old overflow,
   then passed all eleven metric labels at five viewports. Both options workflows

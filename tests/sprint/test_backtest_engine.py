@@ -4,10 +4,10 @@ import pytest
 from app.backtest_engine import BacktestSettings, risk_parity, signals_for, simulate
 
 
-def frames(count=320):
+def frames(count: int = 320) -> dict[str, pd.DataFrame]:
     dates = pd.bdate_range("2024-01-01", periods=count)
     rng = np.random.default_rng(3110)
-    result = {}
+    result: dict[str, pd.DataFrame] = {}
     for name in ("AAA", "BBB", "CCC"):
         close = 100 * np.exp(np.cumsum(rng.normal(0.0005, 0.015, count)))
         result[name] = pd.DataFrame(
@@ -33,8 +33,11 @@ def frames(count=320):
         "MULTIFACTOR",
     ],
 )
-def test_approved_strategy_runs_real_offline_fills(strategy):
-    result = simulate(frames(), BacktestSettings(strategy=strategy, fast=5, slow=30, top_n=1))
+def test_approved_strategy_runs_real_offline_fills(strategy: str) -> None:
+    settings = BacktestSettings.model_validate(
+        {"strategy": strategy, "fast": 5, "slow": 30, "top_n": 1}
+    )
+    result = simulate(frames(), settings)
     assert len(result["equity_curve"]) == 320
     assert result["fills"]
     assert result["metrics"]["fill_count"] == len(result["fills"])

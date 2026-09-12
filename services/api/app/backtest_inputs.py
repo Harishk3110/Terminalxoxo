@@ -1,10 +1,12 @@
 """Pin instruments and prior-published FX fixings before an offline run is queued."""
 
+import math
 from collections.abc import Mapping
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
+from typing import Self
 
-from pydantic import JsonValue, TypeAdapter
+from pydantic import BaseModel, Field, JsonValue, TypeAdapter, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,6 +19,33 @@ from .terminal_analytics import instrument
 JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
 SYMBOLS = TypeAdapter(list[str])
 TEXT = TypeAdapter(str)
+
+
+class PinnedFxFixing(BaseModel):
+    rate: Decimal = Field(gt=0, allow_inf_nan=False)
+    provenance: dict[str, JsonValue]
+
+    @model_validator(mode="after")
+    def representable_rate(self) -> Self:
+        projected = float(self.rate)
+        if not math.isfinite(projected) or projected <= 0:
+            raise ValueError("Pinned FX must remain finite and positive in the simulator")
+        return self
+
+
+class PinnedBacktestInputs(BaseModel):
+    datasets: dict[str, DatasetProvenance] = Field(alias="_datasets", min_length=1, max_length=12)
+    fx: dict[str, dict[date, PinnedFxFixing]] = Field(alias="_fx")
+    sectors: dict[str, str | None] | None = Field(default=None, alias="_sectors")
+    base_currency: str = Field(min_length=3, max_length=3)
+    start: str | None = None
+    end: str | None = None
+
+    @model_validator(mode="after")
+    def matching_fx_symbols(self) -> Self:
+        if set(self.fx) != set(self.datasets):
+            raise ValueError("Every pinned security requires its own FX fixing series")
+        return self
 
 
 def pin_backtest_inputs(session: Session, params: Mapping[str, JsonValue]) -> dict[str, JsonValue]:

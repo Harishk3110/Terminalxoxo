@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Mapping
 
 import pandas as pd
+from pydantic import JsonValue
+from sqlalchemy.orm import Session
 
 from . import models
 from .analysis_lifecycle import transition_run
@@ -13,21 +16,22 @@ from .terminal_analytics import stress_result
 from .valuation_values import jsonable
 
 
-def backtest_result(session, params):
+def backtest_result(session: Session, params: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
     from .backtest_engine import BacktestSettings, simulate
-    from .backtest_inputs import pin_backtest_inputs
+    from .backtest_inputs import PinnedBacktestInputs, pin_backtest_inputs
     from .quant_data import dataset_rows
     from .research_inputs import bars_frame
 
-    params = params if params.get("_datasets") else pin_backtest_inputs(session, params)
-    frames = {}
-    for symbol, evidence in params["_datasets"].items():
+    params = dict(params) if params.get("_datasets") else pin_backtest_inputs(session, params)
+    pinned = PinnedBacktestInputs.model_validate(params)
+    frames: dict[str, pd.DataFrame] = {}
+    for symbol, evidence in pinned.datasets.items():
         rows, verified = dataset_rows(session, evidence["dataset_version_id"])
         if verified["content_hash"] != evidence["content_hash"]:
             raise ValueError("Pinned research input hash changed")
-        frame = bars_frame(rows, symbol, params.get("start"), params.get("end"))
+        frame = bars_frame(rows, symbol, pinned.start, pinned.end)
         fixing = pd.Series(
-            {pd.Timestamp(day): float(row["rate"]) for day, row in params["_fx"][symbol].items()}
+            {pd.Timestamp(day): float(row.rate) for day, row in pinned.fx[symbol].items()}
         ).reindex(frame.index)
         if fixing.isna().any():
             raise ValueError("Pinned prior-published FX fixing is incomplete")
@@ -35,41 +39,41 @@ def backtest_result(session, params):
             fixing, axis=0
         )
         frames[symbol] = frame
-    settings = BacktestSettings(
-        **{key: params[key] for key in BacktestSettings.model_fields if key in params}
+    settings = BacktestSettings.model_validate(
+        {key: params[key] for key in BacktestSettings.model_fields if key in params}
     )
-    result = simulate(frames, settings, sectors=params.get("_sectors"))
+    result = simulate(frames, settings, sectors=pinned.sectors)
     gross = simulate(
         frames,
         settings.model_copy(
             update={"fee_bps": 0, "spread_bps": 0, "slippage_bps": 0, "short_borrow_rate": 0}
         ),
-        sectors=params.get("_sectors"),
+        sectors=pinned.sectors,
     )
-    result["gross_equity_curve"] = gross["equity_curve"]
     result["metrics"]["cost_drag"] = (
         gross["metrics"]["total_return"] - result["metrics"]["total_return"]
     )
     result["warnings"].append(
         "Gross is a separate zero-cost counterfactual; cash, integer sizing and rejected orders can differ. Cost drag is not identical to recorded commissions."
     )
-    evidence = list(params["_datasets"].values())
-    quality = {item["quality"] for item in evidence}
-    result.update(
-        {
-            "inputs": params["_datasets"],
-            "currency": params["base_currency"],
-            "fx": params["_fx"],
-            "source": " / ".join(dict.fromkeys(item["source"] for item in evidence)),
-            "quality": next(iter(quality)) if len(quality) == 1 else "MIXED SOURCES",
-            "as_of": next(iter(frames.values())).index[-1].isoformat(),
-            "parameters": {key: value for key, value in params.items() if not key.startswith("_")},
-        }
-    )
+    input_evidence = list(pinned.datasets.values())
+    quality = {item["quality"] for item in input_evidence}
     result["warnings"].append(
         "FX assumption: each full bar uses its last available fixing published before that UTC date. Fills and marks use that same fixing, not contemporaneous intraday FX. Cash is held in the base currency."
     )
-    return result
+    return jsonable(
+        {
+            **result,
+            "gross_equity_curve": gross["equity_curve"],
+            "inputs": params["_datasets"],
+            "currency": pinned.base_currency,
+            "fx": params["_fx"],
+            "source": " / ".join(dict.fromkeys(item["source"] for item in input_evidence)),
+            "quality": next(iter(quality)) if len(quality) == 1 else "MIXED SOURCES",
+            "as_of": pd.Timestamp(next(iter(frames.values())).index[-1]).isoformat(),
+            "parameters": {key: value for key, value in params.items() if not key.startswith("_")},
+        }
+    )
 
 
 def execute_run(run_id: str) -> None:

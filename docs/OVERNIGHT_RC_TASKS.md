@@ -21,6 +21,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2/M9: typed offline backtest engine/results and pinned FX consumer, verified Backtrader boundary, covariance/FX negative controls; 124 affected tests, seven focused strict modules and 120 exact numerical/whole-output parity cases pass. Whole strict 38 remains red at 820 diagnostics.
 - [x] M2/M3/M9: atomic analysis claim/cancellation/completion/failure history, finite object-result validation and launch-error ownership; 98 affected tests including five isolated PostgreSQL races pass. Whole strict 36 remains red at 850 diagnostics.
 - [x] M3: shorten the long GEX concentration metric label without numeric/layout changes; negative overflow reproduced, all eleven labels and existing canvas assertions pass at five sizes, both options workflows pass with zero retries and ten screenshots inspected.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.

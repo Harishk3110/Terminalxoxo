@@ -14,6 +14,46 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Typed Offline Backtest Contracts
+
+Source 612da19 plus worktree. Explicit simulation result/metric/trade/position
+contracts replace inferred mixed dictionaries. A narrow Backtrader 1.9.78.123
+stub surface is verified with real feed/order/trade callbacks and exact configured
+commission arithmetic. No live broker adapter is involved. One initial surface
+test used decimal-literal equality for a binary floating-point fee; the final
+test compares exact configured arithmetic, with no tolerance increase.
+
+Risk-parity covariance now validates shape, symmetry and finiteness before its
+single-security shortcut; the existing PSD and optimiser tolerances are unchanged.
+Persisted FX must be positive, finite, representable in simulation arithmetic and
+matched to the pinned securities before any dataset access. Original raw FX strings
+and extra vendor evidence remain in the response unchanged.
+
+| Check | Result / evidence |
+| --- | --- |
+| Covariance negative controls | 5 failed / 4 passed, 4.33s, exit 1; overnight-backtest-covariance-negative-01.log |
+| Corrected covariance + approved strategies | 26 passed, 18.76s, exit 0; overnight-backtest-covariance-01.log |
+| Typed engine/consumer selection | Initial collection caught missing postponed pandas annotations; corrected selection 35 passed, 17.84s, exit 0; overnight-backtest-contracts-02.log |
+| Invalid pinned inputs against 612da19 worker | 10 failed / 1 passed, 3.85s, exit 1; overnight-backtest-pins-negative-01.log |
+| FX float overflow/underflow controls | 2 failed / 11 passed before guard, 5.03s, exit 1; overnight-backtest-fx-range-negative-01.log |
+| Final affected selection | 124 passed, zero failed/skipped, seven warnings, 63.77s, exit 0; overnight-backtest-contracts-05.log/xml |
+| Focused strict contracts | Seven source files, zero diagnostics, exit 0; overnight-backtest-focused-types-02.log |
+| Exact numerical and JSON parity | 18 complete simulations and 96 allocation vectors; six full worker results including raw decimal strings/vendor metadata; overnight-backtest-parity-01.log and overnight-backtest-worker-parity-01.log |
+| Whole strict 37 | 820 distinct diagnostics / 83 files / 293 sources, exit 1; API 443 / 23 files; final FX range guard followed by clean focused checks |
+| Whole strict 38, final batch | Same 820 diagnostics / 83 files / 293 sources / nine distributions, exit 1; overnight-whole-types-38/manifest.json |
+| Ruff, format, secret and no-execution scans | Exit 0; 634 text files, zero secret findings, no forbidden broker methods |
+
+The remaining terminal_worker type diagnostic is its existing untyped model_result
+call. Whole release and the corrected full-backend rerun remain pending; the failed
+full backend 28 is not relabeled as passing.
+
+GEX frontend Docker build/up both exit 0 (`overnight-gex-docker-build.log` and
+`overnight-gex-docker-up.log`). Deployed options-page hash matches 612da19:
+ffd81d423f86d12497d117a0d80c77d74053e2f8a641651dcb8bd1790afb94cb.
+Observe-only watchdog at 2026-09-12T03:46:28.386917Z reports ten healthy services,
+no actions, MinIO init succeeded; private /overview returns HTTP 200.
+API/workers/reports remain bd7247d and are not claimed to contain uncommitted code.
+
 ## GEX Metric Fit And Runtime Refresh
 
 Source bd7247d plus the one-label frontend change. The new overflow assertion
