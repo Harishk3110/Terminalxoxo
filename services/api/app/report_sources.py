@@ -7,7 +7,7 @@ from pydantic import JsonValue, TypeAdapter
 from sqlalchemy.orm import Session
 
 from . import models
-from .report_contracts import FORMATS, ReportRequest, ReportSnapshot, section
+from .report_contracts import ANALYSIS_KINDS, FORMATS, ReportRequest, ReportSnapshot, section
 
 JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
 
@@ -63,16 +63,14 @@ def capture(session: Session, request: ReportRequest) -> ReportSnapshot:
             if request.analysis_run_id
             else None
         )
-        allowed = {
-            "backtest": {"backtest"},
-            "factor": {"factor"},
-            "dcf": {"dcf"},
-            "comps": {"comparables"},
-            "quant": {"backtest", "alpha", "factor", "model", "montecarlo"},
-        }
-        if run is None or run.status != "SUCCEEDED" or run.kind not in allowed[request.kind]:
+        if (
+            run is None
+            or run.status != "SUCCEEDED"
+            or not run.result
+            or run.kind not in ANALYSIS_KINDS[request.kind]
+        ):
             raise ValueError("Select a completed matching analysis run")
-        raw = dict(run.result or {})
+        raw = dict(run.result)
         raw["parameters"] = run.parameters
         references = {
             "analysis_run_id": run.id,

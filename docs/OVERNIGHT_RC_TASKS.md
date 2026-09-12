@@ -13,6 +13,7 @@ milestone remain open unless explicitly verified below.
 - [x] M1: DCF native forecast/WACC/terminal/bridge/sensitivity formulas, pinned-result reconciliation and independent Excel recalculation.
 - [x] M1/M15: clean Python checkpoint 27, all six real Excel/PostgreSQL/backup tests pass without skips; seven printed ten-year DCF baseline pages inspected.
 - [x] M1: source metadata, hashes, owned downloads, worker-exit persistence and anonymous tests.
+- [x] M1/M2/M9: shared report-template source-kind contract, canonical Monte Carlo deck source, missing-result rejection and selected-run revalidation; 51 affected backend tests, 333 terminal units, five strict modules and two browser workflows pass. Whole strict 35 remains red at 870 diagnostics.
 - [x] M1: Excel Studio / Deck Builder, health, metrics, browser generation.
 - [ ] M2: whole first-party formatting/Ruff/mypy, TypeScript, ESLint, OpenAPI.
 - [x] M2: first-party Ruff and formatting, OpenAPI generation (170 paths).

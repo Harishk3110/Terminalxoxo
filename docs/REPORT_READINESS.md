@@ -10,6 +10,14 @@ public URL or legacy manifest alias. SQL claims are conditional; an expired work
 cannot publish. Source/output tampering fails closed, with sanitized errors/audits.
 Downloads expire after 30 days; physical object purging is not scheduled yet.
 
+Accepted saved-analysis kinds are declared by the authenticated template API and
+used by both Deck Builder and snapshot capture. Quant decks support the worker's
+`monte_carlo` kind and retain the older `montecarlo` spelling for saved sources.
+Missing results and unfinished or unrelated runs reject before enqueue; the UI
+requires the selected run to remain eligible. The real backtest-to-Monte-Carlo-to-
+owned-deck browser workflow passes with pinned source identity and a private
+download. This does not certify complete quant deck narrative/financial content.
+
 Review exports: portfolio/risk/equity XLSX/PPTX/PDF; backtest XLSX/PDF;
 factor/macro/DCF/comparables XLSX; quant PPTX. Unabridged immutable inputs remain
 in the authenticated JSON source download. PDF/PPTX abbreviate long table text

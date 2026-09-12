@@ -3,7 +3,7 @@
 import hashlib
 import json
 from datetime import date
-from typing import Literal
+from typing import Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
@@ -23,6 +23,26 @@ FORMATS: dict[str, tuple[str, ...]] = {
     "comps": ("xlsx",),
     "quant": ("pptx",),
 }
+ANALYSIS_KINDS: dict[str, tuple[str, ...]] = {
+    "backtest": ("backtest",),
+    "factor": ("factor",),
+    "dcf": ("dcf",),
+    "comps": ("comparables",),
+    # Keep the older persisted spelling readable alongside the worker's kind.
+    "quant": ("backtest", "alpha", "factor", "model", "monte_carlo", "montecarlo"),
+}
+
+
+class ReportTemplate(TypedDict):
+    kind: str
+    formats: tuple[str, ...]
+    analysis_kinds: tuple[str, ...]
+
+
+class ReportTemplates(TypedDict):
+    items: list[ReportTemplate]
+
+
 CONTENT_TYPES = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",

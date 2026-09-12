@@ -12,7 +12,15 @@ from .database import get_session
 from .object_storage import ObjectStorage
 from .portfolio_operations import audit
 from .price_sources import utc
-from .report_contracts import CONTENT_TYPES, FORMATS, ReportRequest, canonical, digest
+from .report_contracts import (
+    ANALYSIS_KINDS,
+    CONTENT_TYPES,
+    FORMATS,
+    ReportRequest,
+    ReportTemplates,
+    canonical,
+    digest,
+)
 from .report_jobs import enqueue, public_job
 from .report_models import ReportJob
 from .report_sources import capture
@@ -32,9 +40,14 @@ def owned(session: Session, request: Request, identifier: str) -> ReportJob:
 
 
 @router.get("/templates")
-def templates(request: Request, session: Database) -> dict[str, object]:
+def templates(request: Request, session: Database) -> ReportTemplates:
     current_user(request, session)
-    return {"items": [{"kind": kind, "formats": formats} for kind, formats in FORMATS.items()]}
+    return {
+        "items": [
+            {"kind": kind, "formats": formats, "analysis_kinds": ANALYSIS_KINDS.get(kind, ())}
+            for kind, formats in FORMATS.items()
+        ]
+    }
 
 
 @router.get("")

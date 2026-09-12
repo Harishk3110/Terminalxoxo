@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the home-state commit: 7056621, pushed.
-Docker runtime is e5a366d. Full backend 27 and the home-state browser selection pass.
+Current HEAD before the report-source commit: 6422c55, pushed.
+Docker runtime is e5a366d. Full backend 27 and both focused browser selections pass.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,14 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Report source contract: 51 affected backend tests, all 333 terminal unit tests,
+  five focused strict modules and two rebuilt browser workflows pass. Template
+  metadata is the single source of accepted analysis kinds; actual Monte Carlo
+  runs can be exported, empty results reject, and stale/ineligible selections
+  cannot submit. Thirty complete valid report snapshots exactly match 6422c55.
+  OpenAPI includes the typed template contract. Whole strict 35: 870 distinct
+  diagnostics / 86 files / 285 sources; API remains 475 / 24 files. Full release
+  and all-family report financial-model/visual acceptance remain open.
 - Home loading/failure states: 11 focused and all 328 terminal unit tests pass.
   Ten unit failures and two browser failures reproduced the prior defect. All
   four rebuilt browser checks pass with zero retries, including five home sizes

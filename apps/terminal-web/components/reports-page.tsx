@@ -34,10 +34,9 @@ export function ReportsWorkspace({ deck = false }: { deck?: boolean }) {
   const [symbol, setSymbol] = useTabState("private-report-symbol", "AAPL");
   const [asOf, setAsOf] = useTabState("private-report-date", "");
   const portfolio = usePortfolio();
-  const templates = useApi<{ items: { kind: string; formats: string[] }[] }>(
-    "report-templates",
-    "/api/v1/report-jobs/templates",
-  );
+  const templates = useApi<{
+    items: { kind: string; formats: string[]; analysis_kinds: string[] }[];
+  }>("report-templates", "/api/v1/report-jobs/templates");
   const jobs = useQuery({
     queryKey: ["private-report-jobs"],
     queryFn: () => knkApi.get<{ items: ReportJob[] }>("/api/v1/report-jobs"),
@@ -53,9 +52,17 @@ export function ReportsWorkspace({ deck = false }: { deck?: boolean }) {
   const selected =
     jobs.data?.items.find((job) => job.id === selectedId) ??
     jobs.data?.items[0];
-  const formats =
-    templates.data?.items.find((item) => item.kind === kind)?.formats ?? [];
-  const needsRun = !["portfolio", "risk", "macro", "equity"].includes(kind);
+  const template = templates.data?.items.find((item) => item.kind === kind);
+  const formats = template?.formats ?? [];
+  const analysisKinds = template?.analysis_kinds;
+  const needsRun = Boolean(analysisKinds?.length);
+  const eligibleRuns = runs.error
+    ? []
+    : (runs.data?.items.filter(
+        (run) =>
+          run.status === "SUCCEEDED" && analysisKinds?.includes(run.kind),
+      ) ?? []);
+  const sourceError = needsRun ? runs.error : null;
   const create = useMutation({
     mutationFn: () =>
       knkApi.post<ReportJob>("/api/v1/report-jobs", {
@@ -88,8 +95,10 @@ export function ReportsWorkspace({ deck = false }: { deck?: boolean }) {
           className="primary-button"
           disabled={
             create.isPending ||
+            !analysisKinds ||
+            Boolean(templates.error) ||
             !formats.includes(format) ||
-            (needsRun && !runId)
+            (needsRun && !eligibleRuns.some((run) => run.id === runId))
           }
           onClick={() => create.mutate()}
         >
@@ -102,6 +111,12 @@ export function ReportsWorkspace({ deck = false }: { deck?: boolean }) {
           title="Report selection"
           source="KnK private reports"
           quality={portfolio.data?.quality}
+          loading={templates.isLoading}
+          error={templates.error}
+          onRefresh={() => {
+            void templates.refetch();
+            void runs.refetch();
+          }}
         >
           <div className="modal-body">
             <Field label="Report type">
@@ -173,35 +188,22 @@ export function ReportsWorkspace({ deck = false }: { deck?: boolean }) {
                 <select
                   aria-label="Report analysis"
                   value={runId}
+                  disabled={runs.isLoading || Boolean(runs.error)}
+                  aria-busy={runs.isFetching}
                   onChange={(event) => setRunId(event.target.value)}
                 >
                   <option value="">Select completed analysis</option>
-                  {runs.data?.items
-                    .filter(
-                      (run) =>
-                        run.status === "SUCCEEDED" &&
-                        (kind === "quant"
-                          ? [
-                              "backtest",
-                              "alpha",
-                              "factor",
-                              "model",
-                              "montecarlo",
-                            ].includes(run.kind)
-                          : run.kind ===
-                            (kind === "comps" ? "comparables" : kind)),
-                    )
-                    .map((run) => (
-                      <option key={run.id} value={run.id}>
-                        {run.name} | {run.id.slice(0, 8)}
-                      </option>
-                    ))}
+                  {eligibleRuns.map((run) => (
+                    <option key={run.id} value={run.id}>
+                      {run.name} | {run.id.slice(0, 8)}
+                    </option>
+                  ))}
                 </select>
               </Field>
             )}
-            {(create.error || templates.error) && (
+            {(create.error || sourceError) && (
               <p className="negative" role="alert">
-                {create.error?.message ?? templates.error?.message}
+                {create.error?.message ?? sourceError?.message}
               </p>
             )}
           </div>

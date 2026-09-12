@@ -1433,3 +1433,36 @@ agent requests. No existing financial, layout, timeout or retry assertion was re
 Corrected home images were inspected at all five sizes in logs/portfolio-screenshots.
 The full browser matrix and remaining whole-repository types are still open.
 Persistent Docker is e5a366d, not this worktree; data and volumes were preserved.
+
+## Report Source Selection And Typed Fixtures
+
+2026-09-12, 6422c55 plus report-source worktree. Review found the renderer and UI
+both accepted `montecarlo`, while the real worker persists `monte_carlo`. The
+authenticated template API now publishes accepted source kinds and both consumers
+use that contract. Older saved spelling remains supported. Empty completed results
+reject before capture; removed, failed or ineligible source selections cannot submit.
+Existing report fixtures now have concrete session/snapshot/path/client contracts,
+with additional explicit presence/JSON-shape assertions and no removed assertions.
+
+| Check | Exit | Evidence |
+| --- | --- | --- |
+| Backend negative control | 1 | overnight-report-source-negative-01.log: four intended failures, five preservation passes |
+| UI negative control | 1 | overnight-report-source-units-negative-01.log: two intended failures, three preservation passes |
+| Real workflow negative control | 1 | overnight-report-source-negative-01-results.json: completed real Monte Carlo run absent from selector, one failure, no skips/retries, 49.02s |
+| Initial corrected backend selection | 0 | overnight-report-source-positive-01.log: 46 passed, one warning, 6.07s |
+| Final affected report selection | 0 | overnight-report-source-positive-02.log: 51 passed, one warning, 7.33s |
+| Initial focused unit selection | 0 | overnight-report-source-units-positive-01.log: 16 passed |
+| Expanded unit selection | 1 | overnight-report-source-units-positive-02.log: 18 passed, one new fixture failed because template rows were incorrectly returned to the job-history endpoint |
+| Full terminal units after fixture correction | 0 | overnight-terminal-units-29.log: 333 passed / 26 files, 69.15s; template-only fault scoped to its own endpoint |
+| Strict report modules and fixtures | 0 | overnight-report-source-types-02.log: five modules, after four optional ORM lookup inference fixes; no ignore/exclusion added |
+| Whole strict 35 | 1 | overnight-whole-types-35/: 870 distinct diagnostics / 86 files / 285 sources, nine distributions; API 475 / 24 files. Python source stayed fixed during the invocation |
+| Complete pinned-input parity | 0 | overnight-report-source-parity.log: 30 complete snapshots exactly equal 6422c55, fixed capture clock and read-only populated source DB copied to memory |
+| OpenAPI | 0 | overnight-report-source-openapi.log: 170 paths / 97 schemas; required analysis_kinds, formats and kind fields verified |
+| TypeScript / ESLint / Node 22 build | 0 each | overnight-report-source-ts-02.log, overnight-report-source-lint.log, overnight-report-source-build-01.log |
+| Rebuilt report browser workflows | 0 | overnight-report-source-positive-01-results.json: two passed, no failed/skipped/flaky/retries, 69.14s; Monte Carlo owned deck plus existing XLSX/PDF/PPTX workflow |
+| Ruff / final format / Prettier / secrets / no-execution | 0 each | one final wrapping-only Python format correction; 626 eligible text files scanned, zero findings |
+
+Financial results, source timestamps and zero values remain unchanged for valid
+sources. The renderer's full financial/narrative depth and all-family rendered
+artifact acceptance remain open. The prior full backend 27 predates these report
+changes; full browser after the two frontend corrections remains pending.

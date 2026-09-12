@@ -1,6 +1,8 @@
 import hashlib
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
@@ -18,9 +20,11 @@ from fastapi.testclient import TestClient
 from openpyxl import load_workbook
 from sqlalchemy.orm import Session, sessionmaker
 
+ReportHarness = tuple[TestClient, sessionmaker[Session]]
+
 
 @pytest.fixture
-def snapshot():
+def snapshot() -> ReportSnapshot:
     return ReportSnapshot(
         title="KnK Capital | Portfolio Review",
         kind="portfolio",
@@ -43,7 +47,9 @@ def snapshot():
 
 
 @pytest.fixture
-def reports(ledger_session, monkeypatch, tmp_path):
+def reports(
+    ledger_session: Session, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> ReportHarness:
     from app.config import get_settings
 
     settings = get_settings().model_copy(
@@ -78,7 +84,7 @@ def reports(ledger_session, monkeypatch, tmp_path):
     app = FastAPI()
     app.include_router(report_api.router)
 
-    def session_override():
+    def session_override() -> Iterator[Session]:
         with factory() as session:
             yield session
 
@@ -91,7 +97,9 @@ def reports(ledger_session, monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     "kind,format", [(kind, format) for kind, formats in FORMATS.items() for format in formats]
 )
-def test_all_sixteen_report_outputs_are_real_files(snapshot, kind, format):
+def test_all_sixteen_report_outputs_are_real_files(
+    snapshot: ReportSnapshot, kind: str, format: str
+) -> None:
     document = snapshot.model_copy(update={"kind": kind})
     if kind == "dcf":
         request = DcfRequest(symbol="AAA", scenarios=[DcfScenario(name="BASE")])
@@ -112,7 +120,9 @@ def test_all_sixteen_report_outputs_are_real_files(snapshot, kind, format):
             assert ("xl/workbook.xml" if format == "xlsx" else "ppt/presentation.xml") in names
 
 
-def test_workbook_formulas_match_source_and_leave_missing_unavailable(snapshot):
+def test_workbook_formulas_match_source_and_leave_missing_unavailable(
+    snapshot: ReportSnapshot,
+) -> None:
     content = render(snapshot, "xlsx")
     formulas = load_workbook(BytesIO(content), data_only=False)
     cached = load_workbook(BytesIO(content), data_only=True)
@@ -122,13 +132,13 @@ def test_workbook_formulas_match_source_and_leave_missing_unavailable(snapshot):
     assert formulas["00 Sources"]["B6"].value == "FILE IMPORT"
 
 
-def test_spreadsheet_content_cannot_inject_formula(snapshot):
+def test_spreadsheet_content_cannot_inject_formula(snapshot: ReportSnapshot) -> None:
     snapshot.sections[0].rows[0][0] = '=HYPERLINK("https://invalid.test","bad")'
     book = load_workbook(BytesIO(render(snapshot, "xlsx")))
     assert book["01 Positions"]["A2"].data_type == "s"
 
 
-def test_workbook_chart_uses_pinned_unrounded_curve(snapshot):
+def test_workbook_chart_uses_pinned_unrounded_curve(snapshot: ReportSnapshot) -> None:
     snapshot.sections.append(
         ReportSection(
             title="Curve",
@@ -142,7 +152,7 @@ def test_workbook_chart_uses_pinned_unrounded_curve(snapshot):
     assert "02 Curve" in chart
 
 
-def test_local_write_once_does_not_replace_existing(reports):
+def test_local_write_once_does_not_replace_existing(reports: ReportHarness) -> None:
     storage = ObjectStorage()
     storage.put_new_bytes(key="private-reports/test.txt", data=b"first", content_type="text/plain")
     with pytest.raises(FileExistsError):
@@ -152,7 +162,9 @@ def test_local_write_once_does_not_replace_existing(reports):
     assert storage.get_bytes("private-reports/test.txt") == b"first"
 
 
-def test_s3_write_once_uses_atomic_precondition(reports, monkeypatch):
+def test_s3_write_once_uses_atomic_precondition(
+    reports: ReportHarness, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import boto3
     from botocore.stub import Stubber
 
@@ -178,7 +190,9 @@ def test_s3_write_once_uses_atomic_precondition(reports, monkeypatch):
         stub.assert_no_pending_responses()
 
 
-def test_report_health_requires_real_dependencies_and_recent_poll(reports, monkeypatch):
+def test_report_health_requires_real_dependencies_and_recent_poll(
+    reports: ReportHarness, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import time
 
     from app import report_engine
@@ -213,7 +227,9 @@ def test_busy_worker_readiness_is_bounded(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 @pytest.mark.parametrize("format", ["xlsx", "pptx", "pdf"])
-def test_queue_worker_owner_download_and_durable_snapshot(reports, snapshot, monkeypatch, format):
+def test_queue_worker_owner_download_and_durable_snapshot(
+    reports: ReportHarness, snapshot: ReportSnapshot, monkeypatch: pytest.MonkeyPatch, format: str
+) -> None:
     client, factory = reports
     monkeypatch.setattr(report_api, "capture", lambda *_: snapshot)
     response = client.post("/api/v1/report-jobs", json={"kind": "portfolio", "format": format})
@@ -224,8 +240,11 @@ def test_queue_worker_owner_download_and_durable_snapshot(reports, snapshot, mon
     assert not report_jobs.execute(identifier)
     with factory() as session:
         job = session.get(ReportJob, identifier)
+        assert job is not None
         assert job.status == "SUCCEEDED"
-        assert job.snapshot["references"]["dataset_version_id"] == "original-version"
+        references = job.snapshot["references"]
+        assert isinstance(references, dict)
+        assert references["dataset_version_id"] == "original-version"
         assert job.snapshot_hash == digest(job.snapshot)
         assert job.worker_id
     result = client.get(f"/api/v1/report-jobs/{identifier}").json()
@@ -242,7 +261,9 @@ def test_queue_worker_owner_download_and_durable_snapshot(reports, snapshot, mon
     assert client.get(result["download_url"]).status_code == 401
 
 
-def test_tampered_source_fails_without_rendering(reports, snapshot, monkeypatch):
+def test_tampered_source_fails_without_rendering(
+    reports: ReportHarness, snapshot: ReportSnapshot, monkeypatch: pytest.MonkeyPatch
+) -> None:
     client, factory = reports
     with factory() as session:
         job = report_jobs.enqueue(session, "report-owner", snapshot, "xlsx")
@@ -257,7 +278,9 @@ def test_tampered_source_fails_without_rendering(reports, snapshot, monkeypatch)
     assert client.get(result["source_url"]).status_code == 409
 
 
-def test_tampered_output_and_expired_retention_are_rejected(reports, snapshot):
+def test_tampered_output_and_expired_retention_are_rejected(
+    reports: ReportHarness, snapshot: ReportSnapshot
+) -> None:
     client, factory = reports
     with factory() as session:
         job = report_jobs.enqueue(session, "report-owner", snapshot, "xlsx")
@@ -265,16 +288,23 @@ def test_tampered_output_and_expired_retention_are_rejected(reports, snapshot):
         identifier = job.id
     report_jobs.execute(identifier)
     with factory() as session:
-        job = session.get(ReportJob, identifier)
-        ObjectStorage().put_bytes(key=job.object_key, data=b"tampered", content_type="text/plain")
+        stored = session.get(ReportJob, identifier)
+        assert stored is not None and stored.object_key is not None
+        ObjectStorage().put_bytes(
+            key=stored.object_key, data=b"tampered", content_type="text/plain"
+        )
     assert client.get(f"/api/v1/report-jobs/{identifier}/download").status_code == 409
     with factory() as session:
-        session.get(ReportJob, identifier).expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        stored = session.get(ReportJob, identifier)
+        assert stored is not None
+        stored.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         session.commit()
     assert client.get(f"/api/v1/report-jobs/{identifier}/download").status_code == 410
 
 
-def test_active_job_limit(reports, snapshot, monkeypatch):
+def test_active_job_limit(
+    reports: ReportHarness, snapshot: ReportSnapshot, monkeypatch: pytest.MonkeyPatch
+) -> None:
     client, _ = reports
     monkeypatch.setattr(report_api, "capture", lambda *_: snapshot)
     for _ in range(4):
@@ -290,7 +320,9 @@ def test_real_portfolio_source_is_explicitly_dated(ledger_session: Session) -> N
     )
     assert snapshot.references["valuation_run_id"]
     assert snapshot.references["portfolio_id"] == "book"
-    assert snapshot.payload["portfolio"]["id"] == "book"
+    portfolio = snapshot.payload["portfolio"]
+    assert isinstance(portfolio, dict)
+    assert portfolio["id"] == "book"
     assert snapshot.calculation_version != "UNVERSIONED"
 
 
@@ -299,7 +331,7 @@ def test_missing_analysis_does_not_fabricate_report(ledger_session: Session) -> 
         capture(ledger_session, ReportRequest(kind="backtest"))
 
 
-def test_queued_dcf_uses_native_model_and_pinned_analysis(reports):
+def test_queued_dcf_uses_native_model_and_pinned_analysis(reports: ReportHarness) -> None:
     client, factory = reports
     request = DcfRequest(symbol="AAA", scenarios=[DcfScenario(name="BASE")])
     calculated = dcf_scenarios({"revenue": 100, "debt": 20, "cash": 10, "shares": 10}, request)
@@ -330,24 +362,30 @@ def test_queued_dcf_uses_native_model_and_pinned_analysis(reports):
     assert "DCF BASE Sens" in book.sheetnames
 
 
-def test_expired_worker_cannot_publish_after_lease_is_lost(reports, snapshot, monkeypatch):
+def test_expired_worker_cannot_publish_after_lease_is_lost(
+    reports: ReportHarness, snapshot: ReportSnapshot, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, factory = reports
     with factory() as session:
         job = report_jobs.enqueue(session, "report-owner", snapshot, "xlsx")
         session.commit()
         identifier = job.id
 
-    def delayed_render(*args):
+    def delayed_render(document: ReportSnapshot, format: str) -> bytes:
         with factory() as session:
-            session.get(ReportJob, identifier).status = "FAILED"
+            job = session.get(ReportJob, identifier)
+            assert job is not None
+            job.status = "FAILED"
             session.commit()
-        return render(*args)
+        return render(document, format)
 
     monkeypatch.setattr(report_jobs, "render", delayed_render)
     assert not report_jobs.execute(identifier)
     with factory() as session:
-        assert session.get(ReportJob, identifier).status == "FAILED"
-        assert session.get(ReportJob, identifier).content_hash is None
+        stored = session.get(ReportJob, identifier)
+        assert stored is not None
+        assert stored.status == "FAILED"
+        assert stored.content_hash is None
 
 
 def test_saved_comparables_and_macro_capture(ledger_session: Session) -> None:
@@ -367,7 +405,9 @@ def test_saved_comparables_and_macro_capture(ledger_session: Session) -> None:
     assert macro.data_as_of is None
 
 
-def test_expired_worker_lease_is_failed_not_automatically_retried(reports, snapshot):
+def test_expired_worker_lease_is_failed_not_automatically_retried(
+    reports: ReportHarness, snapshot: ReportSnapshot
+) -> None:
     _, factory = reports
     with factory() as session:
         job = report_jobs.enqueue(session, "report-owner", snapshot, "xlsx")
@@ -376,6 +416,7 @@ def test_expired_worker_lease_is_failed_not_automatically_retried(reports, snaps
         identifier = job.id
     report_jobs.run_once()
     with factory() as session:
-        job = session.get(ReportJob, identifier)
-        assert job.status == "FAILED"
-        assert job.error_category == "WorkerLeaseExpired"
+        stored = session.get(ReportJob, identifier)
+        assert stored is not None
+        assert stored.status == "FAILED"
+        assert stored.error_category == "WorkerLeaseExpired"
