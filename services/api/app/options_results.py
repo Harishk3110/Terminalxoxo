@@ -14,6 +14,45 @@ type PositionMetric = Literal[
 ]
 
 
+class ChainVersion(TypedDict):
+    id: str
+    dataset_id: str
+    name: str
+    version: int
+    source: str
+    quality: str
+    rows: int
+    created_at: str
+    file_id: str | None
+
+
+class ChainVersions(TypedDict):
+    items: list[ChainVersion]
+
+
+class ChainDataset(TypedDict):
+    items: list[dict[str, JsonValue]]
+    provenance: DatasetProvenance
+    as_of: str
+    symbols: list[str]
+
+
+class DemoChainReceipt(TypedDict):
+    id: str
+    source: str
+    quality: str
+    spot: float
+    as_of: str
+    rows: int
+
+
+class SpotAssumption(TypedDict):
+    source: Literal["USER SPOT ASSUMPTION"]
+    value: str
+    as_of: str
+    data_state: Literal["RESEARCH ASSUMPTION"]
+
+
 class ProviderGreeks(TypedDict):
     delta: float | None
     gamma: float | None
@@ -203,7 +242,7 @@ class ChainAnalysis(TypedDict):
     source: NotRequired[str]
     quality: NotRequired[str]
     inputs: NotRequired[DatasetProvenance]
-    spot_provenance: NotRequired[PriceProvenance]
+    spot_provenance: NotRequired[PriceProvenance | SpotAssumption]
     instrument_id: NotRequired[str]
     valuation_run_id: NotRequired[str]
     unmatched_portfolio_options: NotRequired[list[str]]

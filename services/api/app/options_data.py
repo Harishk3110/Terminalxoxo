@@ -1,10 +1,17 @@
 """Immutable option-chain dataset discovery and validated file normalization."""
 
+from datetime import datetime
+
+from pydantic import TypeAdapter
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
 from .option_contracts import ChainContract
-from .quant_data import dataset_rows
+from .options_results import ChainVersion
+from .quant_data import DatasetProvenance, dataset_rows
+
+OPTIONAL_FILE_ID: TypeAdapter[str | None] = TypeAdapter(str | None)
 
 OPTION_ALIASES = {
     "symbol": ["underlying", "underlying symbol", "underlying ticker"],
@@ -30,7 +37,7 @@ OPTION_ALIASES = {
 }
 
 
-def chain_versions(session, symbol=None):
+def chain_versions(session: Session, symbol: str | None = None) -> list[ChainVersion]:
     rows = session.execute(
         select(models.DatasetVersion, models.Dataset)
         .join(models.Dataset, models.Dataset.id == models.DatasetVersion.dataset_id)
@@ -38,7 +45,7 @@ def chain_versions(session, symbol=None):
         .order_by(models.DatasetVersion.created_at.desc())
         .limit(100)
     ).all()
-    items = []
+    items: list[ChainVersion] = []
     for version, dataset in rows:
         schema = version.schema_json or {}
         items.append(
@@ -51,13 +58,13 @@ def chain_versions(session, symbol=None):
                 "quality": dataset.quality,
                 "rows": version.row_count,
                 "created_at": version.created_at.isoformat(),
-                "file_id": schema.get("file_id"),
+                "file_id": OPTIONAL_FILE_ID.validate_python(schema.get("file_id"), strict=True),
             }
         )
     return items
 
 
-def load_chain(session, version_id):
+def load_chain(session: Session, version_id: str) -> tuple[list[ChainContract], DatasetProvenance]:
     version = session.get(models.DatasetVersion, version_id)
     dataset = session.get(models.Dataset, version.dataset_id) if version else None
     if dataset is None or dataset.dataset_type != "options_chain":
@@ -66,7 +73,7 @@ def load_chain(session, version_id):
     if not rows or len(rows) > 2000:
         raise ValueError("Options research supports one to 2,000 contracts per version")
     contracts = [ChainContract.model_validate(row) for row in rows]
-    seen = set()
+    seen: set[tuple[str, datetime]] = set()
     for contract in contracts:
         key = (contract.option_symbol, contract.timestamp)
         if key in seen:

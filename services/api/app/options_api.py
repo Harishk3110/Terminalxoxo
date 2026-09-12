@@ -2,11 +2,13 @@
 
 import hashlib
 import json
+import math
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from sqlalchemy import select
 
 from . import models
@@ -17,23 +19,24 @@ from .option_contracts import ChainContract
 from .option_greeks import PricingInputs, greeks
 from .options_analytics import OptionLeg, OptionsRequest, analyse_chain, position_analytics
 from .options_data import chain_versions, load_chain
+from .options_results import ChainDataset, ChainVersions, DemoChainReceipt, SpotAssumption
 from .portfolio_api import identity
 from .portfolio_operations import audit
 from .portfolio_resource_api import Database
 from .portfolio_valuation import PortfolioValuationService
-from .price_sources import MarketPriceResolver
+from .price_sources import MarketPriceResolver, PriceProvenance
 from .terminal_analytics import instrument
 
 router = APIRouter(prefix="/api/v1/options", tags=["options-research"])
 
 
 @router.get("/datasets")
-def datasets(session: Database):
+def datasets(session: Database) -> ChainVersions:
     return {"items": chain_versions(session)}
 
 
 @router.get("/datasets/{version_id}")
-def dataset(version_id: str, session: Database):
+def dataset(version_id: str, session: Database) -> ChainDataset:
     rows, provenance = load_chain(session, version_id)
     return {
         "items": [row.model_dump(mode="json") for row in rows],
@@ -44,7 +47,7 @@ def dataset(version_id: str, session: Database):
 
 
 @router.post("/calculate", status_code=201)
-def calculate(payload: OptionsRequest, request: Request, session: Database):
+def calculate(payload: OptionsRequest, request: Request, session: Database) -> dict[str, JsonValue]:
     actor = identity(request, session)
     item = instrument(session, payload.symbol)
     payload = payload.model_copy(update={"symbol": item.symbol})
@@ -53,13 +56,12 @@ def calculate(payload: OptionsRequest, request: Request, session: Database):
     if payload.dataset_version_id:
         contracts, provenance = load_chain(session, payload.dataset_version_id)
     else:
-        contracts, provenance = [], {}
         for version in chain_versions(session):
             candidates, meta = load_chain(session, version["id"])
             if any(row.symbol == item.symbol for row in candidates):
                 contracts, provenance = candidates, meta
                 break
-        if not contracts:
+        else:
             raise ValueError(
                 "DATA UNAVAILABLE: import an options chain or explicitly create a demo dataset"
             )
@@ -68,7 +70,7 @@ def calculate(payload: OptionsRequest, request: Request, session: Database):
         raise ValueError("As-of requires an explicit timezone")
     resolver = MarketPriceResolver(session, [item.id])
     selected = resolver.resolve(item.id, as_of)
-    price_source = resolver.describe(item.id, as_of)
+    price_source: PriceProvenance | SpotAssumption = resolver.describe(item.id, as_of)
     if payload.spot_override is not None:
         spot = payload.spot_override
         price_source = {
@@ -96,7 +98,7 @@ def calculate(payload: OptionsRequest, request: Request, session: Database):
         }
     )
     legs = payload.legs
-    equity_quantity = 0
+    equity_quantity: float = 0
     if payload.portfolio:
         valuation = PortfolioValuationService(session).latest(payload.portfolio, end=as_of.date())
         result["valuation_run_id"] = valuation["valuation_run_id"]
@@ -146,19 +148,21 @@ class DemoRequest(BaseModel):
 
 
 @router.post("/demo", status_code=201)
-def demo(payload: DemoRequest, request: Request, session: Database):
+def demo(payload: DemoRequest, request: Request, session: Database) -> DemoChainReceipt:
     actor = identity(request, session)
     if get_settings().knk_env not in {"local-demo", "demo", "test"}:
         raise ValueError("Demo-chain generation is disabled in production")
     item = instrument(session, payload.symbol)
     now = datetime.now(UTC).replace(microsecond=0)
-    rows = []
+    rows: list[dict[str, JsonValue]] = []
+    rights: tuple[Literal["CALL", "PUT"], ...] = ("CALL", "PUT")
     for days in (30, 60, 90):
         expiry = (now + timedelta(days=days)).date()
         for index, ratio in enumerate((0.8, 0.9, 1, 1.1, 1.2)):
             strike = round(payload.spot * ratio, 4)
-            for right in ("CALL", "PUT"):
+            for right in rights:
                 option_symbol = f"DEMO.{item.symbol}.{expiry}.{right[0]}.{strike}"
+                volatility = 0.22 + abs(ratio - 1) * 0.3
                 contract = ChainContract(
                     symbol=item.symbol,
                     option_symbol=option_symbol,
@@ -170,7 +174,7 @@ def demo(payload: DemoRequest, request: Request, session: Database):
                     currency=item.currency,
                     timestamp=now,
                     iv_unit="DECIMAL",
-                    iv=0.22 + abs(ratio - 1) * 0.3,
+                    iv=volatility,
                     open_interest=100 + index * 80 + (140 if right == "PUT" and ratio < 1 else 0),
                     volume=20 + index * 10,
                 )
@@ -179,9 +183,11 @@ def demo(payload: DemoRequest, request: Request, session: Database):
                     spot=payload.spot,
                     strike=strike,
                     years=(contract.expires_at - now).total_seconds() / (365 * 86400),
-                    volatility=contract.iv,
+                    volatility=volatility,
                 )
                 price = greeks(inputs, advanced=False)["theoretical_price"]
+                if price is None or not math.isfinite(price) or price < 0:
+                    raise ValueError("Demo chain requires a finite non-negative theoretical price")
                 contract.bid = max(0, price - 0.03)
                 contract.ask = price + 0.03
                 contract.last = price

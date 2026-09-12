@@ -33,6 +33,15 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Options API and shared saved-receipt contracts: 120 affected tests pass (9.41s),
+  five focused strict modules pass and two browser workflows pass without retries
+  (35.735s); all twelve screenshots inspected. Thirty synthetic contract records,
+  36 saved options responses, nine shared-save cases and both dataset payloads
+  exactly match eb43e37. Reserved receipt fields, invalid demo prices and malformed
+  file references reject before the relevant writes; genuine zero and explicit
+  spot-assumption provenance remain unchanged. Whole strict 43 is still red:
+  714 diagnostics / 72 files / 310 sources, API 383 / 17 files. Runtime refresh
+  pending; full backend 30 remains the latest whole-suite baseline.
 - Full backend 30 on frozen fdfb688: 1,799 passed, zero failed/skipped,
   123 warnings, 421.23s, native exit 0. Coverage: 11,703 / 13,084 statements
   (89.4451238%), 1,381 missing, 31 existing excluded. Risk Docker build/up both

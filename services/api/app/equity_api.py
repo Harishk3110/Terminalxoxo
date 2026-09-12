@@ -2,13 +2,15 @@
 
 import hashlib
 import json
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, model_validator
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from . import models
 from .equity_financials import comparable_statistics, ratios, statements
@@ -19,6 +21,7 @@ from .portfolio_resource_api import Database
 from .terminal_analytics import fundamentals, history, instrument, quotes
 
 router = APIRouter(prefix="/api/v1/equity", tags=["equity-research"])
+ANALYSIS_OBJECT = TypeAdapter(dict[str, JsonValue])
 
 
 @router.get("/{symbol}/snapshot")
@@ -168,24 +171,37 @@ def financials(
     return financial_report(session, symbol, frequency, actual_estimate)
 
 
-def save_analysis(session, kind, name, parameters, result, actor):
+def save_analysis(
+    session: Session,
+    kind: str,
+    name: str,
+    parameters: Mapping[str, object],
+    result: Mapping[str, object],
+    actor: str | None,
+) -> dict[str, JsonValue]:
     now = datetime.now(UTC)
+    parameters = ANALYSIS_OBJECT.validate_python(parameters, strict=True)
+    validated_result = ANALYSIS_OBJECT.validate_python(result, strict=True)
+    if {"id", "input_hash", "calculated_at"} & validated_result.keys():
+        raise ValueError("Analysis result contains reserved receipt metadata")
     encoded = json.dumps(
-        {"parameters": parameters, "result": result},
+        {"parameters": parameters, "result": validated_result},
         sort_keys=True,
         separators=(",", ":"),
         allow_nan=False,
     ).encode()
+    digest = hashlib.sha256(encoded).hexdigest()
+    saved_result: dict[str, JsonValue] = {
+        **validated_result,
+        "input_hash": digest,
+        "calculated_at": now.isoformat(),
+    }
     row = models.AnalysisRun(
         kind=kind,
         name=name,
         status="SUCCEEDED",
         parameters=parameters,
-        result={
-            **result,
-            "input_hash": hashlib.sha256(encoded).hexdigest(),
-            "calculated_at": now.isoformat(),
-        },
+        result=saved_result,
         started_at=now,
         finished_at=now,
         history=[{"state": "SUCCEEDED", "at": now.isoformat(), "actor": actor}],
@@ -197,10 +213,10 @@ def save_analysis(session, kind, name, parameters, result, actor):
         kind.upper() + "_CREATED",
         "analysis_run",
         row.id,
-        {"input_hash": row.result["input_hash"]},
+        {"input_hash": digest},
         actor,
     )
-    return {"id": row.id, **row.result}
+    return ANALYSIS_OBJECT.validate_python({"id": row.id, **saved_result}, strict=True)
 
 
 @router.post("/dcf", status_code=201)

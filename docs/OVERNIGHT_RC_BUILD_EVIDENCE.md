@@ -14,6 +14,40 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Options API And Saved-Receipt Contracts
+
+Source eb43e37 plus this batch. Saved analyses accept finite JSON objects and
+reject caller-supplied id/input_hash/calculated_at before inserting a run or audit.
+Typed options discovery, chain loading and HTTP responses retain source metadata.
+Explicit spot assumptions remain distinct from observed-price provenance: no
+fabricated stale=false field is added. Demo generation rejects missing, non-finite
+or negative theoretical prices before writing storage or database records; genuine
+zero is retained. Optional file references must be strings or null.
+
+| Check | Result / evidence |
+| --- | --- |
+| Shared-save negative | 3 failed / 13 passed, 3.07s, native 1; overnight-saved-analysis-negative-01.log. Only reserved metadata controls failed; nested-copy and invalid-JSON controls already passed. |
+| Shared-save affected | 43 passed, 8.38s, native 0; overnight-saved-analysis-contracts-01.log |
+| Options negative | 12 failed / 8 passed, 6.84s, native 1; overnight-options-negative-01.log: five invalid-price and seven malformed-file-reference controls |
+| Final affected backend | 120 passed, one warning, 9.41s, native 0; overnight-options-contracts-03.log/xml |
+| Focused strict | Five modules, zero errors, native 0; overnight-options-focused-types-03.log |
+| Whole strict 43 | 714 distinct diagnostics / 72 files / 310 sources / nine distributions, native 1. API: 383 / 17 files / 120 sources. No new ignore or exclusion; logs/overnight-whole-types-43/manifest.json |
+| Exact comparison | 36 full options responses including hashes/key order, nine shared-save JSON cases, two dataset payloads and all 30 demo contract bytes match eb43e37; overnight-options-parity-01.log, native 0 |
+| Browser | Two passed, zero failures/skips/flakes/retries, 35.735s, native 0; overnight-options-browser-05.log and matching results JSON |
+| OpenAPI | 170 paths, four options response schemas and nullable file reference verified; overnight-options-openapi-01.log, native 0 |
+| Static/security | Six files pass Ruff/format; 651 text files scanned, zero secret findings; git diff --check passes |
+
+All ten metrics/gamma screenshots at 1366/1440/1920/2560/390 widths and both
+options workflow screenshots at 1440/390 were inspected. Existing canvas-pixel,
+negative-label, metric-containment, saved-run and unchanged-ledger assertions pass.
+No frontend source was changed. The parity harness deliberately reuses a fixed ID
+under rolled-back savepoints, producing two SQLAlchemy identity-map warnings;
+all exact assertions and its native exit pass. Initial focused types found three
+annotation/nullable-test issues, corrected before the final frozen checks.
+The shared equity module still has unrelated diagnostics; it is not represented
+as a wholly clean module. Full backend 30 remains the last whole-suite baseline.
+Docker remains on fdfb688 pending the verified batch refresh. No full release claim.
+
 ## Full Backend 30 And Risk Runtime Refresh
 
 Frozen fdfb688, isolated database/storage/key, no Python source edits during the
