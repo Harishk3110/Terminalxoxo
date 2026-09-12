@@ -1402,3 +1402,34 @@ hedge, quant dashboard, backtests, options, Data Drop and Data Catalogue. Panels
 controls and data-state labels are readable; wide tables retain their scrollable
 content. This does not certify the complete 95-image matrix or current-source
 browser behavior. Full backend/browser verification after this batch is pending.
+
+## Backend Checkpoint 27 And Home Request States
+
+2026-09-12, backend frozen at 7056621, then a frontend-only home-state correction.
+Full-14 review covered all 19 screenshots at 1440 and 2560px and the first six
+routes at 1920px. The 1920px home screenshot exposed secondary tables displaying
+empty results before their requests completed. The report-history clipping was
+already corrected in 33d423d. Neither observation was dismissed as a flaky test.
+
+| Check | Exit | Evidence |
+| --- | --- | --- |
+| Full backend 27 | 0 | overnight-backend-27.log/xml: 1,539 passed, no failures/skips, 123 warnings, 559.58s; unchanged source throughout |
+| Coverage 27 | 0 | overnight-coverage-27.json: 11,368 / 12,770 statements, 89.02114330462021%, 1,402 missing, 31 existing excluded |
+| Pre-change full terminal units 27 | 0 | overnight-terminal-units-27.log: 317 passed / 25 files, 83.68s |
+| Old home unit negative control | 1 | overnight-home-state-negative-01.log: ten intended failures, one genuine-empty preservation pass |
+| Old-build browser negative control | 1 | overnight-home-state-negative-01-results.json: two intended failures, no skips/retries, 64.08s |
+| Corrected home units | 0 | overnight-home-state-positive-01.log: 11 passed, 5.82s |
+| Full terminal units 28 | 0 | overnight-terminal-units-28.log: 328 passed / 26 files, 70.11s |
+| TypeScript / ESLint / Node 22 build | 0 each | overnight-home-state-types.log, overnight-home-state-lint.log, overnight-home-state-build-01.log |
+| Rebuilt browser selection | 0 | overnight-home-state-positive-01-results.json: four passed, zero failed/skipped/flaky/retries, 160.77s; pending/failure recovery, five-size home sweep, 19-route 1920px sweep |
+| Secrets / no-execution / diff check | 0 each | 625 eligible text files, zero findings; broker execution remains prohibited |
+| Observe-only watchdog | 0 | overnight-home-state-watchdog.log: 2026-09-12T02:39:04Z, ten healthy services, init succeeded, no restarts |
+
+The home now passes each query's loading/error/retry state to the existing panel.
+Agent checks stay separate from portfolio availability; failed refreshes invalidate
+cached ONLINE/OFFLINE display, and genuine empty results still render normally.
+Both visual sweeps additionally require populated trade/strategy tables and settled
+agent requests. No existing financial, layout, timeout or retry assertion was relaxed.
+Corrected home images were inspected at all five sizes in logs/portfolio-screenshots.
+The full browser matrix and remaining whole-repository types are still open.
+Persistent Docker is e5a366d, not this worktree; data and volumes were preserved.

@@ -168,7 +168,9 @@ export function PortfolioHomePage() {
   const [accountingOpen, setAccountingOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const query = usePortfolio();
-  const data = query.data as OperatingData | undefined;
+  const data = query.error
+    ? undefined
+    : (query.data as OperatingData | undefined);
   const { open, selectSecurity } = useTerminal();
   const trades = useApi<{ items: Row[] }>(
     "operating-trades",
@@ -182,12 +184,21 @@ export function PortfolioHomePage() {
     "operating-agents",
     "/api/v1/data-drop/agents",
   );
+  const agentState = agents.isFetching
+    ? "CHECKING"
+    : agents.error || !agents.data
+      ? "UNAVAILABLE"
+      : agents.data.items.some((agent) => agent.state === "ONLINE")
+        ? "ONLINE"
+        : "OFFLINE";
   const [curve, setCurve] = useState("equity");
   return (
     <>
       <PageTitle code="HOME" title="Portfolio Command Centre">
         <span className="secondary mono">KNK_MAIN / SGD</span>
-        <Badge>{data?.quality ?? "LOADING"}</Badge>
+        <Badge>
+          {query.error ? "UNAVAILABLE" : (data?.quality ?? "LOADING")}
+        </Badge>
         <IconButton
           label="Portfolio ledgers"
           onClick={() => setDirectoryOpen(true)}
@@ -227,6 +238,8 @@ export function PortfolioHomePage() {
           quality={data?.quality}
           asOf={data?.as_of}
           loading={query.isLoading}
+          error={query.error}
+          onRefresh={() => query.refetch()}
           actions={
             <div className="segmented">
               {[
@@ -271,6 +284,9 @@ export function PortfolioHomePage() {
           title="Risk / limits"
           source="INTERNAL LEDGER"
           quality={data?.quality}
+          loading={query.isLoading}
+          error={query.error}
+          onRefresh={() => query.refetch()}
         >
           <dl className="operating-facts">
             {[
@@ -278,7 +294,7 @@ export function PortfolioHomePage() {
               ["Largest position", pct(data?.risk.max_position_weight)],
               ["Currency concentration", pct(data?.risk.max_currency_weight)],
               ["CVaR 95%", money(data?.risk.cvar_95)],
-              ["Limit breaches", String(data?.breaches.length ?? 0)],
+              ["Limit breaches", data ? String(data.breaches.length) : "--"],
               [
                 "NAV reconciliation",
                 String(data?.reconciliation.state ?? "--"),
@@ -301,6 +317,9 @@ export function PortfolioHomePage() {
           title="Positions / ledger-derived"
           source={data?.source}
           quality={data?.quality}
+          loading={query.isLoading}
+          error={query.error}
+          onRefresh={() => query.refetch()}
         >
           <DataTable
             id="main-holdings"
@@ -317,6 +336,9 @@ export function PortfolioHomePage() {
           title="P&L / inception attribution"
           source={data?.source}
           quality={data?.quality}
+          loading={query.isLoading}
+          error={query.error}
+          onRefresh={() => query.refetch()}
         >
           <DataTable
             id="main-attribution"
@@ -338,6 +360,9 @@ export function PortfolioHomePage() {
         <Panel
           title="Trade monitor / recent ledger events"
           source="RECORDED EVENTS"
+          loading={trades.isLoading}
+          error={trades.error}
+          onRefresh={() => trades.refetch()}
           actions={
             <IconButton
               label="Open trade monitor"
@@ -357,6 +382,9 @@ export function PortfolioHomePage() {
         <Panel
           title="Quant / jobs and strategy registry"
           source="PERSISTED RUNS"
+          loading={quant.isLoading}
+          error={quant.error}
+          onRefresh={() => quant.refetch()}
         >
           <DataTable
             id="main-strategies"
@@ -373,6 +401,17 @@ export function PortfolioHomePage() {
           title="Operations / freshness and exceptions"
           source="INTERNAL DIAGNOSTICS"
           quality={data?.quality}
+          loading={query.isLoading}
+          error={query.error}
+          onRefresh={() => query.refetch()}
+          actions={
+            <IconButton
+              label="Refresh agent status"
+              onClick={() => agents.refetch()}
+            >
+              <RefreshCw size={12} />
+            </IconButton>
+          }
         >
           <div className="operation-health">
             <span>
@@ -383,12 +422,7 @@ export function PortfolioHomePage() {
               Stale NAV <strong>{pct(data?.freshness.stale_nav_pct)}</strong>
             </span>
             <span>
-              Agent{" "}
-              <strong>
-                {agents.data?.items.some((a) => a.state === "ONLINE")
-                  ? "ONLINE"
-                  : "OFFLINE"}
-              </strong>
+              Agent <strong aria-busy={agents.isFetching}>{agentState}</strong>
             </span>
             <span>
               Broker{" "}
@@ -403,6 +437,7 @@ export function PortfolioHomePage() {
               </strong>
             </span>
           </div>
+          <Notice error={agents.error} />
           <div className="operation-warnings">
             {data?.warnings.map((w) => (
               <div key={w} className="warning">

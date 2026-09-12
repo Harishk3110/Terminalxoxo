@@ -23,6 +23,17 @@ test("portfolio operating desks render across desktop and mobile", async ({
     ).toBeVisible();
     await expect(page.getByLabel("main-holdings table")).toContainText("AAPL");
     await expect(page.locator(".loading-state")).toHaveCount(0);
+    for (const id of ["main-trades", "main-strategies"]) {
+      await expect(
+        page.getByLabel(`${id} table`).locator("tbody tr"),
+      ).not.toHaveCount(0);
+    }
+    await expect(
+      page.locator('.operation-health [aria-busy="true"]'),
+    ).toHaveCount(0);
+    await expect(
+      page.locator(".error-state, .operation-notice[role=alert]"),
+    ).toHaveCount(0);
     await expect(page.locator(".chart canvas").first()).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),

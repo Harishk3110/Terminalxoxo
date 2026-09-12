@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the valuation-value commit: d8e76c1, pushed.
-Docker runtime is e5a366d. Full backend 26 and browser 14 passed before this batch.
+Current HEAD before the home-state commit: 7056621, pushed.
+Docker runtime is e5a366d. Full backend 27 and the home-state browser selection pass.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,18 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Home loading/failure states: 11 focused and all 328 terminal unit tests pass.
+  Ten unit failures and two browser failures reproduced the prior defect. All
+  four rebuilt browser checks pass with zero retries, including five home sizes
+  and 19 populated routes at 1920px. TypeScript, ESLint and Node 22 build pass.
+  Pending/failed registries no longer look empty, unavailable breaches are not
+  zero, and failed agent refreshes cannot present cached ONLINE/OFFLINE as current.
+  Corrected home screenshots inspected at 1366/1440/1920/2560/390px.
+- Full backend 27: 1,539 passed, zero failed/skipped, 123 warnings, 559.58s,
+  native exit 0; 11,368 / 12,770 statements covered (89.0211433%). Source 7056621
+  stayed unchanged during the run. Terminal unit checkpoint 27 also passed all
+  317 tests before the home-state additions. Full browser after this batch remains
+  pending; whole strict 34 remains red at 891 distinct diagnostics.
 - Valuation values/metrics: 113 affected tests pass, five warnings, 19.78s;
   two helper modules and two new test modules pass focused strict types.
   Ten negative controls reproduced invalid financial JSON before correction.

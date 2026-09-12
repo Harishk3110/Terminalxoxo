@@ -396,6 +396,19 @@ for (const viewport of [
       await expect(page.locator(".page-toolbar h1")).toBeVisible();
       await expect(page.getByTestId("security-context")).toBeVisible();
       await expect(page.locator(".status-bar")).toBeVisible();
+      if (route === "overview") {
+        for (const id of ["main-holdings", "main-trades", "main-strategies"]) {
+          await expect(
+            page.getByLabel(`${id} table`).locator("tbody tr"),
+          ).not.toHaveCount(0);
+        }
+        await expect(
+          page.locator('.operation-health [aria-busy="true"]'),
+        ).toHaveCount(0);
+        await expect(page.locator(".operation-notice[role=alert]")).toHaveCount(
+          0,
+        );
+      }
       if (
         [
           "overview",

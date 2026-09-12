@@ -66,6 +66,7 @@ milestone remain open unless explicitly verified below.
 - [x] M3/M11: gamma-profile negative label containment; measured negative control, corrected desktop/mobile screenshots and three browser regressions pass with zero retries.
 - [x] M3/M7: macro observation/ingestion separation, actual quality, calendar ranges, all fetched MAX rows; 14 focused and 317 full terminal tests pass.
 - [x] M3: report-history text containment and mobile non-collapsing history; two negative controls, final three-browser selection with all five sizes and owned report downloads pass.
+- [x] M3: home pending/error/retry states, no fabricated zero breaches or current agent status; 11 focused and 328 full unit tests, four rebuilt browser checks and five-size screenshot inspection pass. Ten unit and two browser negative controls reproduce prior behavior.
 - [x] M2/M7: typed macro responses, observation-level source and bounded history query; 110 affected backend tests, 73 complete response parity checks and OpenAPI contracts pass.
 - [ ] M9: corporate actions, PIT factors, diagnostics, walk-forward, OOS, artifacts.
 - [ ] M10: segments/ROIC/multiples/normalization/estimates/research linkage and DCF.
