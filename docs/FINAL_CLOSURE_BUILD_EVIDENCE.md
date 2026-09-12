@@ -188,5 +188,34 @@ sizes, seven operating desks, two reconciliation views), then both final 1440/39
 reconciliation screenshots inspected. No shell redesign or frontend code change.
 These are focused workflow/visual checks, not a full current browser release.
 
-Full backend 35 remains the last complete backend baseline. Full backend 36 and
-deployment of this reconciliation batch have not yet run at this checkpoint.
+Full backend 36 completed on frozen 7703110 with fresh isolated database/storage/
+auth paths: 2,009 passed, zero failures/errors/skips, 123 warnings, 511.25s.
+XML duration 511.238s, start 2026-09-12T21:52:24.441723+08:00. Coverage:
+12,115/13,493 = 89.78729711702364%, 1,378 missing and 31 excluded. Receipts:
+logs/final-backend-36.log/xml and logs/final-coverage-36.json. The final terminal
+collection output was truncated across context transition; the process session
+is closed and its native exit was not recovered. No native result is claimed.
+Command: .venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q
+--cov=services/api/app --cov-report=json:logs/final-coverage-36.json
+--junitxml=logs/final-backend-36.xml. Only documentation changes and Docker deployment
+occurred during this run; Python application/tests stayed frozen until completion.
+
+## Reconciliation Deployment 7703110
+
+Commit/push native 0. Secret scan 02 after documentation: 670 text files, zero
+findings. API/data worker/quant worker/report engine build and up --no-deps
+--no-build --wait both native 0, logs/final-reconciliation-docker-{build,up}-01.log.
+Before/after read-only fingerprints of ten business tables match exactly, both
+row counts and content hashes. Tables: portfolio_transactions, transaction_details,
+transaction_revisions, portfolio_profiles, portfolio_balance_adjustments,
+dataset_versions, research_notes, investment_theses, thesis_sources,
+thesis_attachments. No private rows printed; only counts and hashes retained in
+logs/final-reconciliation-persistence-{before,after}-01.json. Runtime heartbeat/
+audit tables were not claimed unchanged. Comparison command native 0.
+
+Post-deployment watchdog native 0 at 2026-09-12T13:57:14.332580+00:00: ten healthy
+services, MinIO init SUCCEEDED, no actions. /overview HTTP 200 at private sign-in,
+Keep-Alive timeout=70. Workspace/container SHA256 matches:
+- portfolio_operations.py: 6a51cda301f219ee79aaeef76a71c2606b484aff45d9daf42466ace799adb163.
+- reconciliation_contracts.py: 2e7a19ee96bbedc1a56ae602a75432b463289e117a471d75226219575a0673fc.
+Frontend remains 9a85cbe. No hosted URL, real broker or live-provider claim.

@@ -30,6 +30,7 @@ create duplicate projects. One frontend only: apps/terminal-web.
 
 The existing PowerShell local release wrapper lists its currently implemented
 commands without executing them: `scripts/release-candidate.ps1 --list`.
-The runner's update from 27 to 29 stages is still pending. Deployment commands
+The runner now contains the required 29 stages; complete certification remains
+pending while strict types and other final requirements are open. Deployment commands
 will be finalised only after inspecting the actual authorised hosting targets;
 no fabricated backend hostname or token-based command is supplied here.

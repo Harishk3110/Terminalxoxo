@@ -2,8 +2,8 @@
 
 Controlling directive: final release-closure attachment, received 2026-09-12 SGT.
 Starting application commit: 41baacb58bc8a14cd7d6fa47079a9907f1e316a3.
-Chart/29-stage runner checkpoint: 9a85cbe, pushed. Reconciliation batch verified
-locally below; its commit will contain this status update.
+Chart/29-stage runner checkpoint: 9a85cbe, pushed. Reconciliation checkpoint:
+7703110, pushed and deployed to the existing local API/worker/report services.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git. Pushed.
 Earlier overnight starting commit and all historical receipts remain in OVERNIGHT_RC_*.
 
@@ -40,10 +40,11 @@ Release runner now has the required 29 ordered gates; complete execution is pend
 ## Services And Boundaries
 
 Docker project knk-final-local remains running. API/data worker/quant worker/report
-engine: 41baacb; frontend: 9a85cbe. Frontend build/up --wait native 0. Observe-only
-probe at 2026-09-12T13:38:32.928522+00:00: ten healthy services, MinIO init
-SUCCEEDED, no actions. Main /overview HTTP 200 at private sign-in, timeout 70s.
-Workspace/container equity source hashes match. No volumes or user records reset.
+engine: 7703110; frontend: 9a85cbe. Both deployment build/up --wait commands pass.
+Observe-only probe at 2026-09-12T13:57:14.332580+00:00: ten healthy services,
+MinIO init SUCCEEDED, no actions. Main /overview HTTP 200 at private sign-in,
+timeout 70s. Source hashes match; all ten checked business-table hashes/counts
+match before/after restart. No volumes or user records reset.
 
 Main local URL: http://127.0.0.1:3001/overview, private sign-in routing. This is not
 a hosted URL. Hosted deployment remains unverified and requires authorised access.
@@ -87,9 +88,13 @@ screens and both final reconciliation screens reviewed. Whole Ruff/format native
 Historical failures, the corrected fixture, and draft compatibility regression
 are explicitly recorded in FINAL_CLOSURE_BUILD_EVIDENCE.md.
 
-Next: commit/push this verified batch, run full backend 36 with Python source
-frozen, then deploy its API/worker/report images without resetting the book.
-Next implementation target after that run: remaining TradeMonitorService and
+Full backend 36 completed on frozen 7703110 with fresh isolated database/storage/
+auth paths: 2,009 passed, zero failed/errored/skipped, 123 warnings, 511.25s.
+Coverage: 12,115/13,493 = 89.78729711702364%, 1,378 missing and 31 excluded.
+Its terminal result was truncated across context transition and the session is
+now closed; native exit was not recovered, so none is claimed. XML/log/coverage
+receipts confirm test completion, not complete release certification.
+Next implementation target: remaining TradeMonitorService and
 ledger/valuation strict contracts. Full 29-stage certification and domain work
 remain open, including segments/ROIC/PIT/multiples and provider completeness.
 
