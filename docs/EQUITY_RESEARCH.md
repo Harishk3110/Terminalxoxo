@@ -17,6 +17,14 @@ filings or certified point-in-time data. Missing imported fields are never
 demo-filled. Production requests do not create new synthetic statements;
 historical synthetic snapshots retain explicit DEMO DATA labels.
 
+Curated fundamentals use the shared hash-verified dataset reader and strict row
+contracts. Non-tabular content, malformed metadata, non-finite JSON or metric
+values, and non-positive scales reject explicitly. Valid Decimal unit conversion
+retains its prior float bits; partial restatements retain earlier metric values,
+per-metric versions and report dates. The browser import-to-FIN test checks
+approval, reload, source badges and immutable metric/file lineage using fictional
+data. It does not verify a live provider or certify point-in-time availability.
+
 Margins, growth, leverage, liquidity and average-balance ROE/ROA use available
 inputs. Market multiples use current source-aware prices and annual/TTM flows;
 quarterly earnings are not annualized into a P/E. Non-positive denominators stay
