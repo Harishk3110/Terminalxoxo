@@ -24,6 +24,7 @@ from .portfolio_operations import (
 from .portfolio_seed import reset_main_demo
 from .portfolio_valuation import PortfolioValuationService, jsonable
 from .price_sources import PRIORITY
+from .reconciliation_contracts import ReconciliationResult
 from .transaction_context import TransactionContext
 
 # Named defaults preserve direct-call signatures as well as FastAPI injection.
@@ -148,9 +149,17 @@ def review(
         raise HTTPException(422, str(exc)) from exc
 
 
-@router.post("/reconciliation")
-def reconcile(portfolio: str = "KNK_MAIN", session: Session = SESSION_DEPENDENCY):
-    return PortfolioReconciliationService(session).reconcile(portfolio)
+@router.post(
+    "/reconciliation", response_model=None, responses={200: {"model": ReconciliationResult}}
+)
+def reconcile(
+    portfolio: str = "KNK_MAIN", session: Session = SESSION_DEPENDENCY
+) -> ReconciliationResult:
+    try:
+        return PortfolioReconciliationService(session).reconcile(portfolio)
+    except ValueError:
+        session.rollback()
+        raise HTTPException(422, "Recorded reconciliation inputs are invalid") from None
 
 
 @router.post("/reconciliation/{break_id}/resolve")

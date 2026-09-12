@@ -120,3 +120,73 @@ Whole strict run 52: native 1, unchanged 635 distinct diagnostics / 65 files /
 2026-09-12T13:32:09.889259+00:00, logs/final-release-whole-types-52/manifest.json.
 No diagnostics in modified runner/checks/test files. These focused commands do
 not claim that the complete 29-gate release has passed.
+
+## Chart Deployment 9a85cbe
+
+Commit/push native 0 to main. Pre-push scans: 667 text files, zero secret findings;
+broker-action scan native 0. Terminal Docker build/up --no-deps --no-build --wait
+native 0 each (logs/final-fiscal-docker-{build,up}-01.log). Watchdog native 0 at
+2026-09-12T13:38:32.928522+00:00: ten healthy services, init SUCCEEDED, no actions.
+HTTP /overview 200, private sign-in, Keep-Alive timeout=70. Build ID
+NhNZtzzxvdumdoktPDmTC; equity-page.tsx workspace/container SHA256:
+0486e92cedd50e8a12b8b6031521e3f3c48e45e881e3e9eb7c5f127e05ee3cf4.
+API/worker/report images remain 41baacb during this frontend-only deployment.
+
+## Reconciliation Financial Boundary
+
+Preserved the existing comparison arithmetic/tolerances and break state lifecycle.
+Typed header/book/snapshot/fill inputs use the existing accounting decimal guard
+and ordered financial-source validator. Unknown source fill fields and order are
+retained. Missing internal NAV no longer places a raw Decimal inside the SQL JSON
+break payload: existing jsonable converts it exactly to a string. Either observed
+side is validated even if its counterpart is missing. Invalid saved inputs return
+generic HTTP 422 without financial values. Valid unconnected headers do not require
+cash/position/transaction comparisons or apply comparison limits.
+
+All commands use .venv-rc Python 3.12.13 unless stated. Native results retained:
+
+| Receipt under logs/ | Result |
+| --- | --- |
+| final-reconciliation-negative-01.log, old service | 15 failed, two preservation cases passed, one warning, 4.42s, native 1; includes real Decimal JSON failure |
+| final-reconciliation-positive-01.log/xml | 60 passed, three warnings, 16.25s, native 0 |
+| final-reconciliation-focused-types-01.log | two strict files pass, native 0 |
+| final-reconciliation-operations-types-01.log | native 1, 14 errors: 13 pre-existing plus optional matched-break variable; corrected with distinct matched binding |
+| final-reconciliation-api-negative-01.log | one failed, 19 deselected, one warning, 2.47s, native 1: invalid recorded value gave 500 instead of generic 422 |
+| final-reconciliation-positive-02.log/xml | invocation error, native 4: nonexistent test_portfolio_commands.py; no tests certified |
+| final-reconciliation-positive-03.log/xml | one failed, 140 passed, three warnings, 25.65s, native 1: new unpriced fixture omitted required instrument country; fixed fixture, not schema |
+| final-reconciliation-unpriced-01.log/xml | one passed, 19 deselected, one warning, 1.64s, native 0; real ledger replay keeps missing NAV and persists warning |
+| final-reconciliation-positive-04.log/xml | 141 passed, three warnings, 22.85s, native 0 |
+| final-reconciliation-focused-types-02.log | two strict files pass, native 0 |
+| final-reconciliation-unconnected-negative-01.log | four failed, 20 deselected, one warning, 2.09s, native 1; caught draft regression requiring comparison fields before checking whether a broker exists |
+| final-reconciliation-positive-05.log/xml | final eight-file suite: 145 passed, three warnings, 24.67s, native 0 |
+| final-reconciliation-security-01.log/xml | 48 passed, three warnings, 22.61s, native 0 |
+| final-reconciliation-openapi-01.log | 170 paths; reconciliation response documented; native 0 |
+| final-reconciliation-browser-types-01.log | strict new browser-test TypeScript, native 0 |
+| final-reconciliation-ruff-02.log / format-02.log | whole first-party trees native 0 each, 338 formatted files |
+| final-reconciliation-secrets-01.log / no-execution-01.log | native 0 each; 670 text files, zero secret findings; no broker actions |
+
+New 24 regression cases cover missing-NAV warning persistence/identity/resolution,
+malformed saved structures, bad numeric values with missing counterparts, zero,
+signed values, existing tolerances, original fill fields/order, real unpriced
+ledger replay, public error redaction, and unconnected-header compatibility.
+
+Strict run 53 native 1: 614 distinct diagnostics, 65 files, 317 sources, nine
+distributions; observed 2026-09-12T13:44:13.303720+00:00. API 310 / 13 / 123.
+Final header correction run 54 native 1: 615 distinct strings, representing the
+same 614 errors. services.py:1430's existing PriceProvenance missing-key error has
+two different key orders across distributions. Sorting only that unordered list
+gives 614; no diagnostic was discarded. Run 52 similarly gives 635 both raw and
+canonical. Net reduction 21; no new semantic errors. Run 54 observed
+2026-09-12T13:48:31.753792+00:00. Full logs/manifests preserved.
+
+Browser 01: Node 22 Playwright reconciliation + operating suites, three passed,
+native 0, 101.600657s, start 2026-09-12T13:44:35.169Z. Final header correction
+browser 02: one passed, native 0, 25.895619s, start 2026-09-12T13:47:51.004Z.
+Neither run has skipped/flaky/retried/global errors; API logs contain zero
+traceback/500/lock matches. All 14 first-run screenshots inspected (five overview
+sizes, seven operating desks, two reconciliation views), then both final 1440/390
+reconciliation screenshots inspected. No shell redesign or frontend code change.
+These are focused workflow/visual checks, not a full current browser release.
+
+Full backend 35 remains the last complete backend baseline. Full backend 36 and
+deployment of this reconciliation batch have not yet run at this checkpoint.

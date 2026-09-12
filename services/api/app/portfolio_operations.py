@@ -19,6 +19,16 @@ from .portfolio_domain.types import AccountingPolicy
 from .portfolio_engine import TRANSACTION_TYPES, LedgerState, decimal
 from .portfolio_valuation import PortfolioValuationService, jsonable, load_entries
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
+from .reconciliation_contracts import (
+    BOOK,
+    BROKER,
+    HEADER,
+    BreakType,
+    EffectiveTransaction,
+    PositionAmount,
+    ReconciliationItem,
+    ReconciliationResult,
+)
 from .transaction_context import record_context
 from .transaction_views import transaction_views
 
@@ -431,12 +441,13 @@ class TradeMonitorService:
 
 
 class PortfolioReconciliationService:
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def reconcile(self, portfolio_key=None):
-        data = PortfolioValuationService(self.session).latest(portfolio_key)
-        portfolio_id = data["portfolio"]["id"]
+    def reconcile(self, portfolio_key: str | None = None) -> ReconciliationResult:
+        latest = PortfolioValuationService(self.session).latest(portfolio_key)
+        header = HEADER.validate_python(latest, strict=True)
+        portfolio_id = header["portfolio"]["id"]
         broker = self.session.scalar(
             select(models.BrokerAccountSnapshot)
             .where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id)
@@ -447,23 +458,36 @@ class PortfolioReconciliationService:
             return {
                 "state": "BROKER_NOT_CONNECTED",
                 "source": "INTERNAL LEDGER",
-                "as_of": data["as_of"],
-                "internal_nav": data["portfolio"]["nav"],
+                "as_of": header["as_of"],
+                "internal_nav": header["portfolio"]["nav"],
                 "items": [],
                 "warnings": [
                     "No broker snapshot available; reference values are not broker balances"
                 ],
             }
-        observations = []
+        data = BOOK.validate_python(latest, strict=True)
+        payload = BROKER.validate_python(broker.payload, strict=True)
+        observations: list[ReconciliationItem] = []
 
-        def compare(kind, key, internal, external, tolerance=Decimal(".01")):
+        def compare(
+            kind: BreakType,
+            key: str,
+            internal: str | int | float | Decimal | None,
+            external: str | int | float | Decimal | None,
+            tolerance: Decimal = Decimal(".01"),
+        ) -> None:
+            # Validate either observed side even when the counterpart is missing.
+            if internal is not None:
+                decimal(internal)
+            if external is not None:
+                decimal(external)
             if internal is None or external is None:
                 observations.append(
                     {
                         "type": kind,
                         "key": key,
-                        "internal": internal,
-                        "external": external,
+                        "internal": jsonable(internal),
+                        "external": jsonable(external),
                         "difference": None,
                         "severity": "WARN",
                     }
@@ -484,7 +508,7 @@ class PortfolioReconciliationService:
 
         compare("NAV_MISMATCH", "NAV", data["portfolio"]["nav"], broker.nav)
         internal_cash = {r["currency"]: r["amount"] for r in data["cash"]}
-        external_cash = {r["currency"]: r["amount"] for r in broker.payload.get("cash", [])}
+        external_cash = {r["currency"]: r["amount"] for r in payload.get("cash", [])}
         for currency in internal_cash.keys() | external_cash.keys():
             compare(
                 "CASH_MISMATCH",
@@ -493,9 +517,10 @@ class PortfolioReconciliationService:
                 external_cash.get(currency, "0"),
             )
         internal_positions = {r["symbol"]: r for r in data["positions"]}
-        external_positions = {r["symbol"]: r for r in broker.payload.get("positions", [])}
+        external_positions = {r["symbol"]: r for r in payload.get("positions", [])}
         for symbol in internal_positions.keys() | external_positions.keys():
-            left, right = internal_positions.get(symbol, {}), external_positions.get(symbol, {})
+            left: PositionAmount = internal_positions.get(symbol, {"symbol": symbol})
+            right: PositionAmount = external_positions.get(symbol, {"symbol": symbol})
             compare(
                 "QUANTITY_MISMATCH",
                 symbol,
@@ -515,11 +540,14 @@ class PortfolioReconciliationService:
             .where(models.PortfolioTransaction.portfolio_id == portfolio_id)
         ).all()
         effective = {t["id"]: t for t in data["transactions"] if t.get("ledger_state") != "VOID"}
-        linked = {
-            d.metadata_json.get("execution_id"): effective[t.id]
-            for d, t in details
-            if d.metadata_json.get("execution_id") and t.id in effective
-        }
+        linked: dict[str, EffectiveTransaction] = {}
+        for detail, transaction in details:
+            execution_id = detail.metadata_json.get("execution_id")
+            if not execution_id or transaction.id not in effective:
+                continue
+            if not isinstance(execution_id, str):
+                raise ValueError("Recorded execution identity must be text")
+            linked[execution_id] = effective[transaction.id]
         snapshots = self.session.scalars(
             select(models.BrokerAccountSnapshot)
             .where(models.BrokerAccountSnapshot.portfolio_id == portfolio_id)
@@ -528,8 +556,8 @@ class PortfolioReconciliationService:
         fills = {
             f["execution_id"]: f
             for s in snapshots
-            if s.payload.get("account_fingerprint") == broker.payload.get("account_fingerprint")
-            for f in s.payload.get("fills", [])
+            if s.payload.get("account_fingerprint") == payload.get("account_fingerprint")
+            for f in BROKER.validate_python(s.payload, strict=True).get("fills", [])
         }
         for fill in fills.values():
             pair = linked.get(fill["execution_id"])
@@ -539,7 +567,7 @@ class PortfolioReconciliationService:
                         "type": "UNMATCHED_BROKER_FILL",
                         "key": fill["execution_id"],
                         "internal": None,
-                        "external": fill,
+                        "external": jsonable(fill),
                         "difference": None,
                         "severity": "WARN",
                         "snapshot_id": broker.id,
@@ -584,7 +612,7 @@ class PortfolioReconciliationService:
                     {"snapshot_id": broker.id},
                 )
         for observation in observations:
-            row = next(
+            matched = next(
                 (
                     r
                     for r in existing
@@ -593,27 +621,27 @@ class PortfolioReconciliationService:
                 ),
                 None,
             )
-            if row is None:
-                row = models.PortfolioReconciliationBreak(
+            if matched is None:
+                matched = models.PortfolioReconciliationBreak(
                     portfolio_id=portfolio_id,
                     external_snapshot_id=broker.id,
                     break_type=observation["type"],
                     severity=observation["severity"],
-                    payload=dict(observation),
+                    payload=jsonable(observation),
                 )
-                self.session.add(row)
+                self.session.add(matched)
                 self.session.flush()
-            elif row.payload != observation:
+            elif matched.payload != observation:
                 audit(
                     self.session,
                     "RECONCILIATION_BREAK_UPDATED",
                     "reconciliation_break",
-                    row.id,
-                    {"before": row.payload, "after": observation},
+                    matched.id,
+                    {"before": matched.payload, "after": observation},
                 )
-                row.payload = dict(observation)
-                row.external_snapshot_id = broker.id
-            observation["id"] = row.id
+                matched.payload = jsonable(observation)
+                matched.external_snapshot_id = broker.id
+            observation["id"] = matched.id
         audit(
             self.session,
             "PORTFOLIO_RECONCILED",

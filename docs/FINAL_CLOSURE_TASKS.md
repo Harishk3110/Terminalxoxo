@@ -8,7 +8,8 @@ Unchecked below means not certified against this directive, not necessarily miss
 
 - [x] Correct the documented single-period FIN chart invisibility with negative and positive browser evidence.
 - [x] Bring the existing release runner from 27 to the required 29 ordered gates, preserving fail-fast and isolation checks.
-- [ ] Eliminate remaining 635 first-party strict diagnostics without weakening contracts.
+- [x] Correct incomplete-NAV reconciliation serialization and validate recorded comparison inputs without changing the unconnected path.
+- [ ] Eliminate remaining 614 canonical first-party strict diagnostics without weakening contracts (run 54 has 615 strings because one missing-key message repeats with different ordering).
 - [ ] Complete the full current baseline and all final gates; backend 35 passed 1,983 tests, but complete 29-stage execution is pending.
 
 

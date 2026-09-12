@@ -1,13 +1,15 @@
 # Final Closure Status
 
 Controlling directive: final release-closure attachment, received 2026-09-12 SGT.
-Starting/current verified application commit: 41baacb58bc8a14cd7d6fa47079a9907f1e316a3.
+Starting application commit: 41baacb58bc8a14cd7d6fa47079a9907f1e316a3.
+Chart/29-stage runner checkpoint: 9a85cbe, pushed. Reconciliation batch verified
+locally below; its commit will contain this status update.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git. Pushed.
 Earlier overnight starting commit and all historical receipts remain in OVERNIGHT_RC_*.
 
 Milestone: final quality and remaining feature closure, not release certification.
 One-period FIN chart defect is corrected with negative/positive browser evidence.
-First blocking static gate: 635 distinct mypy diagnostics across 65 files.
+First blocking static gate: 614 distinct mypy diagnostics across 65 files.
 Release runner now has the required 29 ordered gates; complete execution is pending.
 
 ## Baseline
@@ -17,8 +19,10 @@ Release runner now has the required 29 ordered gates; complete execution is pend
   (12,034/13,407). Later release-runner changes have separate focused evidence.
 - Latest affected backend: 300 passed, three warnings, 44.76s on 41baacb changes.
 - Ruff: zero errors, native 0. Formatting: 336 files checked, native 0.
-- mypy: whole run 52 native 1, 635 diagnostics / 65 files / 315 source files /
-  nine distributions. API: 323 / 13 files / 122 sources. No new diagnostics.
+- mypy: whole run 54 native 1, 614 canonical diagnostics (615 distinct strings:
+  one repeated missing-key error differs only in key order), 65 files, 317
+  sources, nine distributions. API: 310 / 13 files / 123 sources. Down 21 from
+  run 52; no added semantic diagnostics. No new reconciliation-method errors.
 - OpenAPI: 170 paths, native 0.
 - Frontend: 337 passed / 27 files, native 0, 16.58s. Shared: five passed / two
   files, native 0, 2.47s. These counts are actual tests, not placeholder scripts.
@@ -36,9 +40,10 @@ Release runner now has the required 29 ordered gates; complete execution is pend
 ## Services And Boundaries
 
 Docker project knk-final-local remains running. API/data worker/quant worker/report
-engine: 41baacb; frontend: 612da19. Fresh final-closure observe-only watchdog and
-Compose ps/config --quiet return native 0. Ten long-running services are healthy,
-MinIO init exited successfully, no restart actions. No volumes or user records reset.
+engine: 41baacb; frontend: 9a85cbe. Frontend build/up --wait native 0. Observe-only
+probe at 2026-09-12T13:38:32.928522+00:00: ten healthy services, MinIO init
+SUCCEEDED, no actions. Main /overview HTTP 200 at private sign-in, timeout 70s.
+Workspace/container equity source hashes match. No volumes or user records reset.
 
 Main local URL: http://127.0.0.1:3001/overview, private sign-in routing. This is not
 a hosted URL. Hosted deployment remains unverified and requires authorised access.
@@ -63,8 +68,29 @@ strict run 52 confirms no added diagnostics (2026-09-12T13:32:09.889259+00:00).
 Shared/frontend stages now require nonempty clean JUnit receipts. Backup, source
 fingerprint, timeout, command hash, coverage and no-retry safeguards are retained.
 
-Next: collect migration and whole-type native exits, commit/push verified work,
-deploy the corrected terminal image without resetting data, then continue strict
-backend closure. Full 29-stage certification and remaining domain work are open.
+## Reconciliation Closure
+
+Missing internal NAV now persists a JSON-safe warning instead of raising a
+Decimal serialization failure. Recorded comparisons validate either observed
+side even when the counterpart is missing; malformed saved inputs return a
+generic 422 without disclosing values. The unconnected header-only path keeps
+its previous requirements and does not apply comparison bounds. Amount strings,
+zeros/signs, tolerances, source extension order, fill approval and break identities
+remain covered. Full ledger replay with an unpriced security remains INCOMPLETE.
+
+Affected eight-file tests: 145 passed, three warnings, 24.67s, native 0. Security:
+48 passed, three warnings, 22.61s, native 0. OpenAPI 170 paths native 0. Browser
+01: three passed, 101.600657s; final header-path browser 02: one passed, 25.895619s.
+Both native 0, no skipped/flaky/retried/global/API errors. Fourteen first-run
+screens and both final reconciliation screens reviewed. Whole Ruff/format native
+0, 338 files. Secret scan: 670 files, zero findings; broker-action scan passes.
+Historical failures, the corrected fixture, and draft compatibility regression
+are explicitly recorded in FINAL_CLOSURE_BUILD_EVIDENCE.md.
+
+Next: commit/push this verified batch, run full backend 36 with Python source
+frozen, then deploy its API/worker/report images without resetting the book.
+Next implementation target after that run: remaining TradeMonitorService and
+ledger/valuation strict contracts. Full 29-stage certification and domain work
+remain open, including segments/ROIC/PIT/multiples and provider completeness.
 
 No final release pass is claimed until all 29 required critical gates pass.
