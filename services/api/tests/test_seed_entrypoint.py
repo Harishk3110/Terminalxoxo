@@ -8,7 +8,7 @@ import pytest
 
 
 @pytest.mark.parametrize("compact_layout", [False, True])
-def test_seed_entrypoint_outside_repository_cwd(tmp_path, compact_layout):
+def test_seed_entrypoint_outside_repository_cwd(tmp_path: Path, compact_layout: bool) -> None:
     service_root = Path(__file__).resolve().parents[1]
     script = service_root / "scripts" / "seed_demo.py"
     if compact_layout:
@@ -19,6 +19,7 @@ def test_seed_entrypoint_outside_repository_cwd(tmp_path, compact_layout):
         )
         script = Path(shutil.copy2(script, service_copy / "scripts"))
     env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+    env["DATABASE_URL"] = f"sqlite:///{(tmp_path / 'unconfigured' / 'ledger.db').as_posix()}"
     result = subprocess.run(
         [sys.executable, str(script), "--help"],
         cwd=tmp_path,
@@ -29,3 +30,4 @@ def test_seed_entrypoint_outside_repository_cwd(tmp_path, compact_layout):
     )
     assert result.returncode == 0, result.stderr
     assert "--reset" in result.stdout
+    assert not (tmp_path / "unconfigured").exists()

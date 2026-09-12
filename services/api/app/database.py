@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Generator
+from contextlib import closing
 
 from pydantic import TypeAdapter
-from sqlalchemy import Engine, create_engine, make_url
+from sqlalchemy import Engine, create_engine, event, make_url
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import ConnectionPoolEntry
 
 from .config import get_settings
 
@@ -31,14 +33,18 @@ def create_database_engine(database_url: str) -> Engine:
         )
     result = create_engine(url, future=True, connect_args={"check_same_thread": False})
     if not memory:
-        try:
-            # Configure once before serving requests; keep FULL sync and the default timeout.
-            with result.connect() as connection:
-                if connection.exec_driver_sql("PRAGMA journal_mode=WAL").scalar_one() != "wal":
-                    raise RuntimeError("Local SQLite storage does not support WAL journaling")
-        except Exception:
-            result.dispose()
-            raise
+
+        def configure_wal(connection: sqlite3.Connection, _record: ConnectionPoolEntry) -> None:
+            try:
+                # Pool first_connect is synchronized; imports and CLI help stay database-free.
+                with closing(connection.cursor()) as cursor:
+                    if cursor.execute("PRAGMA journal_mode=WAL").fetchone() != ("wal",):
+                        raise RuntimeError("Local SQLite storage does not support WAL journaling")
+            except BaseException:
+                connection.close()
+                raise
+
+        event.listen(result, "first_connect", configure_wal)
     return result
 
 

@@ -4,11 +4,16 @@ The detached terminal at `http://127.0.0.1:3001/overview` uses PostgreSQL. These
 requirements apply to local file-backed SQLite and isolated browser tests only.
 
 File-backed SQLite uses write-ahead logging (WAL) so a research read does not
-block a workspace save from committing. The connection factory configures WAL
-before serving requests, checks the returned journal mode, and preserves FULL
+block a workspace save from committing. The connection pool configures WAL on
+its synchronized first connection, checks the returned journal mode, and preserves FULL
 synchronization, the default 5-second busy timeout, and automatic checkpoints.
 In-memory SQLite and the PostgreSQL pool configuration are unchanged. This does
 not eliminate writer/writer contention or make SQLite a multi-host database.
+
+Creating an engine, importing application modules and requesting CLI help do not
+open or create a database. Initialization completes before the first connection
+is handed to a caller and runs again if the pool is disposed and recreated. A
+failed WAL initialization closes its DBAPI connection and propagates the error.
 
 ## Required Version
 

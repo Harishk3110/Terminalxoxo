@@ -8,8 +8,11 @@ import pytest
 from app import models
 from app.database import create_database_engine
 from app.terminal_api import WorkspaceRequest, save_workspace
-from sqlalchemy import Connection, Engine, event
+from sqlalchemy import Engine, event
+from sqlalchemy.engine import Dialect
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import ConnectionPoolEntry
 
 from infrastructure.scripts.backup_archive import create_backup, restore_backup
 
@@ -63,6 +66,32 @@ def test_file_sqlite_keeps_durability_and_default_timeout(local_engine: Engine) 
         assert connection.exec_driver_sql("PRAGMA wal_autocheckpoint").scalar_one() == 1000
 
 
+def test_engine_creation_does_not_create_a_database_file(tmp_path: Path) -> None:
+    target = tmp_path / "lazy.db"
+    engine = create_database_engine(f"sqlite:///{target.as_posix()}")
+    try:
+        assert not target.exists()
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql("PRAGMA journal_mode").scalar_one() == "wal"
+        assert target.is_file()
+    finally:
+        engine.dispose()
+
+
+def test_unavailable_database_path_is_not_opened_until_used(tmp_path: Path) -> None:
+    target = tmp_path / "unavailable" / "ledger.db"
+    engine = create_database_engine(f"sqlite:///{target.as_posix()}")
+    try:
+        assert not target.parent.exists()
+        with (
+            pytest.raises(OperationalError, match="unable to open database file"),
+            engine.connect(),
+        ):
+            pytest.fail("An unavailable database path must not connect")
+    finally:
+        engine.dispose()
+
+
 @pytest.mark.parametrize(
     "url",
     [
@@ -95,34 +124,60 @@ def test_memory_query_without_uri_mode_is_still_a_file(tmp_path: Path, query: st
         engine.dispose()
 
 
-def test_unsupported_storage_mode_disposes_the_engine(tmp_path: Path) -> None:
-    disposed: list[Engine] = []
+def test_unsupported_storage_mode_closes_the_failed_connection(tmp_path: Path) -> None:
+    connections: list[sqlite3.Connection] = []
+    engine = create_database_engine(f"sqlite:///{(tmp_path / 'unsupported.db').as_posix()}")
 
-    def record_disposal(engine: Engine) -> None:
-        disposed.append(engine)
+    def open_memory(
+        dialect: Dialect,
+        record: ConnectionPoolEntry,
+        args: list[object],
+        options: dict[str, object],
+    ) -> sqlite3.Connection:
+        connection = sqlite3.connect(":memory:")
+        connections.append(connection)
+        return connection
 
-    def refuse_wal(
-        connection: Connection,
-        cursor: object,
-        statement: str,
-        parameters: object,
-        context: object,
-        executemany: bool,
-    ) -> tuple[str, object]:
-        return (
-            "PRAGMA journal_mode" if statement == "PRAGMA journal_mode=WAL" else statement,
-            parameters,
-        )
-
-    event.listen(Engine, "before_cursor_execute", refuse_wal, retval=True)
-    event.listen(Engine, "engine_disposed", record_disposal)
+    event.listen(engine, "do_connect", open_memory)
     try:
-        with pytest.raises(RuntimeError, match="does not support WAL"):
-            create_database_engine(f"sqlite:///{(tmp_path / 'unsupported.db').as_posix()}")
-        assert len(disposed) == 1
+        with pytest.raises(RuntimeError, match="does not support WAL"), engine.connect():
+            pytest.fail("A file-backed configuration must not accept unsupported journaling")
+        assert len(connections) == 1
+        with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+            connections[0].execute("SELECT 1")
     finally:
-        event.remove(Engine, "before_cursor_execute", refuse_wal)
-        event.remove(Engine, "engine_disposed", record_disposal)
+        event.remove(engine, "do_connect", open_memory)
+        engine.dispose()
+
+
+def test_wal_configuration_runs_once_per_pool_before_connections_are_used(tmp_path: Path) -> None:
+    target = tmp_path / "pooled.db"
+    engine = create_database_engine(f"sqlite:///{target.as_posix()}")
+    statements: list[str] = []
+
+    def traced_connection(
+        dialect: Dialect,
+        record: ConnectionPoolEntry,
+        args: list[object],
+        options: dict[str, object],
+    ) -> sqlite3.Connection:
+        connection = sqlite3.connect(target, check_same_thread=False)
+        connection.set_trace_callback(statements.append)
+        return connection
+
+    event.listen(engine, "do_connect", traced_connection)
+    try:
+        with engine.connect() as first, engine.connect() as second:
+            assert first.exec_driver_sql("PRAGMA journal_mode").scalar_one() == "wal"
+            assert second.exec_driver_sql("PRAGMA journal_mode").scalar_one() == "wal"
+        assert statements.count("PRAGMA journal_mode=WAL") == 1
+        engine.dispose()
+        with engine.connect() as reopened:
+            assert reopened.exec_driver_sql("PRAGMA journal_mode").scalar_one() == "wal"
+        assert statements.count("PRAGMA journal_mode=WAL") == 2
+    finally:
+        event.remove(engine, "do_connect", traced_connection)
+        engine.dispose()
 
 
 @pytest.mark.parametrize("version", [(3, 49, 1), (3, 50, 4), (3, 51, 2), (3, 44, 5)])
