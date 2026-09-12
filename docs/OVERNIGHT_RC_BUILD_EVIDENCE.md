@@ -16,6 +16,36 @@ until concrete tests are recorded here.
 
 ## Lazy SQLite Initialization Correction
 
+Full backend 33 completed on 2026-09-12: native exit 0, 1,886 passed, zero
+failures/errors/skips, 123 warnings, 497.23s. Command:
+`.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q --cov=services/api/app --cov-report=json:logs/overnight-coverage-33.json --junitxml=logs/overnight-backend-33.xml`.
+Application source was frozen at 71169ba throughout; a15e731 added documentation
+only while it ran. Isolated database, object storage and auth-key paths were used.
+Coverage: 11,865 / 13,241 statements, 89.60803564685446%, 1,376 missing, 31 existing
+excluded. Receipts: overnight-backend-33.log/xml and overnight-coverage-33.json.
+This corrects the failed full run below without changing its assertions. Real
+integration 28 has started on the same runtime and source, not yet certified.
+
+Integration 28 returned native 1 after 102.61s: four passed (three independent
+Excel recalculation cases plus managed PostgreSQL/MinIO backup), seven setup
+errors, 31 warnings, no skips. The invocation omitted KNK_RELEASE_BACKUP_ACK=1,
+so local_configuration correctly rejected PostgreSQL lifecycle/race setup.
+Receipts: overnight-integration-28.log/xml. No application or test change is
+needed for this operator configuration error. Integration 29 reruns the complete
+eleven-case suite with the acknowledgement set; five analysis-transition races
+were added after the older six-case integration 27. Code and guards stay frozen.
+
+Integration 29 returned native 0: eleven passed, no failures/errors/skips, 31
+existing botocore UTC deprecation warnings, 227.72s. XML starts at
+2026-09-12T14:38:04.541479+08:00. Command:
+`.venv-rc/Scripts/python.exe -m pytest tests/integration -q --junitxml=logs/overnight-integration-29.xml`,
+with KNK_EXCEL_INTEGRATION=1, KNK_RELEASE_BACKUP_ACK=1, the existing private local
+Compose environment, loopback PostgreSQL/MinIO overrides and PostgreSQL tools
+container. Receipts: overnight-integration-29.log/xml. Source and assertions were
+unchanged throughout. Post-run observe-only watchdog returns native 0 in
+overnight-integration-29-watchdog.log. This certifies the patched runtime for
+the existing eleven integration cases, not all remaining release requirements.
+
 2026-09-12, application 71169ba, parent 22f803e, pushed. Full backend 32 on
 a5b0830 application code and the patched runtime returned native 1: 1,881 passed,
 two failed, 123 warnings, 487.37s. Both failures were seed-entrypoint help from

@@ -32,19 +32,34 @@ Dated stress/hedge selection is implemented. Historical valuations no longer rew
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-rc/Scripts/python.exe scripts/check_python_types.py`.
 
-Current checkpoint: lazy SQLite initialization correction, 71169ba. First
-unchecked task: full backend 33 and real integration 28 on the patched runtime,
-then remaining strict equity, valuation and service/API contracts. Full backend
-32 failed two seed-help tests; the correction passes focused tests but is not
-yet certified by a complete backend run. The 27-gate release remains open.
-Next command: `.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q --cov=services/api/app --cov-report=json:logs/overnight-coverage-33.json --junitxml=logs/overnight-backend-33.xml`, using isolated database, storage and auth key.
+Current checkpoint: full backend 33 passes on lazy SQLite correction 71169ba.
+First unchecked task: remaining strict equity, valuation and service/API
+contracts. Real integration 29 passes on the patched runtime. Full backend 32's
+two seed-help failures are corrected and the complete backend rerun passes.
+The 27-gate release remains open.
+Next command: add equity numeric/receipt regression cases, then run `.venv-rc/Scripts/python.exe -m pytest tests/sprint/test_equity_financials.py tests/sprint/test_equity_api.py -q` as a negative control before their guards.
 
 Current evidence:
+- Integration 29: eleven passed / zero failures/errors/skips / 31 warnings /
+  227.72s / native exit 0, frozen 71169ba application. Real Excel recalculation,
+  PostgreSQL migrations/five transition races/API-worker restarts and private
+  MinIO backup/restore pass. No safety guard was changed. Post-run watchdog
+  returns native 0; active services and user data remain intact.
+- Integration 28 returned native 1: four passed (three real Excel cases and
+  managed backup), seven PostgreSQL setup errors, 31 warnings, 102.61s. The
+  invocation omitted KNK_RELEASE_BACKUP_ACK=1; the existing guard correctly
+  rejected setup. Integration 29 corrects the invocation without changing code,
+  tests or safety guards. There are now eleven integration cases, including
+  five PostgreSQL analysis-transition races added since checkpoint 27.
+- Full backend 33: 1,886 passed / zero failures/errors/skips / 123 warnings /
+  497.23s / native exit 0 on frozen 71169ba application code. Coverage is
+  11,865 / 13,241 statements (89.6080356%), 1,376 missing, 31 existing excluded.
+  This supersedes failed backend 32. Source stayed frozen during the subsequent
+  complete integration rerun.
 - 71169ba Docker build/up pass; database/equity source hashes match the API
   container. Watchdog at 2026-09-12T06:26:33.552135Z reports ten healthy services,
   successful MinIO initialization and no restart actions. Private /overview
-  returns HTTP 200 at sign-in with Keep-Alive 70s. Full backend 33 is running
-  against isolated test paths; source stays frozen until completion.
+  returns HTTP 200 at sign-in with Keep-Alive 70s. Test paths remain isolated.
 - 71169ba: full backend 32 failed two seed-help tests / 1,881 passed / 123
   warnings / 487.37s, native 1. Eager engine construction opened an unavailable
   relative database path before argparse. WAL now initializes through the
