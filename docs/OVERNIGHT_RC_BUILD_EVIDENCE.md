@@ -14,6 +14,56 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Lazy SQLite Initialization Correction
+
+2026-09-12, application 71169ba, parent 22f803e, pushed. Full backend 32 on
+a5b0830 application code and the patched runtime returned native 1: 1,881 passed,
+two failed, 123 warnings, 487.37s. Both failures were seed-entrypoint help from
+an unrelated working directory. Eager engine construction tried to open the
+inherited relative database path before argument parsing. Coverage from this
+FAILED run was 11,857 / 13,237 statements (89.5746770%), 1,380 missing, 31 excluded;
+this is not a full-suite pass. Receipts: overnight-backend-32.log/xml and
+overnight-coverage-32.json.
+
+WAL now initializes on SQLAlchemy's synchronized pool first_connect event,
+before callers receive a connection. Engine construction remains lazy, each
+new pool initializes once, and rejected WAL connections close explicitly.
+Durability, timeouts, in-memory behavior and PostgreSQL pool policy are unchanged.
+Seed-help tests explicitly use an unavailable database parent and assert no
+directory is created. No assertion, retry or timeout was weakened.
+
+| Check | Native Exit | Receipt / Result |
+| --- | --- | --- |
+| Pre-fix engine/seed negative controls | 1 | overnight-sqlite-lazy-negative-01.log: four failed / 22 deselected / three warnings, 9.49s |
+| Focused SQLite and seed checks | 0 | overnight-sqlite-lazy-contracts-02.log/xml: 27 passed / three warnings, 10.18s |
+| Affected database/backup/migration/middleware/research checks | 0 | overnight-sqlite-lazy-contracts-03.log/xml: 208 passed / three warnings, 35.58s |
+| Strict database and both test modules | 0 | overnight-sqlite-lazy-focused-types-02.log: three files |
+| Whole strict 48 | 1 | overnight-whole-types-48.log and directory: 660 distinct diagnostics / 67 files / 313 sources / nine distributions; API unchanged at 348 / 15 files / 121 sources; manifest 2026-09-12T06:18:42.604992Z |
+| Equity browser 08 | 0 | overnight-thesis-browser-08.log/results.json: two passed, 55.135271s, zero failures/skips/flaky/retries; start 2026-09-12T06:20:00.300Z |
+| Ruff / full formatting | 0 each | overnight-sqlite-lazy-ruff.log and overnight-sqlite-lazy-format.log, all seven release Python roots |
+| Secret / no-execution / diff checks | 0 each | 655 eligible text files / zero findings; no forbidden broker methods |
+
+Browser 08 used isolated SQLite/storage/auth state and the existing production
+frontend build. API log contains zero ERROR/Traceback/500/SQLite-lock matches.
+Desktop DCF, mobile DCF/thesis and security-chart screenshots were individually
+inspected; controls, charts and source states render. Full backend 33 and real
+Excel/PostgreSQL/MinIO integration 28 are next, not claimed complete. Earlier
+a5b0830 Docker build/up passed and its watchdog observed ten healthy services at
+2026-09-12T06:03:38.076850Z.
+
+71169ba Docker build/up both return native 0; receipts are
+overnight-sqlite-lazy-docker-build.log and overnight-sqlite-lazy-docker-up.log.
+API database.py SHA-256 is
+f3e14ce1e39d213587a0cd19d1562017335b67a0160ef16950e0390a272114c8;
+equity_api.py SHA-256 is
+31487a42fb8e4e6167ee4bcadc5e115eea39e26bdc7e94cdfb40246ff8eb6e8d.
+Both match source. Docker uses PostgreSQL; its older SQLite library is not used
+for file-backed application storage and remains guarded. Observe-only watchdog
+returns native 0 at 2026-09-12T06:26:33.552135Z: ten healthy services, successful
+MinIO init, no actions (overnight-sqlite-lazy-watchdog.log). Main /overview returns
+HTTP 200 at private sign-in, Keep-Alive 70s. No persistent data was reset. Full
+backend 33 started on frozen 71169ba with isolated database/storage/auth paths.
+
 ## Thesis Receipts And Local SQLite Concurrency
 
 Verified application a5b0830, parent 403b49a, pushed on 2026-09-12. Thesis parents

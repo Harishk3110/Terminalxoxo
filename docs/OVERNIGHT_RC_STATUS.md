@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current verified application HEAD: a5b0830, pushed.
-Docker API/workers/reports are cc91f85; frontend is 612da19.
+Current verified application HEAD: 71169ba, pushed.
+Docker API/workers/reports are 71169ba; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -32,13 +32,29 @@ Dated stress/hedge selection is implemented. Historical valuations no longer rew
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-rc/Scripts/python.exe scripts/check_python_types.py`.
 
-Current checkpoint: saved-thesis linkage/history validation and local SQLite
-concurrency correction, a5b0830. First unchecked task: remaining strict equity,
-valuation and service/API contracts. Full backend 32 on the patched runtime and
-the Docker refresh are next; the complete 27-gate release remains open.
-Next command: `.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q --cov=services/api/app --cov-report=json:logs/overnight-coverage-32.json --junitxml=logs/overnight-backend-32.xml`, using isolated database, storage and auth key.
+Current checkpoint: lazy SQLite initialization correction, 71169ba. First
+unchecked task: full backend 33 and real integration 28 on the patched runtime,
+then remaining strict equity, valuation and service/API contracts. Full backend
+32 failed two seed-help tests; the correction passes focused tests but is not
+yet certified by a complete backend run. The 27-gate release remains open.
+Next command: `.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q --cov=services/api/app --cov-report=json:logs/overnight-coverage-33.json --junitxml=logs/overnight-backend-33.xml`, using isolated database, storage and auth key.
 
 Current evidence:
+- 71169ba Docker build/up pass; database/equity source hashes match the API
+  container. Watchdog at 2026-09-12T06:26:33.552135Z reports ten healthy services,
+  successful MinIO initialization and no restart actions. Private /overview
+  returns HTTP 200 at sign-in with Keep-Alive 70s. Full backend 33 is running
+  against isolated test paths; source stays frozen until completion.
+- 71169ba: full backend 32 failed two seed-help tests / 1,881 passed / 123
+  warnings / 487.37s, native 1. Eager engine construction opened an unavailable
+  relative database path before argparse. WAL now initializes through the
+  synchronized pool first_connect event; failed connections close explicitly.
+  Four negative controls fail before the correction, then 27 focused and 208
+  affected tests pass. Three strict files pass; whole strict 48 remains FAIL at
+  660 distinct diagnostics / 67 files / 313 sources / nine distributions.
+  Browser 08 passes both workflows in 55.135s without retries/errors/skips;
+  all four screenshots inspected and no API error/500/lock matches. Whole Ruff
+  and formatting, secret scan (655 files / zero findings), no-execution scan pass.
 - a5b0830: 203 affected tests (85.18s), 67 database/launcher/release checks
   (13.41s), three focused strict files and OpenAPI's 170 paths pass. Final equity
   browser 07 passes both workflows in 51.523s with zero retries/errors/skips;
