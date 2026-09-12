@@ -14,6 +14,24 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Full Backend 31 And Pine Runtime Refresh
+
+Frozen cc91f85, isolated database/storage/key, no source edits during the run:
+1,842 passed, zero failed/errored/skipped, 123 warnings, 999.54s, native exit 0.
+JUnit reports 999.463s. Coverage: 11,816 / 13,195 statements =
+89.54907161803713%, 1,379 missing, 31 existing excluded. Receipts:
+logs/overnight-backend-31.log/xml and logs/overnight-coverage-31.json.
+The full suite includes both options/saved-receipt and Pine batches.
+
+Pine Docker build/up exit 0 without resetting data; receipts:
+logs/overnight-pine-docker-{build,up}.log. Deployed pine_api, pine_research,
+pine_results and services SHA256 values match cc91f85. Observe-only watchdog at
+2026-09-12T05:04:46.659997Z reports ten healthy services, MinIO init SUCCEEDED and
+no repair actions; overnight-pine-watchdog.log. Main /overview remains HTTP 200 at
+private sign-in, Keep-Alive 70s. Frontend remains 612da19; no frontend edits in
+these batches. Whole strict 44 remains red at 683 diagnostics. This is a backend
+checkpoint, not a 27-gate release pass.
+
 ## Typed Pine Evidence And Pre-Read Validation
 
 Source 9f0addf plus Pine batch. Typed generated templates, per-bar comparisons and

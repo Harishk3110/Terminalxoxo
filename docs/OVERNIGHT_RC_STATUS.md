@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current verified application HEAD: 9f0addf, pushed; verified Pine batch follows.
-Docker API/workers/reports are 9f0addf; frontend is 612da19.
+Current verified application HEAD: cc91f85, pushed.
+Docker API/workers/reports are cc91f85; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -33,6 +33,13 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Full backend 31 on frozen cc91f85: 1,842 passed, zero failed/errored/skipped,
+  123 warnings, 999.54s, native exit 0. Coverage: 11,816 / 13,195 statements
+  (89.5490716%), 1,379 missing, 31 existing excluded. Both options and Pine batches
+  are included. Pine Docker build/up pass, four hashes match source; watchdog at
+  2026-09-12T05:04:46.659997Z reports ten healthy services and no actions. Main
+  /overview remains HTTP 200 at private sign-in, Keep-Alive 70s. Whole strict
+  remains red at 683 diagnostics; the full release is not passed.
 - Typed Pine templates/comparisons and pre-read saved-source/settings validation:
   46 affected tests, five strict modules and the real browser upload workflow pass;
   desktop/mobile screenshots inspected. Twelve generated templates/source bytes,
