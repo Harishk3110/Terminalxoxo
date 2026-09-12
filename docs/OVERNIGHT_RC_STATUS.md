@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the DataDrop-service commit: e5a366d, pushed.
+Current HEAD before the DataDrop-API commit: 7074ef3, pushed.
 Docker runtime is e5a366d. Full backend 26 and browser 14 passed before this batch.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -32,6 +32,13 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- DataDrop API contracts: 125 affected tests pass, three warnings, 54.54s;
+  API/new tests pass focused strict types. Missing broker profile and unknown
+  reject/archive files return explicit client errors; pairing ownership, token
+  hashing and single-use claim remain covered. Ten HTTP responses exactly match
+  the prior version on an isolated copy of seven persisted files and list data.
+  Whole strict 33: 931 diagnostics / 87 files / 280 sources; API 512 / 24 files.
+  OpenAPI has 170 paths / 95 schemas. Ruff, formatting and both security scans pass.
 - DataDrop service contracts: 77 affected tests pass, three warnings, 21.37s;
   service/new tests pass focused strict types. Missing raw/profile references,
   malformed persisted mapping and non-finite defaults fail before transitions.
@@ -302,13 +309,12 @@ unreviewed desktop combinations remain open.
 Additional direct review: overview, risk and options screenshots at 1920px were
 inspected. Risk's all-null panels prompted the empty-state fix verified in two
 new browser tests; the remaining viewport matrix is not certified complete.
-Exact next command: `Get-Content logs/overnight-browser-full-14.log -Tail 12`.
-Keep runtime source unchanged during browser 14; continue typed test fixtures,
-then run the complete backend checkpoint and remaining strict API/domain work.
+Next work: remaining strict API/domain contracts, followed by full backend and
+browser checkpoints on stable source. No full test process is currently active.
 The clean
 Windows environment and Docker now share NumPy 2.5.3/SciPy 1.18.1 pins; the old
 environment is preserved but is not used for release gates. Full backend 23 passes
-in the clean environment. Whole strict checkpoint 30 remains red at 1,095 errors.
+in the clean environment. Whole strict checkpoint 33 remains red at 931 errors.
 Agent startup installation, structured
 logs and separate file/broker credential profiles remain open. A separate review
 move journal is still needed for a hard interruption between its rename and

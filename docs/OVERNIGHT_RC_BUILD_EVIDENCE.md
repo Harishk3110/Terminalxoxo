@@ -1345,3 +1345,27 @@ ordering. Approval, immutable storage, deduplication and atomic rollback remain.
 The response-copy regression also verifies mutations of returned metadata,
 mapping, validation and nested history cannot mutate ORM state. Broad release,
 all-state payload visual review and live-provider certification remain open.
+
+## DataDrop HTTP Contracts
+
+2026-09-12, 7074ef3 plus API worktree. Explicit file/profile/agent response types
+preserve decimal/date/null payloads. Missing KNK_MAIN broker pairing returns 409
+before creating a pairing record; file-only pairing needs no broker profile.
+Unknown reject/archive files return the existing checked-boundary 422 convention.
+Non-finite mapping defaults fail request validation. Pairing remains single-use,
+tokens remain hashed, and broker scopes retain the selected portfolio identity.
+
+| Check | Exit | Evidence |
+| --- | --- | --- |
+| Prior-API negative control | 1 | overnight-drop-api-negative-01.log: six intended failures, three preservation passes |
+| Initial corrected API tests | 0 | overnight-drop-api-positive-01.log: nine passed, one warning, 2.89s |
+| Final affected API/agent/security selection | 0 | overnight-drop-api-affected.log: 125 passed, three warnings, 54.54s; includes the tenth unknown-reject regression |
+| Focused strict | 0 | overnight-drop-api-types-01.log: API and new tests; imports-silent scope does not certify dependencies |
+| Complete valid HTTP parity | 0 | overnight-drop-api-parity.log: ten old/new responses match, including seven saved files and file/profile/agent lists; source DB opened read-only and copied to memory |
+| OpenAPI generation | 0 | overnight-drop-api-openapi.log: 170 paths, 95 schemas, six typed response checks |
+| Whole strict checkpoint 33 | 1 | overnight-whole-types-33/: 931 distinct diagnostics, 87 files, 280 sources; API 512 / 24 files |
+| Ruff / format / secrets / no-execution | 0 each | changed source/tests clean; secret scan 619 files, zero findings |
+
+No application or test edits occurred during whole strict 33. Full backend 26
+and browser 14 precede this batch and are not final-source certification.
+Persistent Docker remains at e5a366d; no active database or volume was reset.

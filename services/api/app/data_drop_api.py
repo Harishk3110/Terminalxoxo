@@ -2,16 +2,17 @@
 
 import hashlib
 import secrets
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, TypedDict
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from . import models
-from .data_drop import DataDropService, file_payload, transition
+from .data_drop import DataDropService, FilePayload, file_payload, transition
 from .data_mapping import seed_profiles
 from .database import get_session
 from .portfolio_api import identity
@@ -26,7 +27,59 @@ router = APIRouter()
 SCOPES = ["files:upload", "files:status", "agent:heartbeat"]
 
 
-def checked(call, session):
+class FileList(TypedDict):
+    items: list[FilePayload]
+
+
+class ProfilePayload(TypedDict):
+    id: str
+    code: str
+    version: int
+    source: str
+    dataset_type: str
+    approved: bool
+    rules: dict[str, JsonValue]
+
+
+class ProfileList(TypedDict):
+    items: list[ProfilePayload]
+
+
+class AgentPayload(TypedDict):
+    id: str
+    name: str
+    scopes: list[str]
+    last_seen: str | None
+    state: str
+    status: dict[str, JsonValue]
+
+
+class AgentList(TypedDict):
+    items: list[AgentPayload]
+
+
+class PairingPayload(TypedDict):
+    code: str
+    expires_at: str
+    scopes: list[str]
+
+
+class ClaimedAgent(TypedDict):
+    agent_id: str
+    token: str
+    scopes: list[str]
+
+
+class StatusPayload(TypedDict):
+    status: str
+
+
+class HeartbeatPayload(TypedDict):
+    status: str
+    server_time: str
+
+
+def checked[T](call: Callable[[], T], session: Session) -> T:
     try:
         return call()
     except ValueError as exc:
@@ -35,7 +88,7 @@ def checked(call, session):
 
 
 @router.get("/api/v1/data-drop/files")
-def files(session: Session = SESSION_DEPENDENCY):
+def files(session: Session = SESSION_DEPENDENCY) -> FileList:
     rows = session.scalars(
         select(models.ExternalFile).order_by(models.ExternalFile.created_at.desc()).limit(250)
     ).all()
@@ -43,12 +96,14 @@ def files(session: Session = SESSION_DEPENDENCY):
 
 
 @router.get("/api/v1/data-drop/files/{file_id}")
-def file_detail(file_id: str, session: Session = SESSION_DEPENDENCY):
+def file_detail(file_id: str, session: Session = SESSION_DEPENDENCY) -> FilePayload:
     return checked(lambda: file_payload(DataDropService(session).get(file_id)), session)
 
 
 @router.post("/api/v1/data-drop/files")
-async def upload(file: UploadFile = UPLOAD_DEPENDENCY, session: Session = SESSION_DEPENDENCY):
+async def upload(
+    file: UploadFile = UPLOAD_DEPENDENCY, session: Session = SESSION_DEPENDENCY
+) -> FilePayload:
     data = await file.read(25_000_001)
     return checked(
         lambda: DataDropService(session).receive(file.filename or "upload.csv", data), session
@@ -56,7 +111,7 @@ async def upload(file: UploadFile = UPLOAD_DEPENDENCY, session: Session = SESSIO
 
 
 @router.get("/api/v1/data-drop/profiles")
-def profiles(session: Session = SESSION_DEPENDENCY):
+def profiles(session: Session = SESSION_DEPENDENCY) -> ProfileList:
     seed_profiles(session)
     session.commit()
     return {
@@ -80,16 +135,17 @@ def profiles(session: Session = SESSION_DEPENDENCY):
 
 
 class MappingRequest(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     profile_id: str
     mapping: dict[str, str] | None = None
-    defaults: dict = Field(default_factory=dict)
+    defaults: dict[str, JsonValue] = Field(default_factory=dict)
     symbol_resolution: str | None = None
 
 
 @router.post("/api/v1/data-drop/files/{file_id}/validate")
 def validate(
     file_id: str, payload: MappingRequest, request: Request, session: Session = SESSION_DEPENDENCY
-):
+) -> FilePayload:
     actor = identity(request, session)
     return checked(
         lambda: DataDropService(session).map_validate(
@@ -114,10 +170,17 @@ class ImportRequest(BaseModel):
 @router.post("/api/v1/data-drop/files/{file_id}/import")
 def import_file(
     file_id: str, payload: ImportRequest, request: Request, session: Session = SESSION_DEPENDENCY
-):
+) -> FilePayload:
     actor = identity(request, session)
     return checked(
-        lambda: DataDropService(session).import_file(file_id, **payload.model_dump(), actor=actor),
+        lambda: DataDropService(session).import_file(
+            file_id,
+            name=payload.name,
+            licence=payload.licence,
+            approve=payload.approve,
+            portfolio=payload.portfolio,
+            actor=actor,
+        ),
         session,
     )
 
@@ -129,8 +192,8 @@ class RejectRequest(BaseModel):
 @router.post("/api/v1/data-drop/files/{file_id}/reject")
 def reject(
     file_id: str, payload: RejectRequest, request: Request, session: Session = SESSION_DEPENDENCY
-):
-    row = DataDropService(session).get(file_id)
+) -> FilePayload:
+    row = checked(lambda: DataDropService(session).get(file_id), session)
     checked(lambda: transition(row, "REJECTED", payload.reason), session)
     audit(
         session,
@@ -145,7 +208,7 @@ def reject(
 
 
 @router.get("/api/v1/data-drop/agents")
-def agents(session: Session = SESSION_DEPENDENCY):
+def agents(session: Session = SESSION_DEPENDENCY) -> AgentList:
     now = datetime.now(UTC)
     return {
         "items": [
@@ -167,16 +230,19 @@ def agents(session: Session = SESSION_DEPENDENCY):
 
 
 @router.post("/api/v1/data-drop/agents/pair")
-def pair(request: Request, broker: bool = False, session: Session = SESSION_DEPENDENCY):
+def pair(
+    request: Request, broker: bool = False, session: Session = SESSION_DEPENDENCY
+) -> PairingPayload:
     actor = identity(request, session, admin=True)
     code = secrets.token_urlsafe(24)
     from .portfolio_seed import profile_for
 
-    permissions = (
-        [*SCOPES, "broker:read-sync", "portfolio:" + profile_for(session).portfolio_id]
-        if broker
-        else SCOPES
-    )
+    permissions = [*SCOPES]
+    if broker:
+        profile = profile_for(session)
+        if profile is None:
+            raise HTTPException(409, "Main portfolio profile is not configured")
+        permissions.extend(["broker:read-sync", "portfolio:" + profile.portfolio_id])
     row = models.AgentPairing(
         code_hash=hashlib.sha256(code.encode()).hexdigest(),
         expires_at=datetime.now(UTC) + timedelta(minutes=10),
@@ -190,7 +256,7 @@ def pair(request: Request, broker: bool = False, session: Session = SESSION_DEPE
 
 
 @router.post("/api/v1/data-drop/agents/{agent_id}/revoke")
-def revoke(agent_id: str, request: Request, session: Session = SESSION_DEPENDENCY):
+def revoke(agent_id: str, request: Request, session: Session = SESSION_DEPENDENCY) -> StatusPayload:
     actor = identity(request, session, admin=True)
     row = session.get(models.LocalAgent, agent_id)
     if row is None:
@@ -207,7 +273,7 @@ class ClaimRequest(BaseModel):
 
 
 @router.post("/agent/v1/pair")
-def claim(payload: ClaimRequest, session: Session = SESSION_DEPENDENCY):
+def claim(payload: ClaimRequest, session: Session = SESSION_DEPENDENCY) -> ClaimedAgent:
     now = datetime.now(UTC)
     row = session.scalar(
         select(models.AgentPairing).where(
@@ -273,8 +339,10 @@ class HeartbeatRequest(BaseModel):
 
 @router.post("/agent/v1/heartbeat")
 def heartbeat(
-    payload: HeartbeatRequest, agent=AGENT_DEPENDENCY, session: Session = SESSION_DEPENDENCY
-):
+    payload: HeartbeatRequest,
+    agent: models.LocalAgent = AGENT_DEPENDENCY,
+    session: Session = SESSION_DEPENDENCY,
+) -> HeartbeatPayload:
     scope(agent, "agent:heartbeat")
     agent.last_seen, agent.status = datetime.now(UTC), payload.model_dump()
     session.commit()
@@ -284,9 +352,9 @@ def heartbeat(
 @router.post("/agent/v1/files")
 async def agent_upload(
     file: UploadFile = UPLOAD_DEPENDENCY,
-    agent=AGENT_DEPENDENCY,
+    agent: models.LocalAgent = AGENT_DEPENDENCY,
     session: Session = SESSION_DEPENDENCY,
-):
+) -> FilePayload:
     scope(agent, "files:upload")
     data = await file.read(25_000_001)
     return checked(
@@ -336,9 +404,13 @@ def agent_files(
 
 
 @router.post("/agent/v1/files/{file_id}/archived")
-def archived(file_id: str, agent=AGENT_DEPENDENCY, session: Session = SESSION_DEPENDENCY):
+def archived(
+    file_id: str,
+    agent: models.LocalAgent = AGENT_DEPENDENCY,
+    session: Session = SESSION_DEPENDENCY,
+) -> StatusPayload:
     scope(agent, "files:status")
-    row = DataDropService(session).get(file_id)
+    row = checked(lambda: DataDropService(session).get(file_id), session)
     if row.agent_id != agent.id:
         raise HTTPException(403, "File belongs to another agent")
     if row.state != "ARCHIVED":
