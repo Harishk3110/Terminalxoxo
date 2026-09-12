@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
+from .equity_contracts import finite_object
 from .ledger_storage import validate_storage
 from .portfolio_domain.money import money, stored_decimal
 from .portfolio_domain.transaction_cash import enrich_cash_effects
@@ -28,6 +29,18 @@ from .reconciliation_contracts import (
     PositionAmount,
     ReconciliationItem,
     ReconciliationResult,
+)
+from .trade_monitor_contracts import (
+    LEGACY_CONTEXT_FIELDS,
+    METADATA,
+    MONITOR_ROW,
+    REVIEW_RECEIPT,
+    TRADE_RISK,
+    TRANSACTIONS,
+    TradeMonitorRow,
+    TradeReviewReceipt,
+    position_weight,
+    sector_weight,
 )
 from .transaction_context import record_context
 from .transaction_views import transaction_views
@@ -342,12 +355,14 @@ class PortfolioLedgerService:
 
 
 class TradeMonitorService:
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def list(self, portfolio_key=None):
+    def list(self, portfolio_key: str | None = None) -> list[TradeMonitorRow]:
         portfolio, _ = PortfolioValuationService(self.session).portfolio(portfolio_key)
-        transactions = transaction_views(self.session, portfolio.id)
+        transactions = TRANSACTIONS.validate_python(
+            transaction_views(self.session, portfolio.id), strict=True
+        )
         txns = {t["id"]: t for t in transactions}
         risks = {
             r.trade_id: r
@@ -363,67 +378,64 @@ class TradeMonitorService:
             .order_by(models.TradeEvent.created_at.desc())
             .limit(500)
         ).all()
-        result = []
+        result: list[TradeMonitorRow] = []
         instruments = {r.symbol: r for r in self.session.scalars(select(models.Instrument)).all()}
         marks = MarketPriceResolver(self.session, [r.id for r in instruments.values()])
         now = datetime.now(UTC)
         for row in rows:
             risk = risks.get(row.id)
-            txn = txns.get(row.transaction_id, {})
-            symbol = txn.get("symbol") or row.payload.get("symbol")
-            mark = marks.resolve(instruments[symbol].id, now) if symbol in instruments else None
-            sector = instruments[symbol].sector if symbol in instruments else None
-
-            def exposure(snapshot, key, value):
-                if not snapshot or snapshot.get("nav") is None:
-                    return None
-                items = (
-                    snapshot.get("positions", [])
-                    if key == "symbol"
-                    else snapshot.get("exposures", {}).get("sector", [])
-                )
-                return next(
-                    (
-                        r.get("weight")
-                        for r in items
-                        if r.get(key if key == "symbol" else "name") == value
-                    ),
-                    0,
-                )
-
-            result.append(
+            txn = txns.get(row.transaction_id)
+            if txn is None:
+                raise ValueError("Recorded trade has no effective transaction in its portfolio")
+            metadata = finite_object(METADATA.validate_python(row.payload, strict=True))
+            protected = TradeMonitorRow.__required_keys__ | txn.keys()
+            if metadata.keys() & (protected - LEGACY_CONTEXT_FIELDS):
+                raise ValueError("Recorded trade metadata conflicts with authoritative evidence")
+            source_transaction = finite_object(txn)
+            for key in metadata.keys() & txn.keys() & LEGACY_CONTEXT_FIELDS:
+                metadata[key] = source_transaction[key]
+            symbol = txn.get("symbol")
+            instrument = instruments.get(symbol) if symbol is not None else None
+            mark = marks.resolve(instrument.id, now) if instrument else None
+            sector = instrument.sector if instrument else None
+            before = TRADE_RISK.validate_python(risk.before, strict=True) if risk else None
+            after = TRADE_RISK.validate_python(risk.after, strict=True) if risk else None
+            record = MONITOR_ROW.validate_python(
                 {
                     **txn,
                     "id": row.id,
                     "transaction_id": row.transaction_id,
                     "detected_at": row.created_at.isoformat(),
                     "review_state": row.review_state,
-                    "pre_beta": risk.before.get("beta") if risk else None,
-                    "post_beta": risk.after.get("beta") if risk else None,
-                    "weight_before": exposure(risk.before, "symbol", symbol) if risk else None,
-                    "weight_after": exposure(risk.after, "symbol", symbol) if risk else None,
-                    "sector_weight_before": exposure(risk.before, "sector", sector)
-                    if risk and sector
-                    else None,
-                    "sector_weight_after": exposure(risk.after, "sector", sector)
-                    if risk and sector
-                    else None,
-                    "risk_as_of": risk.after.get("as_of") if risk else None,
+                    "pre_beta": before.get("beta") if before else None,
+                    "post_beta": after.get("beta") if after else None,
+                    "weight_before": position_weight(before, symbol),
+                    "weight_after": position_weight(after, symbol),
+                    "sector_weight_before": sector_weight(before, sector),
+                    "sector_weight_after": sector_weight(after, sector),
+                    "risk_as_of": after.get("as_of") if after else None,
                     "current_price": str(mark.value) if mark else None,
-                    "current_price_provenance": marks.describe(instruments[symbol].id, now)
-                    if symbol in instruments
+                    "current_price_provenance": marks.describe(instrument.id, now)
+                    if instrument
                     else None,
                     "breaches": risk.breaches if risk else [],
-                    **row.payload,
-                }
+                    **metadata,
+                },
+                strict=True,
             )
+            result.append(record)
         return result
 
-    def review(self, trade_id, state, note, actor=None):
+    def review(
+        self, trade_id: str, state: str, note: str, actor: str | None = None
+    ) -> TradeReviewReceipt:
         row = self.session.get(models.TradeEvent, trade_id)
         if row is None:
             raise ValueError("Trade not found")
-        if state not in {"REQUIRES_REVIEW", "REVIEWED", "FLAGGED"} or not str(note).strip():
+        receipt = REVIEW_RECEIPT.validate_python(
+            {"id": trade_id, "state": state, "note": note}, strict=True
+        )
+        if not receipt["note"].strip():
             raise ValueError("A valid review state and note are required")
         row.review_state = state
         review = models.TradeReview(trade_id=trade_id, actor_user_id=actor, state=state, note=note)
@@ -437,7 +449,7 @@ class TradeMonitorService:
             actor,
         )
         self.session.commit()
-        return {"id": trade_id, "state": state, "note": note}
+        return receipt
 
 
 class PortfolioReconciliationService:

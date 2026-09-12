@@ -6,7 +6,7 @@ from datetime import UTC, date
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue, TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -25,6 +25,7 @@ from .portfolio_seed import reset_main_demo
 from .portfolio_valuation import PortfolioValuationService, jsonable
 from .price_sources import PRIORITY
 from .reconciliation_contracts import ReconciliationResult
+from .trade_monitor_contracts import TradeMonitorResult, TradeReviewReceipt
 from .transaction_context import TransactionContext
 
 # Named defaults preserve direct-call signatures as well as FastAPI injection.
@@ -131,15 +132,23 @@ def add_transaction(
         ) from exc
 
 
-@router.get("/trades")
-def trades(portfolio: str = "KNK_MAIN", session: Session = SESSION_DEPENDENCY):
-    return {"items": TradeMonitorService(session).list(portfolio)}
+@router.get("/trades", response_model=None, responses={200: {"model": TradeMonitorResult}})
+def trades(
+    portfolio: str = "KNK_MAIN", session: Session = SESSION_DEPENDENCY
+) -> TradeMonitorResult:
+    try:
+        return {"items": TradeMonitorService(session).list(portfolio)}
+    except ValueError:
+        session.rollback()
+        raise HTTPException(422, "Recorded trade-monitor inputs are invalid") from None
 
 
-@router.post("/trades/{trade_id}/review")
+@router.post(
+    "/trades/{trade_id}/review", response_model=None, responses={200: {"model": TradeReviewReceipt}}
+)
 def review(
     trade_id: str, payload: ReviewRequest, request: Request, session: Session = SESSION_DEPENDENCY
-):
+) -> TradeReviewReceipt:
     try:
         return TradeMonitorService(session).review(
             trade_id, payload.state, payload.note, identity(request, session)
@@ -290,38 +299,43 @@ def balance(
 
 
 @router.get("/export")
-def export_portfolio(portfolio: str = "KNK_MAIN", session: Session = SESSION_DEPENDENCY):
+def export_portfolio(
+    portfolio: str = "KNK_MAIN", session: Session = SESSION_DEPENDENCY
+) -> StreamingResponse:
     from openpyxl import Workbook
 
     from .broker_api import account_view
 
     data = account_view(session, PortfolioValuationService(session).latest(portfolio))
     book = Workbook()
-    book.remove(book.active)
-    datasets = {
-        "Summary": [data["portfolio"]],
-        "Positions": data["positions"],
-        "Cash": data["cash"],
-        "Transactions": data["transactions"],
-        "NAV History": data["curve"],
-        "Performance": [data["performance"]],
-        "Risk": [data["risk"]],
-        "Attribution": data["attribution"],
-        "Limits": data["breaches"],
-        "Trade Monitor": TradeMonitorService(session).list(portfolio),
-        "Reconciliation": [data["reconciliation"]],
-        "Metadata": [
-            {
-                "source": data["source"],
-                "as_of": data["as_of"],
-                "calculated_at": data["calculated_at"],
-                "version": data["calculation_version"],
-                "method": data["methodology"],
-                "quality": data["quality"],
-                "warnings": data["warnings"],
-            }
-        ],
-    }
+    book.remove(book.worksheets[0])
+    datasets = TypeAdapter(dict[str, list[dict[str, JsonValue]]]).validate_python(
+        {
+            "Summary": [data["portfolio"]],
+            "Positions": data["positions"],
+            "Cash": data["cash"],
+            "Transactions": data["transactions"],
+            "NAV History": data["curve"],
+            "Performance": [data["performance"]],
+            "Risk": [data["risk"]],
+            "Attribution": data["attribution"],
+            "Limits": data["breaches"],
+            "Trade Monitor": TradeMonitorService(session).list(portfolio),
+            "Reconciliation": [data["reconciliation"]],
+            "Metadata": [
+                {
+                    "source": data["source"],
+                    "as_of": data["as_of"],
+                    "calculated_at": data["calculated_at"],
+                    "version": data["calculation_version"],
+                    "method": data["methodology"],
+                    "quality": data["quality"],
+                    "warnings": data["warnings"],
+                }
+            ],
+        },
+        strict=True,
+    )
     for name, rows in datasets.items():
         sheet = book.create_sheet(name)
         keys = list(dict.fromkeys(k for row in rows for k in row))

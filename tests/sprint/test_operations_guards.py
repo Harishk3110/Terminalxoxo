@@ -102,6 +102,7 @@ def test_manual_buy_flows_through_cash_nav_performance_risk_trade_monitor_and_au
     assert after["accounting"]["reconciliation"]["state"] == "BALANCED"
     trade = TradeMonitorService(ledger_session).list("book")[0]
     assert trade["transaction_id"] == response.json()["id"]
+    assert trade["weight_before"] is not None and trade["weight_after"] is not None
     assert Decimal(trade["weight_before"]) == 0 and Decimal(trade["weight_after"]) > 0
     assert trade["review_state"] == "REQUIRES_REVIEW"
     audit = ledger_session.scalar(

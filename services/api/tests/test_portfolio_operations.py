@@ -139,6 +139,8 @@ def test_manual_trade_review_and_duplicate(accounting_session: Session) -> None:
     trades = TradeMonitorService(accounting_session).list()
     trade = next(r for r in trades if r["id"] == result["trade_event_id"])
     assert trade["review_state"] == "REQUIRES_REVIEW"
+    assert trade["weight_after"] is not None and trade["weight_before"] is not None
+    assert trade["sector_weight_after"] is not None and trade["sector_weight_before"] is not None
     assert float(trade["weight_after"]) > float(trade["weight_before"])
     assert float(trade["sector_weight_after"]) > float(trade["sector_weight_before"])
     assert trade["risk_as_of"]

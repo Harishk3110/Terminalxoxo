@@ -9,6 +9,7 @@ Classifications describe evidence, not promises of live connectivity.
 | Private terminal / Docker | DEMO_FUNCTIONAL | Current full release and hosted auth smoke |
 | Portfolio / ledger / NAV | DEMO_FUNCTIONAL | Full required accounting and attribution matrix |
 | Broker reconciliation boundary | VERIFIED_LOCAL | Missing NAV, malformed saved inputs, source preservation, API and unconnected browser states verified; live broker remains unverified |
+| Trade-monitor evidence boundary | VERIFIED_LOCAL | Typed recorded inputs, authoritative ledger/review fields, 186 affected tests and desktop/mobile review persistence pass; live data unverified |
 | Performance / Alpha / Beta | PARTIAL | Complete aligned-history and missing-range evidence |
 | Risk / stress / hedge / rebalance | PARTIAL | Complete nonlinear, cost and review workflow acceptance |
 | Equity FIN / DCF / WACC / COMP / theses | DEMO_FUNCTIONAL | Preserve passing source/version workflows |
@@ -25,7 +26,7 @@ Classifications describe evidence, not promises of live connectivity.
 | Authentication | PARTIAL | Complete trusted-device, provisioning and race acceptance |
 | Monitoring | PARTIAL | Ten dashboards and all required observed metrics |
 | PostgreSQL / object backup | DEMO_FUNCTIONAL | Latest final gate plus operator-managed offsite policy |
-| Static quality | PARTIAL | Ruff passes; 614 canonical strict diagnostics remain (615 strings in run 54) |
+| Static quality | PARTIAL | Ruff passes; 590 raw/canonical strict diagnostics remain (run 56) |
 | Release command | PARTIAL | Required 29 stages implemented and 55 runner tests pass; complete execution pending |
 | Tomorrow onboarding/deployment wrappers | MISSING | Required scripts and exact validated runbooks |
 | Hosted deployment | MISSING | Code gates and authorised cloud execution remain |

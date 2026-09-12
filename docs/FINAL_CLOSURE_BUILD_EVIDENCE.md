@@ -219,3 +219,55 @@ Keep-Alive timeout=70. Workspace/container SHA256 matches:
 - portfolio_operations.py: 6a51cda301f219ee79aaeef76a71c2606b484aff45d9daf42466ace799adb163.
 - reconciliation_contracts.py: 2e7a19ee96bbedc1a56ae602a75432b463289e117a471d75226219575a0673fc.
 Frontend remains 9a85cbe. No hosted URL, real broker or live-provider claim.
+
+## Trade-Monitor Evidence Boundary
+
+Typed recorded transactions, risk snapshots, breaches, event metadata and output
+rows preserve observed scalar kinds and source extension order. Missing NAV stays
+missing; an observed zero/negative value is not replaced. Metadata cannot override
+review state, current marks/provenance, risk results or ledger financial fields.
+Legacy duplicated context fields use the effective ledger, including its symbol.
+Events require a matching effective transaction in their own portfolio. Invalid
+recorded inputs on GET /trades return a generic 422 without input values.
+Review receipts and both route schemas are typed. The tabular workbook boundary
+validates its dynamic sheet rows without changing headers, cells or formula safety.
+
+Receipts under logs/, Python commands use .venv-rc:
+
+| Receipt | Result |
+| --- | --- |
+| final-trade-monitor-negative-01.log | old service: 23 failed, four passed, one warning, 5.79s, native 1 |
+| final-trade-monitor-positive-01.log/xml | 46 passed, three warnings, 15.96s, native 0 |
+| final-trade-monitor-context-negative-01.log | five failed, 27 deselected, one warning, 3.40s, native 1; legacy context still overrode ledger and missing linked transaction was accepted |
+| final-trade-monitor-positive-02.log/xml | 122 passed, three warnings, 24.40s, native 0 |
+| final-trade-monitor-positive-03.log/xml | 186 passed, three warnings, 43.51s, native 0; includes auth, manual-only and report-source contracts |
+| final-trade-monitor-focused-types-01.log | native 1: two missing adapter generic annotations; corrected |
+| final-trade-monitor-focused-types-02.log | two strict files pass, native 0 |
+| final-trade-monitor-operations-types-01/02/03.log | native 1 each: 19, 25, 15 errors respectively; draft workbook inference fixed with validated dynamic sheet rows; remaining 15 pre-existing ledger/API errors |
+| final-trade-monitor-parity-01.log | native 0: three full fictional trade rows exactly match 7703110, including scalar kinds, values and JSON order |
+| final-trade-monitor-ruff-01.log / format-01.log | native 0 each; 340 formatted files |
+| final-trade-monitor-openapi-01.log | native 0, 170 paths; trade list/review responses documented |
+| final-trade-monitor-browser-types-01/02/03.log | native 0 each, strict standalone TypeScript |
+| final-trade-monitor-secrets-01.log / no-execution-01.log | native 0 each; 673 text files, zero secret findings and no broker actions |
+
+Whole strict run 55: native 1, 597 distinct strings including new nullable-test
+and workbook-inference diagnostics. These were corrected, not suppressed. Run 56:
+native 1, 590 raw/canonical diagnostics, 65 files, 319 sources, nine distributions.
+API: 292 errors / 13 files / 124 sources. Observed 2026-09-12T14:15:35.875679+00:00.
+Net reduction 24 from run 54's 614 canonical errors; no new semantic errors.
+
+Browser 01: native 1, two existing operating workflows passed; new test failed
+because it filtered on a reference not exposed as a table column. JSON: two
+expected, one unexpected, zero skipped/flaky/global errors; 116.409871s,
+start 2026-09-12T14:15:48.946Z. All 12 operating screenshots and the failure
+screenshot reviewed. Browser 02: native 1, one failed, 143.021239s, start
+2026-09-12T14:18:45.978Z. The exact-label selector did not match the existing
+wrapped select; screenshot confirms the trade and review form rendered. Fixed
+the selector to the existing non-exact label pattern, not the application.
+Browser 03: native 0, one passed, 36.754111s, start 2026-09-12T14:22:02.439Z.
+Zero skipped/flaky/retried/global errors. Both 1440/390 review screenshots
+inspected: saved FLAGGED state, unchanged price and ledger references. All three
+API logs have zero traceback/500/lock error matches. Thirty-two new backend cases.
+These are focused workflow checks; the entire browser release has not been rerun.
+No frontend application or design changes. In-app connection attempt failed;
+the repository's existing isolated Chromium runner supplied these receipts.
