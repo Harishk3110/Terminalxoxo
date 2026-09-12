@@ -115,6 +115,48 @@ test("approved fundamental import reaches FIN with immutable metric lineage", as
       exact: true,
     });
     if (await hide.isVisible()) await hide.click();
+    const chart = page.getByLabel("Financial history chart");
+    await chart.scrollIntoViewIfNeeded();
+    const canvas = chart.locator("canvas");
+    await expect(canvas).toBeVisible();
+    await expect
+      .poll(async () =>
+        canvas.evaluate((node) => {
+          if (!(node instanceof HTMLCanvasElement))
+            throw new Error("Financial plot must render an HTML canvas");
+          const context = node.getContext("2d");
+          if (!context)
+            throw new Error("Financial plot requires a canvas context");
+          const pixels = context.getImageData(
+            0,
+            0,
+            node.width,
+            node.height,
+          ).data;
+          const scale = node.width / node.getBoundingClientRect().width;
+          let amber = 0;
+          let cyan = 0;
+          // Exclude the legend, axes and toolbox; inspect only the actual plot.
+          for (
+            let y = Math.ceil(20 * scale);
+            y < node.height - 24 * scale;
+            y++
+          ) {
+            for (
+              let x = Math.ceil(56 * scale);
+              x < node.width - 16 * scale;
+              x++
+            ) {
+              const i = (y * node.width + x) * 4;
+              const [r, g, b] = [pixels[i], pixels[i + 1], pixels[i + 2]];
+              if (r > 180 && g > 75 && g < 210 && b < 90) amber++;
+              if (r < 90 && g > 100 && b > 130) cyan++;
+            }
+          }
+          return { revenueVisible: amber > 5, ebitVisible: cyan > 5 };
+        }),
+      )
+      .toEqual({ revenueVisible: true, ebitVisible: true });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);

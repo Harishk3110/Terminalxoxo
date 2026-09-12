@@ -64,7 +64,7 @@ class ManifestEvidence(BaseModel):
     branch: str = Field(min_length=1)
     state: Literal["INCOMPLETE"]
     # The last gate is actively writing this evidence, not already passed.
-    gates: list[dict[str, object]] = Field(min_length=27, max_length=27)
+    gates: list[dict[str, object]] = Field(min_length=29, max_length=29)
 
 
 def local_configuration(env_file: Path) -> None:
@@ -153,15 +153,15 @@ def evidence(output: Path, env_file: Path, pg_container: str) -> None:
 
     payload = ManifestEvidence.model_validate_json((output / "manifest.json").read_bytes())
     expected = release_gates(output, env_file, pg_container)
-    rows = [GateEvidence.model_validate_json(json.dumps(row)) for row in payload.gates[:26]]
+    rows = [GateEvidence.model_validate_json(json.dumps(row)) for row in payload.gates[:-1]]
     pending = payload.gates[-1]
     if (pending.get("number"), pending.get("name"), pending.get("state")) != (
-        27,
+        len(expected),
         expected[-1].name,
         "RUNNING",
     ):
         raise ValueError("Evidence gate is not running")
-    for index, (row, gate) in enumerate(zip(rows, expected[:26], strict=True), 1):
+    for index, (row, gate) in enumerate(zip(rows, expected[:-1], strict=True), 1):
         if (row.number, row.name, len(row.commands)) != (index, gate.name, len(gate.commands)):
             raise ValueError("Gate does not match the release contract")
         if row.logs != [command.log for command in row.commands]:

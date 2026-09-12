@@ -6,30 +6,30 @@ Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git. Pushed.
 Earlier overnight starting commit and all historical receipts remain in OVERNIGHT_RC_*.
 
 Milestone: final quality and remaining feature closure, not release certification.
-First unchecked visible defect: one-period FIN chart has no visible data point.
+One-period FIN chart defect is corrected with negative/positive browser evidence.
 First blocking static gate: 635 distinct mypy diagnostics across 65 files.
-Release runner currently has 27 gates; the latest directive requires 29 ordered gates.
+Release runner now has the required 29 ordered gates; complete execution is pending.
 
 ## Baseline
 
-- Backend: 1,947 passed, zero failed/errored/skipped, 123 warnings, 485.02s on
-  3156aec. Coverage: 89.7145854% (11,976/13,349). Full backend 35 on 41baacb
-  is running with isolated data and frozen Python source; its result is pending.
+- Backend 35: 1,983 passed, zero failed/errored/skipped, 123 warnings, 515.06s,
+  native 0 on frozen 41baacb Python application/tests. Coverage: 89.7590811%
+  (12,034/13,407). Later release-runner changes have separate focused evidence.
 - Latest affected backend: 300 passed, three warnings, 44.76s on 41baacb changes.
 - Ruff: zero errors, native 0. Formatting: 336 files checked, native 0.
-- mypy: whole run 51 native 1, 635 diagnostics / 65 files / 315 source files /
+- mypy: whole run 52 native 1, 635 diagnostics / 65 files / 315 source files /
   nine distributions. API: 323 / 13 files / 122 sources. No new diagnostics.
 - OpenAPI: 170 paths, native 0.
-- Frontend: last full terminal units 333 passed / 26 files; shared five passed
-  at their preceding checkpoint. Fresh final-closure invocations are pending.
-- TypeScript/lint/Node 22 production build: preceding frontend checkpoint passed;
-  final-closure rerun pending. New import browser test strict TypeScript passes.
+- Frontend: 337 passed / 27 files, native 0, 16.58s. Shared: five passed / two
+  files, native 0, 2.47s. These counts are actual tests, not placeholder scripts.
+- Terminal TypeScript, frontend lint, strict import-test TypeScript and Node 22
+  production build: native 0 at the chart correction checkpoint.
 - Full browser: latest complete run 15 passed 52 without retries. The newly
   added import workflow increases the inventory; full current rerun pending.
-- Focused browser 10: three passed, zero failures/skips/retries/errors, 66.670761s.
-- Visual: six browser-10 screenshots inspected. Imported values and layout are
-  correct, but the one-period FIN plot is empty because symbols are disabled.
-  This is a documented remaining defect, not a visual pass.
+- Focused final-fiscal-positive-01: three passed, zero failures/skips/retries/
+  errors, 65.647701s, native 0. Isolated imported financial points have real
+  amber/cyan pixels in the plot at 1440/390px. Six screenshots inspected; DCF
+  connected lines, thesis and security-chart workflows are preserved.
 - Secret scan: 658 text files, zero findings before 41baacb push; re-scan required
   before the next push. Broker-action scan passes; manual execution only.
 
@@ -50,13 +50,21 @@ Corporate actions, PIT factors, attribution, walk-forward, segments/ROIC/histori
 multiples, provider adapter completeness and the full dashboard set remain open.
 
 The chart unit regression exposed two failures on the old renderer; all four
-focused cases pass with the pending isolated-point correction. The browser pixel
-regression is written but still must run against old and corrected builds.
-Python source remains frozen for backend 35; frontend-only edits do not change
-that tested backend revision.
+focused cases pass after the correction. The browser negative control reported
+one failure: both actual plot series absent. Its JSON receipt is retained; the
+native process exit was not recovered across context transition, so no native
+exit is claimed for that invocation. Corrected browser native exit is confirmed.
 
-Next command: collect native exit and XML/coverage for logs/overnight-backend-35;
-run the new import chart pixel test against the existing build as a negative
-control, then build the frontend and rerun it with the isolated-point correction.
+Runner tests: 55 passed, one warning, 12.31s, native 0. Three focused strict files
+pass. The ordered-gate negative control failed four tests before correction.
+Whole Ruff/format pass (336 files). Separate migration upgrade and roundtrip
+invocations passed 17 and two tests, respectively; native 0 each. Fresh whole
+strict run 52 confirms no added diagnostics (2026-09-12T13:32:09.889259+00:00).
+Shared/frontend stages now require nonempty clean JUnit receipts. Backup, source
+fingerprint, timeout, command hash, coverage and no-retry safeguards are retained.
+
+Next: collect migration and whole-type native exits, commit/push verified work,
+deploy the corrected terminal image without resetting data, then continue strict
+backend closure. Full 29-stage certification and remaining domain work are open.
 
 No final release pass is claimed until all 29 required critical gates pass.

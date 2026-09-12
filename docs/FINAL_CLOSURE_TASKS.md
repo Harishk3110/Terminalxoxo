@@ -6,10 +6,10 @@ Unchecked below means not certified against this directive, not necessarily miss
 
 ## Immediate Queue
 
-- [ ] Correct the documented single-period FIN chart invisibility with negative and positive browser evidence.
-- [ ] Bring the existing release runner from 27 to the required 29 ordered gates, preserving fail-fast and isolation checks.
+- [x] Correct the documented single-period FIN chart invisibility with negative and positive browser evidence.
+- [x] Bring the existing release runner from 27 to the required 29 ordered gates, preserving fail-fast and isolation checks.
 - [ ] Eliminate remaining 635 first-party strict diagnostics without weakening contracts.
-- [ ] Complete the full current baseline and all final gates; backend 35 is currently running.
+- [ ] Complete the full current baseline and all final gates; backend 35 passed 1,983 tests, but complete 29-stage execution is pending.
 
 
 ## 6. REPORT ENGINE - FIRST RELEASE BLOCKER
@@ -992,4 +992,3 @@ Unchecked below means not certified against this directive, not necessarily miss
 Detailed constraints, formulas and acceptance semantics remain in the user directive.
 Existing verified component evidence: OVERNIGHT_RC_BUILD_EVIDENCE.md and FINAL_CLOSURE_BUILD_EVIDENCE.md.
 No checked domain completion is inferred from historical test totals alone.
-

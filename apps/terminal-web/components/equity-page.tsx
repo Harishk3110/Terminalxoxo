@@ -181,7 +181,7 @@ const defaults = () => [
 ];
 type Assumption = ReturnType<typeof defaults>[number];
 const rate = (value: string) => String(Number(value) / 100);
-function FiscalChart({
+export function FiscalChart({
   rows,
   keys,
   label,
@@ -196,12 +196,25 @@ function FiscalChart({
       option={{
         legend: { top: 0 },
         xAxis: { type: "category", data: rows.map((r) => String(r.year)) },
-        series: keys.map((key) => ({
-          type: "line",
-          name: labels(key),
-          data: rows.map((r) => (r[key] == null ? null : Number(r[key]))),
-          symbol: "none",
-        })),
+        series: keys.map((key) => {
+          const data = rows.map((r) => (r[key] == null ? null : Number(r[key])));
+          const isolated = data.some(
+            (value, index) =>
+              value != null &&
+              Number.isFinite(value) &&
+              data[index - 1] == null &&
+              data[index + 1] == null,
+          );
+          return {
+            type: "line",
+            name: labels(key),
+            data,
+            symbol: isolated ? "circle" : "none",
+            symbolSize: 6,
+            showAllSymbol: true,
+            connectNulls: false,
+          };
+        }),
       }}
     />
   );

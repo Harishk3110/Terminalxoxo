@@ -39,18 +39,33 @@ def recorded_success(command: runner.Command, log: Path, environment: Mapping[st
 
 def test_release_contract_is_ordered_nonempty_and_non_destructive(tmp_path: Path) -> None:
     gates = runner.release_gates(tmp_path, tmp_path / "private.env", "test-postgres")
-    assert len(gates) == 27
+    assert len(gates) == 29
     assert all(gate.commands for gate in gates)
-    assert [gate.name for gate in gates][0:7] == [
+    assert [gate.name for gate in gates] == [
         "Environment validation",
         "Secret scan",
+        "No-execution scan",
         "Dependency installation check",
-        "Database migration check",
+        "Database migration upgrade",
+        "Database downgrade/upgrade test",
         "Backend formatting",
         "Ruff",
         "Strict first-party mypy",
-    ]
-    assert [gate.name for gate in gates][-5:] == [
+        "Backend unit tests",
+        "Backend integration tests",
+        "Coverage",
+        "Frontend lint",
+        "TypeScript",
+        "Frontend unit tests",
+        "Shared package tests",
+        "Frontend build",
+        "Docker build",
+        "Docker startup",
+        "Health checks",
+        "Report generation smoke",
+        "Full Playwright suite",
+        "Visual comparison",
+        "Security tests",
         "Backup",
         "Backup verification",
         "Isolated restore",
@@ -60,20 +75,69 @@ def test_release_contract_is_ordered_nonempty_and_non_destructive(tmp_path: Path
     argv = [part for gate in gates for command in gate.commands for part in command.argv]
     assert "--frozen-lockfile" in argv and "--retries=0" in argv
     assert not {"--reset", "--clean", "down", "--force", "--update-snapshots"} & set(argv)
-    assert gates[7].commands[0].test_environment
-    assert gates[8].commands[0].test_environment
+    by_name = {gate.name: gate for gate in gates}
+    assert by_name["Backend unit tests"].commands[0].test_environment
+    integration = by_name["Backend integration tests"].commands[0]
+    assert integration.test_environment
     assert (
         "tests/integration/test_postgres_lifecycle.py::test_postgres_analysis_transitions_preserve_the_committed_winner"
-        in gates[8].commands[0].argv
+        in integration.argv
     )
-    assert not gates[15].commands[0].test_environment
-    full, visual = gates[18].commands[0], gates[19].commands[0]
+    assert not by_name["Docker startup"].commands[0].test_environment
+    full = by_name["Full Playwright suite"].commands[0]
+    visual = by_name["Visual comparison"].commands[0]
     assert visual.environment["KNK_COMPARE_SCREENSHOTS"] == "1"
     assert (
         full.environment["PLAYWRIGHT_JSON_OUTPUT_FILE"]
         != visual.environment["PLAYWRIGHT_JSON_OUTPUT_FILE"]
     )
     assert full.environment["PLAYWRIGHT_OUTPUT_DIR"] != visual.environment["PLAYWRIGHT_OUTPUT_DIR"]
+
+
+def test_migration_stages_keep_upgrade_and_roundtrip_receipts_separate(tmp_path: Path) -> None:
+    gates = {
+        gate.name: gate for gate in runner.release_gates(tmp_path, tmp_path / "private.env", "pg")
+    }
+    upgrade = gates["Database migration upgrade"].commands[0]
+    roundtrip = gates["Database downgrade/upgrade test"].commands[0]
+    assert upgrade.test_environment and roundtrip.test_environment
+    assert "tests/sprint/test_ledger_migrations.py" in upgrade.argv
+    assert upgrade.argv[upgrade.argv.index("-k") + 1] == "not downgrade"
+    assert (
+        "tests/sprint/test_ledger_migrations.py::test_upgrade_downgrade_upgrade_preserves_existing_portfolio_rows"
+        in roundtrip.argv
+    )
+    assert (
+        "tests/integration/test_postgres_lifecycle.py::test_postgres_latest_downgrade_upgrade_retains_existing_book"
+        in roundtrip.argv
+    )
+    assert upgrade.result_file == tmp_path / "migration-upgrade.xml"
+    assert roundtrip.result_file == tmp_path / "migration-roundtrip.xml"
+    assert (
+        upgrade.argv[upgrade.argv.index("--basetemp") + 1]
+        != roundtrip.argv[roundtrip.argv.index("--basetemp") + 1]
+    )
+
+
+def test_frontend_and_shared_stages_execute_tests_with_distinct_nonempty_receipts(
+    tmp_path: Path,
+) -> None:
+    gates = {
+        gate.name: gate for gate in runner.release_gates(tmp_path, tmp_path / "private.env", "pg")
+    }
+    frontend = gates["Frontend unit tests"].commands[0]
+    shared = gates["Shared package tests"].commands[0]
+    for command in (frontend, shared):
+        assert "node@22" in command.argv
+        assert "--reporter=junit" in command.argv
+        assert not {"echo", "--passWithNoTests", "--if-present"} & set(command.argv)
+        assert command.result_file is not None
+        assert f"--outputFile={command.result_file}" in command.argv
+    assert frontend.cwd == runner.ROOT / "apps/terminal-web"
+    assert shared.cwd == runner.ROOT
+    assert "tests" in frontend.argv and "packages" in shared.argv
+    assert frontend.result_file == tmp_path / "frontend-unit.xml"
+    assert shared.result_file == tmp_path / "shared-unit.xml"
 
 
 def test_success_records_exact_commands_times_and_hashed_logs(tmp_path: Path) -> None:
@@ -275,7 +339,7 @@ def evidence_fixture(output: Path, env_file: Path) -> None:
 
     def execute(command: runner.Command, log: Path, environment: Mapping[str, str]) -> int:
         if "evidence" in command.argv:
-            # At this instant gate 27 is RUNNING and gates 1-26 have receipts.
+            # The final gate is RUNNING; all preceding gates have receipts.
             checks.evidence(output, env_file, "fixture")
             raise KeyboardInterrupt
         return recorded_success(command, log, environment)
@@ -356,6 +420,6 @@ def test_powershell_wrapper_lists_without_running_gates() -> None:
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
-    assert len(result.stdout.strip().splitlines()) == 27
+    assert len(result.stdout.strip().splitlines()) == 29
     assert result.stdout.startswith("01. Environment validation:")
-    assert "27. Build evidence:" in result.stdout
+    assert "29. Build evidence:" in result.stdout

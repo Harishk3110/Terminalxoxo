@@ -8,7 +8,7 @@ documents. Per-function closure must be reconciled with FINAL_CLOSURE_TASKS.md.
 | --- | --- | --- |
 | HOME / PORT / NAV / PNL / PERF | Internal ledger, saved valuations, private views, restart tests | Full accounting/attribution matrix |
 | ALPHA / BETA / RISK / STRESS / HEDGE | Typed source-aware calculations, persisted runs, focused browser passes | Complete history, decomposition, cost/review acceptance |
-| FIN / DCF / WACC / COMP / THESIS | Imported/demo receipts, exact parity, saved hashes, immutable versions, browser passes | Single-period FIN point display; preserve verified code |
+| FIN / DCF / WACC / COMP / THESIS | Imported/demo receipts, exact parity, saved hashes, immutable versions; isolated FIN point and DCF desktop/mobile browser passes | Full release certification; preserve verified code |
 | SEGMENTS / ROIC / HISTORICAL / FORWARD MULTIPLES | Explicit missing/unsupported labels | Implement required data models, PIT calculations and UI |
 | BACKTEST / FACTOR / EDGE / MODEL / MC / WALK | Persisted asynchronous research and tested core engines | Corporate actions, PIT fundamentals, attribution, general walk-forward |
 | OPTIONS / GREEKS / GAMMA / GEX / DEX / IV / PAYOFF | Typed demo/file chains and financial regressions | Full units/expiry/coverage/limits/provider contracts |

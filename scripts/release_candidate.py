@@ -279,23 +279,41 @@ def release_gates(output: Path, env_file: Path, pg_container: str) -> list[Gate]
     return [
         Gate("Environment validation", (check("environment"),)),
         Gate("Secret scan", (py("scripts/scan_release_secrets.py"),)),
+        Gate("No-execution scan", (Command(("node", "tests/security/no-execution-methods.mjs")),)),
         Gate(
             "Dependency installation check",
             (py("-m", "pip", "check"), Command((*pnpm, "install", "--frozen-lockfile"))),
         ),
         Gate(
-            "Database migration check",
+            "Database migration upgrade",
             (
                 py(
                     "-m",
                     "pytest",
                     "tests/sprint/test_ledger_migrations.py",
-                    "tests/integration/test_postgres_lifecycle.py::test_postgres_latest_downgrade_upgrade_retains_existing_book",
+                    "-k",
+                    "not downgrade",
                     "--basetemp",
-                    str(output / "migrations"),
+                    str(output / "migration-upgrade"),
                     "-q",
                     test=True,
-                    report="migrations.xml",
+                    report="migration-upgrade.xml",
+                ),
+            ),
+        ),
+        Gate(
+            "Database downgrade/upgrade test",
+            (
+                py(
+                    "-m",
+                    "pytest",
+                    "tests/sprint/test_ledger_migrations.py::test_upgrade_downgrade_upgrade_preserves_existing_portfolio_rows",
+                    "tests/integration/test_postgres_lifecycle.py::test_postgres_latest_downgrade_upgrade_retains_existing_book",
+                    "--basetemp",
+                    str(output / "migration-roundtrip"),
+                    "-q",
+                    test=True,
+                    report="migration-roundtrip.xml",
                 ),
             ),
         ),
@@ -342,7 +360,45 @@ def release_gates(output: Path, env_file: Path, pg_container: str) -> list[Gate]
         Gate("Coverage", (py("-m", "coverage", "report", "--fail-under=86.58", test=True),)),
         Gate("Frontend lint", (Command((*pnpm, "lint")),)),
         Gate("TypeScript", (Command((*pnpm, "typecheck")),)),
-        Gate("Frontend unit tests", (Command((*pnpm, "test-unit")),)),
+        Gate(
+            "Frontend unit tests",
+            (
+                Command(
+                    (
+                        *pnpm,
+                        "dlx",
+                        "node@22",
+                        str(ROOT / "node_modules/vitest/vitest.mjs"),
+                        "run",
+                        "tests",
+                        "--reporter=default",
+                        "--reporter=junit",
+                        f"--outputFile={output / 'frontend-unit.xml'}",
+                    ),
+                    cwd=ROOT / "apps/terminal-web",
+                    result_file=output / "frontend-unit.xml",
+                ),
+            ),
+        ),
+        Gate(
+            "Shared package tests",
+            (
+                Command(
+                    (
+                        *pnpm,
+                        "dlx",
+                        "node@22",
+                        str(ROOT / "node_modules/vitest/vitest.mjs"),
+                        "run",
+                        "packages",
+                        "--reporter=default",
+                        "--reporter=junit",
+                        f"--outputFile={output / 'shared-unit.xml'}",
+                    ),
+                    result_file=output / "shared-unit.xml",
+                ),
+            ),
+        ),
         Gate(
             "Frontend build",
             (
@@ -445,7 +501,6 @@ def release_gates(output: Path, env_file: Path, pg_container: str) -> list[Gate]
                 ),
             ),
         ),
-        Gate("No-execution scan", (Command(("node", "tests/security/no-execution-methods.mjs")),)),
         Gate("Backup", (check("backup"),)),
         Gate("Backup verification", (check("verify"),)),
         Gate("Isolated restore", (check("restore-test"),)),

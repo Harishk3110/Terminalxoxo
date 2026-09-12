@@ -11,7 +11,7 @@ Classifications describe evidence, not promises of live connectivity.
 | Performance / Alpha / Beta | PARTIAL | Complete aligned-history and missing-range evidence |
 | Risk / stress / hedge / rebalance | PARTIAL | Complete nonlinear, cost and review workflow acceptance |
 | Equity FIN / DCF / WACC / COMP / theses | DEMO_FUNCTIONAL | Preserve passing source/version workflows |
-| One-period FIN plot | BROKEN | Symbols disabled leave a valid single period invisible |
+| One-period FIN plot | VERIFIED_LOCAL | Old-build pixel regression failed; corrected 1440/390px plots and preserved DCF verified |
 | Segments / ROIC / historical multiples | MISSING | Typed records, methodology, PIT joins, UI and exports |
 | Forward multiples / equity feeds | PARTIAL | Estimate-aware calculations and honest unconnected states |
 | Quant / backtests / factors / Edge / Model | PARTIAL | Corporate actions, PIT, full attribution, general walk-forward |
@@ -25,7 +25,7 @@ Classifications describe evidence, not promises of live connectivity.
 | Monitoring | PARTIAL | Ten dashboards and all required observed metrics |
 | PostgreSQL / object backup | DEMO_FUNCTIONAL | Latest final gate plus operator-managed offsite policy |
 | Static quality | PARTIAL | Ruff passes; 635 strict diagnostics remain |
-| Release command | PARTIAL | Update gate order/count, then all critical stages green |
+| Release command | PARTIAL | Required 29 stages implemented and 55 runner tests pass; complete execution pending |
 | Tomorrow onboarding/deployment wrappers | MISSING | Required scripts and exact validated runbooks |
 | Hosted deployment | MISSING | Code gates and authorised cloud execution remain |
 
