@@ -4,6 +4,7 @@ Controlling directive: final release-closure attachment, received 2026-09-12 SGT
 Starting application commit: 41baacb58bc8a14cd7d6fa47079a9907f1e316a3.
 Chart/29-stage runner checkpoint: 9a85cbe, pushed. Reconciliation checkpoint:
 7703110, pushed and deployed to the existing local API/worker/report services.
+Trade-monitor checkpoint: a57bd47, pushed and deployed to those same services.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git. Pushed.
 Earlier overnight starting commit and all historical receipts remain in OVERNIGHT_RC_*.
 
@@ -39,10 +40,10 @@ Release runner now has the required 29 ordered gates; complete execution is pend
 ## Services And Boundaries
 
 Docker project knk-final-local remains running. API/data worker/quant worker/report
-engine: 7703110; frontend: 9a85cbe. Both deployment build/up --wait commands pass.
-Observe-only probe at 2026-09-12T13:57:14.332580+00:00: ten healthy services,
+engine: a57bd47; frontend: 9a85cbe. Both deployment build/up --wait commands pass.
+Observe-only probe at 2026-09-12T14:25:23.641270+00:00: ten healthy services,
 MinIO init SUCCEEDED, no actions. Main /overview HTTP 200 at private sign-in,
-timeout 70s. Source hashes match; all ten checked business-table hashes/counts
+timeout 70s. Source hashes match; all 13 checked business-table hashes/counts
 match before/after restart. No volumes or user records reset.
 
 Main local URL: http://127.0.0.1:3001/overview, private sign-in routing. This is not
@@ -98,7 +99,7 @@ passing, three warnings, 43.51s, native 0. Final browser 03 passes the desktop/
 mobile review workflow in 36.754111s, native 0, with no retries or API errors.
 The two existing operating workflows passed in browser 01; all 14 successful
 workflow screenshots reviewed. Thirty-two new backend cases cover the boundary.
-Deployment of this batch is pending; running API remains 7703110.
+Deployment a57bd47 is complete with unchanged business-table fingerprints.
 Next implementation target: remaining ledger/valuation strict contracts.
 Full 29-stage certification and domain work
 remain open, including segments/ROIC/PIT/multiples and provider completeness.

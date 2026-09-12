@@ -271,3 +271,24 @@ API logs have zero traceback/500/lock error matches. Thirty-two new backend case
 These are focused workflow checks; the entire browser release has not been rerun.
 No frontend application or design changes. In-app connection attempt failed;
 the repository's existing isolated Chromium runner supplied these receipts.
+
+## Trade-Monitor Deployment a57bd47
+
+Commit/push native 0; secret scan 02 native 0, 673 text files, zero findings.
+Docker build and up --no-deps --no-build --wait native 0 each, receipts
+logs/final-trade-monitor-docker-{build,up}-01.log. The first observe-only probe
+ran during startup and correctly returned native 1, with both workers STARTING
+and no actions. After up --wait completed, probe 02 returned native 0 at
+2026-09-12T14:25:23.641270+00:00: ten healthy services, MinIO init SUCCEEDED.
+Main /overview HTTP 200 at private sign-in, Keep-Alive timeout=70.
+
+Read-only pre/post fingerprints match exactly for all 13 checked business tables:
+the previous ten plus trade_events, trade_reviews and trade_risk_snapshots.
+Both snapshot commands and their comparison returned native 0. Receipts:
+logs/final-trade-monitor-persistence-{before,after}-01.json. No private rows or
+connection settings printed; no volumes or user records reset. Workspace/container
+SHA256 matches:
+- portfolio_operations.py: 3f8886d09f2b19c7a4f1e2c789e04bc66fa9a31c1dc740b87bbb3e3133cd0113.
+- trade_monitor_contracts.py: a2d5d30ab0053772204273212e50ecadf3f58d0653bcf6b5cffa860e94881182.
+- portfolio_api.py: 1d46c251ba357e024f096af9b516421554c17f00316cef3f4dbf747d2534a7f7.
+Frontend remains 9a85cbe. No hosted, live-provider or live-broker certification.
