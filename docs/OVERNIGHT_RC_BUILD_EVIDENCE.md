@@ -14,6 +14,87 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Equity Receipt Validation And Exact Preservation
+
+2026-09-12, application 3156aec, parent af267e6, main, pushed. Financial
+metadata/quote contracts reject malformed or non-finite evidence before ratios;
+the scalar helper rejects booleans/overflow without changing valid float bits.
+Missing/zero prices, valid source extensions and original report row order remain.
+All following tests used isolated synthetic data, .venv-rc and frozen source.
+
+- Numeric negative 01: 26 failed / 26 passed / 1 warning / 0.74s / native 1;
+  positive 01: 86 passed / 1 warning / 5.07s / native 0. Receipts:
+  logs/overnight-equity-numbers-{negative,positive}-01.log.
+- Receipt negative 01: 18 failed / 4 passed / 23 deselected / 1 warning /
+  4.49s / native 1. Spy assertions exposed invalid sources reaching calculation.
+  Receipt positive 01: 108 passed / 7.71s; positive 02: 243 passed / 38.67s,
+  native 0 each. Logs: overnight-equity-receipts-{negative,positive}-01.log
+  and overnight-equity-receipts-positive-02.log.
+- New legacy missing-high/low regression caught a KeyError from typed direct
+  indexing. Restoring get-based missing-field semantics gives history-positive-01:
+  46 passed / 1 warning / 7.46s / native 0. Negative evidence retained in
+  logs/overnight-equity-history-negative-01.log.
+- Positive 03 correctly FAILED: 1 failed / 99 passed / 1 warning / 8.64s /
+  native 1. FastAPI's inferred TypedDict serializer dropped allowed extra fields
+  with installed Pydantic 2.10.4. The FIN factory now explicitly validates the
+  complete output and disables that additional serializer, while retaining its
+  documented OpenAPI model. Permanent HTTP regressions check extensions,
+  required schema fields and three invalid-receipt 422 cases. Positive 04:
+  103 passed / 1 warning / 8.90s / native 0.
+- Expanded parity 02 and 03 FAILED because schema validation reordered quote
+  fields, changing report table rows. The wrapper invokes full schema validation
+  and reconstructs validated fields in original order, rejecting dropped/added
+  keys. It does not bypass validation. Parity 04 returns native 0: 216 financial
+  reports, six snapshots, 24 DCF calls, ten comparable calls, three WACC calls,
+  six full report snapshots, 250 ratio maps and 1,000 exact numeric bit checks
+  match af267e6. Expected unavailable/error cases compare error class/message;
+  successful saved calls include parameters, stored results and hashes.
+  Harness/receipt: logs/overnight-equity-receipts-parity.py and parity-04.log.
+- Final affected backend command: `.venv-rc/Scripts/python.exe -m pytest
+  tests/sprint/test_equity_financials.py tests/sprint/test_equity_api.py
+  tests/sprint/test_equity_valuation.py tests/sprint/test_dcf_workbook.py
+  tests/sprint/test_import_templates.py tests/sprint/test_report_source_contracts.py
+  tests/sprint/test_report_jobs.py tests/sprint/test_saved_analysis_contracts.py
+  tests/sprint/test_report_contracts.py tests/sprint/test_research_desk_contracts.py
+  tests/sprint/test_research_attachments.py services/api/tests/test_upload_report_pine.py
+  services/api/tests/test_portfolio_operations.py -q` with XML/log output.
+  Positive 05: 249 passed / 3 warnings / 49.64s / native 0. Evidence:
+  logs/overnight-equity-receipts-positive-05.log/xml.
+- Focused strict 05: six files pass, native 0 (three equity modules, report
+  sources, two equity tests). Earlier focused runs exposed test annotations and
+  adapter generic inference; both corrected without casts, ignores or Any.
+  Whole strict 49: 639 distinct errors / 67 files; the consumer assignment was
+  corrected using Mapping. Whole strict 50 remains FAIL, native 1: 638 distinct
+  diagnostics / 66 files / 314 sources / nine distributions, API 326 / 14 files
+  / 122 sources. Timestamp 2026-09-12T07:06:52.637124Z. Command:
+  `.venv-rc/Scripts/python.exe scripts/check_python_types.py`; logs and manifests
+  under logs/overnight-whole-types-50. This is not a release pass.
+- Browser 09: `corepack pnpm dlx node@22 node_modules/@playwright/test/cli.js
+  test tests/e2e/equity-research.spec.ts tests/e2e/reports.spec.ts`, with
+  PLAYWRIGHT_RUN_ID=overnight-equity-receipts-09, patched Python, isolated
+  auth/storage and all live providers disabled. Four passed / zero unexpected,
+  skipped, flaky, retries or errors / 98.934203s / native 0, starting
+  2026-09-12T07:08:01.791Z. Zero API error/traceback/500/lock matches. Six
+  screenshots reviewed: dcf-1440, dcf-390, thesis-390, security-m5, reports-1440
+  and reports-390. Receipt: logs/overnight-equity-receipts-browser-09-results.json.
+- Whole Ruff and format: native 0 each, 335 files formatted; OpenAPI: native 0,
+  170 paths, FIN required fields verified. Secret scan: 656 text files, zero
+  findings, native 0; broker-action scan and git diff --check native 0. Two
+  diagnostic shell invocations (browser JSON summary and OpenAPI) had quoting
+  errors; corrected read-only commands succeeded without source changes.
+
+Docker build and up --wait return native 0; receipts are
+logs/overnight-equity-docker-{build,up}.log. API source hashes match the workspace:
+equity_api d07583720f289c3e52001ce2ef971307deb56c6e60106c1fbb46797c28a8697e,
+equity_contracts 69e079f96d2504cc7402055a3acf1f26abb24dcae04182a17b312f10af9ce92b,
+equity_financials 1b7535cb6101e47faa7e63172fe49719732bd44ae5073ffd6652830934ff0f33,
+report_sources a4fec714ccd530b5b03d29dfcaa9b13a34be4840004ce22dbc04455d13b2eb94.
+Observe-only watchdog returns native 0 at 2026-09-12T07:15:57.485738Z: ten healthy
+services, MinIO init SUCCEEDED, zero actions. Receipt: overnight-equity-watchdog.log.
+Main /overview returns HTTP 200 at private sign-in with Keep-Alive 70s. No data
+reset. Full backend 34 is running on frozen 3156aec source and isolated test
+paths; backend 33 and integration 29 below predate the equity batch.
+
 ## Lazy SQLite Initialization Correction
 
 Full backend 33 completed on 2026-09-12: native exit 0, 1,886 passed, zero

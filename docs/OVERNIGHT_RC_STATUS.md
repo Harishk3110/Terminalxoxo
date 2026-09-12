@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current verified application HEAD: 71169ba, pushed.
-Docker API/workers/reports are 71169ba; frontend is 612da19.
+Current verified application HEAD: 3156aec, pushed.
+Docker API/workers/reports are 3156aec; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -32,14 +32,29 @@ Dated stress/hedge selection is implemented. Historical valuations no longer rew
 the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-rc/Scripts/python.exe scripts/check_python_types.py`.
 
-Current checkpoint: full backend 33 passes on lazy SQLite correction 71169ba.
-First unchecked task: remaining strict equity, valuation and service/API
-contracts. Real integration 29 passes on the patched runtime. Full backend 32's
-two seed-help failures are corrected and the complete backend rerun passes.
+Current checkpoint: equity receipt/scalar batch 3156aec passes 249 affected tests,
+six strict files and four browser workflows. Whole strict 50 remains red at 638
+distinct diagnostics / 66 files. First unchecked task: remaining curated-source,
+analytics and service/API contracts. Full backend 33 and real integration 29
+pass on the preceding 71169ba application; full backend 34 is running frozen.
 The 27-gate release remains open.
-Next command: add equity numeric/receipt regression cases, then run `.venv-rc/Scripts/python.exe -m pytest tests/sprint/test_equity_financials.py tests/sprint/test_equity_api.py -q` as a negative control before their guards.
+Next command: collect full backend 34's native exit and logs/overnight-backend-34.xml, then add focused curated-fundamental source regressions before changing that adapter. Do not edit source/tests during the frozen run.
 
 Current evidence:
+- 3156aec Docker build/up return native 0; all four equity/report source hashes
+  match the API container. Observe-only watchdog at 2026-09-12T07:15:57.485738Z
+  reports ten healthy services, MinIO init SUCCEEDED and no actions. Main
+  /overview returns HTTP 200 at private sign-in with Keep-Alive 70s. No data reset.
+- 3156aec: equity source/quote validation preserves valid extensions, missing
+  values, genuine zero, float bits and report row order. 249 affected tests pass
+  (49.64s), six strict files pass, 216 reports/six snapshots/24 DCF/ten COMP/three
+  WACC/six report snapshots/250 ratio maps/1,000 numeric bits match af267e6.
+  Browser 09 passes four workflows in 98.934203s with zero retries/errors/skips;
+  all six screenshots inspected, no API error/500/lock matches. Whole strict 50
+  remains red: 638 diagnostics / 66 files / 314 sources / nine distributions.
+  Ruff/format (335 files), OpenAPI (170 paths), secret scan (656 files, zero
+  findings), no-execution scan pass. New tests caught and corrected HTTP extra
+  field loss, report quote-row reordering and missing historical high/low access.
 - Integration 29: eleven passed / zero failures/errors/skips / 31 warnings /
   227.72s / native exit 0, frozen 71169ba application. Real Excel recalculation,
   PostgreSQL migrations/five transition races/API-worker restarts and private
