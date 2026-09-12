@@ -129,7 +129,7 @@ def test_base_currency_identity_has_no_fx_component() -> None:
         (D(1), D("NaN"), "FX"),
     ],
 )
-def test_invalid_marks_cannot_poison_valuation(price, fx, message) -> None:
+def test_invalid_marks_cannot_poison_valuation(price: D, fx: D, message: str) -> None:
     with pytest.raises(ValueError, match=message):
         PortfolioPositionService.measure(holding(), price, fx)
 
@@ -142,7 +142,7 @@ def test_invalid_marks_cannot_poison_valuation(price, fx, message) -> None:
         ({"quantity": D(0)}, "closed position"),
     ],
 )
-def test_invalid_position_balances_are_rejected(changes, message) -> None:
+def test_invalid_position_balances_are_rejected(changes: dict[str, D], message: str) -> None:
     with pytest.raises(ValueError, match=message):
         PortfolioPositionService.measure(replace(holding(), **changes), D(120), D(1))
 
@@ -156,13 +156,15 @@ def test_invalid_position_balances_are_rejected(changes, message) -> None:
     side=st.sampled_from([-1, 1]),
 )
 def test_unrealised_components_tie_exactly_for_both_sides_and_changing_fx(
-    quantity, old_price, new_price, old_fx, new_fx, side
+    quantity: int, old_price: int, new_price: int, old_fx: int, new_fx: int, side: int
 ) -> None:
     units = D(quantity * side)
     lot = Lot(
         quantity=units, cost_native=units * old_price, cost_base=units * old_price * D(old_fx) / 100
     )
     result = PortfolioPositionService.measure(lot, D(new_price), D(new_fx) / 100)
+    assert result.price_pnl_base is not None
+    assert result.fx_pnl_base is not None
     assert result.price_pnl_base + result.fx_pnl_base == result.unrealised_base
     assert result.unrealised_base == units * D(new_price) * D(new_fx) / 100 - lot.cost_base
 
@@ -197,7 +199,7 @@ def test_incomplete_sector_cannot_be_reported_as_a_partial_total() -> None:
 
 
 @pytest.mark.parametrize("nav", [None, D(0)])
-def test_zero_or_missing_nav_does_not_invent_zero_exposure_weights(nav) -> None:
+def test_zero_or_missing_nav_does_not_invent_zero_exposure_weights(nav: D | None) -> None:
     result = position_exposures([ExposurePosition("AAA", "Tech", D(100), D(1))], nav)
     assert result["AAA"] == {"nav_weight": None, "sector_weight": None, "beta_contribution": None}
 
@@ -208,6 +210,6 @@ def test_exposure_rejects_duplicate_positions_and_nonfinite_inputs() -> None:
         position_exposures([row, row], D(1000))
     with pytest.raises(ValueError, match="NAV"):
         position_exposures([row], D("NaN"))
-    for field in ("base_value", "beta"):
+    for invalid in (replace(row, base_value=D("NaN")), replace(row, beta=D("NaN"))):
         with pytest.raises(ValueError, match="marks and beta"):
-            position_exposures([replace(row, **{field: D("NaN")})], D(1000))
+            position_exposures([invalid], D(1000))

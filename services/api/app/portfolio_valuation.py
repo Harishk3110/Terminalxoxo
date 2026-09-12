@@ -38,6 +38,7 @@ from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .risk_contracts import disabled_limit_ids
 from .transaction_context import context_payload
 from .valuation_metrics import metric_summary
+from .valuation_records import ValuationCash, ValuationDay, ValuationPosition
 from .valuation_values import jsonable as jsonable
 from .valuation_values import number as number
 
@@ -350,23 +351,27 @@ class PortfolioValuationService:
                 models.PortfolioBalanceAdjustment.portfolio_id == portfolio.id
             )
         ).all()
-        days = {r.day for r in entries} | {r.settlement for r in entries} | {end}
-        days.update(row.effective_date for row in adjustments)
+        valuation_dates = {r.day for r in entries} | {r.settlement for r in entries} | {end}
+        valuation_dates.update(row.effective_date for row in adjustments)
         for values in prices.series.values():
-            days.update(r.timestamp.date() for r in values if start <= r.timestamp.date() <= end)
-        days = sorted(d for d in days if start <= d <= end)
+            valuation_dates.update(
+                r.timestamp.date() for r in values if start <= r.timestamp.date() <= end
+            )
+        days = sorted(d for d in valuation_dates if start <= d <= end)
         state = LedgerState(policy=AccountingPolicy.from_config(profile.configuration))
-        index, previous_nav, return_index, peak, previous_benchmark, benchmark_equity = (
-            0,
-            ZERO,
-            ONE,
-            ONE,
-            None,
-            ZERO,
-        )
+        index = 0
+        previous_nav: Decimal | None = ZERO
+        return_index: Decimal | None = ONE
+        peak = ONE
+        previous_benchmark: Decimal | None = None
+        benchmark_equity: Decimal | None = ZERO
         previous_accrued_fees = ZERO
-        curve, histories, last_positions, last_cash, warnings = [], defaultdict(dict), [], [], []
-        previous_position_values = {}
+        curve: list[ValuationDay] = []
+        histories: dict[str, dict[date, float]] = defaultdict(dict)
+        last_positions: list[ValuationPosition] = []
+        last_cash: list[ValuationCash] = []
+        warnings: list[str] = []
+        previous_position_values: dict[str, Decimal | None] = {}
         last_daily_contributions = {}
         for day in days:
             at = min(close_of_day(day), now) if day == now.date() else close_of_day(day)
@@ -383,7 +388,10 @@ class PortfolioValuationService:
                 index += 1
             state.advance(day)
             flows = state.external_flows - flow_before
-            position_values, position_rows, cash_rows, missing = {}, [], [], []
+            position_values: dict[str, Decimal] = {}
+            position_rows: list[ValuationPosition] = []
+            cash_rows: list[ValuationCash] = []
+            missing: list[str] = []
             total_cash = ZERO
             settled_cash_components = []
             settled_cash = available_cash = settlement_receivables = settlement_payables = ZERO
@@ -417,7 +425,7 @@ class PortfolioValuationService:
                     }
                 )
                 sources.append(provenance)
-                if value is None:
+                if value is None or rate is None:
                     missing.append(f"Missing FX {currency}/{portfolio.base_currency}")
                 else:
                     total_cash += value
@@ -442,19 +450,44 @@ class PortfolioValuationService:
                 else:
                     position_values[instrument_id] = value
                 sources.extend([provenance, fx_provenance])
+                amounts = measurement.payload()
                 position_rows.append(
                     {
                         "id": instrument_id,
                         "instrument_id": instrument_id,
                         "symbol": item.symbol,
                         "name": item.name,
-                        **measurement.payload(),
+                        "direction": amounts["direction"],
+                        "quantity": amounts["quantity"],
+                        "contract_multiplier": amounts["contract_multiplier"],
+                        "average_cost": amounts["average_cost"],
+                        "cost_basis_native": amounts["cost_basis_native"],
+                        "cost_basis_base": amounts["cost_basis_base"],
+                        "market_price": amounts["market_price"],
+                        "market_value_native": amounts["market_value_native"],
+                        "market_value_base_exact": amounts["market_value_base_exact"],
+                        "market_value": amounts["market_value"],
+                        "unrealised_pnl_native": amounts["unrealised_pnl_native"],
+                        "unrealised_pnl": amounts["unrealised_pnl"],
+                        "unrealised_price_pnl_base": amounts["unrealised_price_pnl_base"],
+                        "unrealised_fx_pnl_base": amounts["unrealised_fx_pnl_base"],
+                        "realised_pnl": amounts["realised_pnl"],
+                        "income": amounts["income"],
+                        "fees": amounts["fees"],
+                        "capitalized_charges": amounts["capitalized_charges"],
+                        "expensed_charges": amounts["expensed_charges"],
+                        "total_pnl": amounts["total_pnl"],
+                        "return": amounts["return"],
+                        "valuation_state": amounts["valuation_state"],
+                        "valuation_warnings": amounts["valuation_warnings"],
+                        "unrealised_decomposition_method": amounts[
+                            "unrealised_decomposition_method"
+                        ],
                         "currency": item.currency,
                         "sector": item.sector or "Unclassified",
                         "country": item.country,
                         "industry": item.industry or "Unclassified",
                         "asset_class": item.asset_class,
-                        "contract_multiplier": lot.multiplier,
                         "source": provenance["source"],
                         "quality": provenance["data_state"],
                         "as_of": provenance["as_of"],
@@ -466,8 +499,8 @@ class PortfolioValuationService:
                         "risk_contribution": None,
                     }
                 )
-            balances = defaultdict(Decimal)
-            native_balances = defaultdict(Decimal)
+            balances: dict[str, Decimal] = defaultdict(Decimal)
+            native_balances: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
             for adjustment in adjustments:
                 if adjustment.effective_date <= day:
                     native_balances[(adjustment.bucket, adjustment.currency)] += adjustment.amount
@@ -514,10 +547,10 @@ class PortfolioValuationService:
                 return_index = None
             dd = float(return_index / peak - 1) if peak and return_index is not None else None
             benchmark_price = prices.resolve(benchmark.id, at) if benchmark else None
-            benchmark_fx, _ = (
-                fx.resolve(benchmark.currency, portfolio.base_currency, at)
+            benchmark_fx = (
+                fx.resolve(benchmark.currency, portfolio.base_currency, at)[0]
                 if benchmark
-                else (None, {})
+                else None
             )
             benchmark_base = (
                 benchmark_price.value * benchmark_fx if benchmark_price and benchmark_fx else None
@@ -640,17 +673,22 @@ class PortfolioValuationService:
             nav,
         )
         for row in last_positions:
-            row.update(position_weights[row["instrument_id"]])
+            exposure_weights = position_weights[row["instrument_id"]]
+            row["nav_weight"] = exposure_weights["nav_weight"]
+            row["sector_weight"] = exposure_weights["sector_weight"]
+            row["beta_contribution"] = exposure_weights["beta_contribution"]
         marked_exposure = exposure_service(last_positions, last_cash, balance_exposure_rows, nav)
         exposure = marked_exposure.groups()
+        absolute_weights = []
+        for row in last_positions:
+            weight = row["weight"]
+            if weight is None:
+                raise ValueError("Calculated position weight is unavailable")
+            absolute_weights.append(abs(float(weight)))
         risk.update(
             {
-                "max_position_weight": max(
-                    (abs(float(p["weight"])) for p in last_positions), default=0
-                ),
-                "top_five_concentration": sum(
-                    sorted((abs(float(p["weight"])) for p in last_positions), reverse=True)[:5]
-                ),
+                "max_position_weight": max(absolute_weights, default=0),
+                "top_five_concentration": sum(sorted(absolute_weights, reverse=True)[:5]),
                 "max_sector_weight": number(
                     max((abs(r["weight"]) for r in exposure["sector"]), default=ZERO)
                 )
@@ -686,8 +724,8 @@ class PortfolioValuationService:
             for row in last_positions:
                 row["weight"] = None
             for rows in exposure.values():
-                for row in rows:
-                    row["weight"] = None
+                for exposure_row in rows:
+                    exposure_row["weight"] = None
         limits = self.session.execute(
             select(models.RiskLimit, models.RiskPolicy)
             .join(models.RiskPolicy, models.RiskPolicy.id == models.RiskLimit.policy_id)
@@ -757,7 +795,9 @@ class PortfolioValuationService:
             " / " + ", ".join(market_sources) if market_sources else ""
         )
         market_stamps = [
-            p["as_of"] for p in selected_sources if p.get("as_of") and p.get("source") != "IDENTITY"
+            stamp
+            for p in selected_sources
+            if (stamp := p["as_of"]) and p.get("source") != "IDENTITY"
         ]
         as_of = min(market_stamps) if market_stamps else now.isoformat()
         investment = sum((lot.realised for lot in state.lots.values()), ZERO) + sum(
@@ -913,12 +953,12 @@ class PortfolioValuationService:
         )
         monthly = []
         for month in sorted({p["date"][:7] for p in curve}):
-            values = [p["return"] for p in curve if p["date"][:7] == month]
+            monthly_returns = [p["return"] for p in curve if p["date"][:7] == month]
             monthly.append(
                 {
                     "month": month,
-                    "return": float(np.prod(1 + np.array(values)) - 1)
-                    if all(v is not None for v in values)
+                    "return": float(np.prod(1 + np.array(monthly_returns)) - 1)
+                    if all(v is not None for v in monthly_returns)
                     else None,
                 }
             )
@@ -944,17 +984,19 @@ class PortfolioValuationService:
         )
         posting_totals = summarize_postings(postings)
         enrich_cash_effects(transactions, entries, state.cash_service.movements)
-        posting_differences = {
-            name: money(posting_totals[name] - expected_value)
-            for name, expected_value in {
-                "external_flows": state.external_flows,
-                "income": state.income,
-                "fees_paid": state.fees,
-                "taxes": state.taxes,
-                "capitalized_charges": state.capitalized_charges,
-                "expensed_fees": state.expensed_fees,
-            }.items()
-        }
+        posting_differences = {}
+        for name, expected_value in {
+            "external_flows": state.external_flows,
+            "income": state.income,
+            "fees_paid": state.fees,
+            "taxes": state.taxes,
+            "capitalized_charges": state.capitalized_charges,
+            "expensed_fees": state.expensed_fees,
+        }.items():
+            posted_value = posting_totals[name]
+            if posted_value is None:
+                raise ValueError("Recorded transaction posting total is unavailable")
+            posting_differences[name] = money(posted_value - expected_value)
         if any(posting_differences.values()):
             warnings.append(
                 "ACCOUNTING SUBLEDGER BREAK: transaction components differ from replay totals"

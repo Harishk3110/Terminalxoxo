@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from app.portfolio_domain.ledger import LedgerState
-from app.portfolio_domain.position_pnl import PositionPnlSession
+from app.portfolio_domain.position_pnl import PositionPeriodPnl, PositionPnlSession
 from app.portfolio_domain.types import AccountingPolicy, Entry
 from hypothesis import given
 from hypothesis import strategies as st
@@ -25,10 +25,10 @@ def event(identifier: str, kind: str, **fields: Any) -> Entry:
 def period(
     before: list[Entry],
     during: list[Entry],
-    opening: dict,
-    closing: dict,
+    opening: dict[str, D | None],
+    closing: dict[str, D | None],
     policy: AccountingPolicy | None = None,
-):
+) -> dict[str, PositionPeriodPnl]:
     ledger = LedgerState(policy=policy or AccountingPolicy())
     for row in before:
         ledger.apply(row)
@@ -224,7 +224,7 @@ def test_same_day_purchase_is_included_in_stock_merger_reference_value() -> None
     "opening,closing,warning", [(None, D(1100), "Opening"), (D(1000), None, "Closing")]
 )
 def test_missing_marks_remain_unknown_instead_of_fabricating_gains(
-    opening, closing, warning
+    opening: D | None, closing: D | None, warning: str
 ) -> None:
     row = period([initial()], [], {"AAA": opening}, {"AAA": closing})["AAA"]
     assert row.pnl is None
@@ -269,8 +269,14 @@ def test_corporate_transfer_allocation_cannot_create_or_destroy_total_pnl(
         },
     )
     rows = period([initial()], [action], {"AAA": D(1000)}, {"BBB": D(child_value)})
-    assert sum(row.internal_transfer for row in rows.values()) == 0
-    assert sum(row.pnl for row in rows.values()) == D(child_value + cash_per_share * 10 - 1000)
+    transfers, contributions = [], []
+    for row in rows.values():
+        assert row.internal_transfer is not None
+        assert row.pnl is not None
+        transfers.append(row.internal_transfer)
+        contributions.append(row.pnl)
+    assert sum(transfers, D(0)) == 0
+    assert sum(contributions, D(0)) == D(child_value + cash_per_share * 10 - 1000)
 
 
 def test_duplicate_interval_entry_is_rejected() -> None:

@@ -4,9 +4,47 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TypedDict
 
 from .money import ZERO, money
 from .types import Lot
+
+PositionPayload = TypedDict(
+    "PositionPayload",
+    {
+        "direction": str,
+        "quantity": Decimal,
+        "contract_multiplier": Decimal,
+        "average_cost": Decimal | None,
+        "cost_basis_native": Decimal,
+        "cost_basis_base": Decimal,
+        "market_price": Decimal | None,
+        "market_value_native": Decimal | None,
+        "market_value_base_exact": Decimal | None,
+        "market_value": Decimal | None,
+        "unrealised_pnl_native": Decimal | None,
+        "unrealised_pnl": Decimal | None,
+        "unrealised_price_pnl_base": Decimal | None,
+        "unrealised_fx_pnl_base": Decimal | None,
+        "realised_pnl": Decimal,
+        "income": Decimal,
+        "fees": Decimal,
+        "capitalized_charges": Decimal,
+        "expensed_charges": Decimal,
+        "total_pnl": Decimal | None,
+        # The valuation layer normalizes this ratio to float, not monetary fields.
+        "return": Decimal | float | None,
+        "valuation_state": str,
+        "valuation_warnings": list[str],
+        "unrealised_decomposition_method": str,
+    },
+)
+
+
+class PositionExposure(TypedDict):
+    nav_weight: Decimal | None
+    sector_weight: Decimal | None
+    beta_contribution: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -43,7 +81,7 @@ class PositionMeasurement:
             return None
         return self.unrealised_base + self.realised_base + self.income_base - self.expensed_charges
 
-    def payload(self) -> dict[str, Decimal | str | list[str] | None]:
+    def payload(self) -> PositionPayload:
         return {
             "direction": self.direction,
             "quantity": self.quantity,
@@ -151,7 +189,7 @@ class ExposurePosition:
 
 def position_exposures(
     positions: Iterable[ExposurePosition], nav: Decimal | None
-) -> dict[str, dict[str, Decimal | None]]:
+) -> dict[str, PositionExposure]:
     rows = list(positions)
     if nav is not None and not nav.is_finite():
         raise ValueError("Exposure NAV must be finite or unavailable")
@@ -166,7 +204,7 @@ def position_exposures(
             unknown_sectors.add(row.sector)
         else:
             sector_values[row.sector] += row.base_value
-    results = {}
+    results: dict[str, PositionExposure] = {}
     for row in rows:
         weight = row.base_value / nav if row.base_value is not None and nav else None
         sector_weight = (

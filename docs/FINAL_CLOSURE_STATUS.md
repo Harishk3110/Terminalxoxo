@@ -5,24 +5,26 @@ Starting application commit: 41baacb58bc8a14cd7d6fa47079a9907f1e316a3.
 Chart/29-stage runner checkpoint: 9a85cbe, pushed. Reconciliation checkpoint:
 7703110, pushed and deployed to the existing local API/worker/report services.
 Trade-monitor checkpoint: a57bd47, pushed and deployed to those same services.
+Trade-recording checkpoint: fcaa774, pushed and deployed; full backend 37 passes
+on frozen Python application/tests with separate database/storage/auth paths.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git. Pushed.
 Earlier overnight starting commit and all historical receipts remain in OVERNIGHT_RC_*.
 
 Milestone: final quality and remaining feature closure, not release certification.
 One-period FIN chart defect is corrected with negative/positive browser evidence.
-First blocking static gate: 586 distinct mypy diagnostics across 65 files.
+First blocking static gate: 539 distinct mypy diagnostics across 63 files.
 Release runner now has the required 29 ordered gates; complete execution is pending.
 
 ## Baseline
 
-- Backend 35: 1,983 passed, zero failed/errored/skipped, 123 warnings, 515.06s,
-  native 0 on frozen 41baacb Python application/tests. Coverage: 89.7590811%
-  (12,034/13,407). Later release-runner changes have separate focused evidence.
+- Backend 37: 2,053 passed, zero failed/errored/skipped, 123 warnings, 520.52s,
+  native 0 on frozen fcaa774 Python application/tests. Coverage: 89.9076517%
+  (12,267/13,644), 1,377 missing and 31 excluded. XML and native exit retained.
 - Latest affected backend: 300 passed, three warnings, 44.76s on 41baacb changes.
 - Ruff: zero errors, native 0. Formatting: 336 files checked, native 0.
-- mypy: whole run 57 native 1, 586 raw/canonical diagnostics, 65 files, 320
-  sources, nine distributions. API: 288 / 13 files / 124 sources. Down four
-  from run 56. No new trade recording/monitor contract errors.
+- mypy: whole run 58 native 1, 539 raw/canonical diagnostics, 63 files, 322
+  sources, nine distributions. API: 253 / 13 files / 125 sources. Down 47
+  from run 57, with zero new diagnostics after accounting for line shifts.
 - OpenAPI: 170 paths, native 0.
 - Frontend: 337 passed / 27 files, native 0, 16.58s. Shared: five passed / two
   files, native 0, 2.47s. These counts are actual tests, not placeholder scripts.
@@ -40,8 +42,8 @@ Release runner now has the required 29 ordered gates; complete execution is pend
 ## Services And Boundaries
 
 Docker project knk-final-local remains running. API/data worker/quant worker/report
-engine: a57bd47; frontend: 9a85cbe. Both deployment build/up --wait commands pass.
-Observe-only probe at 2026-09-12T14:25:23.641270+00:00: ten healthy services,
+engine: fcaa774; frontend: 9a85cbe. Both deployment build/up --wait commands pass.
+Observe-only probe at 2026-09-12T14:55:04.712246+00:00: ten healthy services,
 MinIO init SUCCEEDED, no actions. Main /overview HTTP 200 at private sign-in,
 timeout 70s. Source hashes match; all 13 checked business-table hashes/counts
 match before/after restart. No volumes or user records reset.
@@ -113,7 +115,28 @@ existing no-prior-valuation snapshot and notes fallback are preserved. Request
 metadata is explicitly JSON; optional FX is narrowed without changing arithmetic.
 Twelve new tests; affected/security suite: 182 passed, three warnings, 44.12s,
 native 0. Final browser: one passed, 56.156265s, native 0, zero skipped/flaky/global
-errors; both screenshots reviewed and API error scan clean. Full backend rerun
-is next; this batch is not yet deployed. Running services remain a57bd47/9a85cbe.
+errors; both screenshots reviewed and API error scan clean. Full backend 37
+passes with 2,053 tests and 89.9076517% coverage. Deployment is complete.
+Observe-only probe at 2026-09-12T14:55:04.712246+00:00 returned native 0, ten
+healthy services, no actions. Main /overview returned HTTP 200 at private sign-in.
+Next command: verify remaining ledger/valuation strict contracts. The new
+valuation-record edits are not yet certified or deployed. No release pass is claimed.
 
 No final release pass is claimed until all 29 required critical gates pass.
+
+## Valuation Record Closure
+
+Position amounts, position-period P&L, cash and curve rows now have named field
+contracts. Optional FX/NAV histories are explicit; no formulas or source choice
+changed. Missing transaction posting totals now raise an explicit ValueError,
+not an incidental arithmetic TypeError. Twelve full outputs compare exactly to
+fcaa774, including scalar types/decimal strings/JSON order, missing marks,
+shorts, corporate actions and sufficient-history risk. Seven new regression
+cases; latest affected run: 290 passed, three warnings, 31.31s, native 0.
+Six focused files pass strict typing. Five browser workflows pass in 116.877422s,
+native 0, zero skipped/flaky/global errors. All 16 screenshots reviewed and API
+error scan clean. Final Ruff/format pass, 343 files; OpenAPI generates 170 paths.
+Old-code negative control: six failures from missing transaction posting totals,
+one passed; final affected rerun: 54 passed, one warning, 2.87s, native 0.
+This batch is ready to commit but is not yet deployed. Top-level valuation
+return contracts remain open; full current backend is not yet rerun.

@@ -329,3 +329,104 @@ Browser 01 (Node 22): native 0, one passed, zero skipped/flaky/global errors,
 56.156265s; start 2026-09-12T14:36:08.076Z. Both 1440/390 review screenshots
 inspected again. API log has zero traceback/500/lock matches. No frontend changes.
 Twelve new recording cases; full current backend and deployment are pending.
+
+## Trade Recording Checkpoint fcaa774
+
+Commit and push returned native 0. Final secret scan 02 returned native 0,
+674 text files, zero findings; diff check native 0. Focused strict 03 returned
+native 0 on three files, including the final twelve recording cases.
+Full backend 37 started on frozen fcaa774 Python application/tests using
+isolated database, object storage and auth paths. Native exit will also be
+persisted in logs/final-backend-37.exit; no result is claimed while it runs.
+
+Observe-only runtime probe returned native 0 at
+2026-09-12T14:44:20.127688+00:00: ten healthy services, MinIO init SUCCEEDED,
+no actions. Receipt: logs/final-trade-recording-watchdog-01.log. Main /overview
+HTTP 200 at private sign-in, Keep-Alive timeout=70. Running backend remains
+a57bd47 and frontend 9a85cbe; fcaa774 deployment is pending.
+
+## Full Backend 37
+
+Frozen fcaa774 Python application/tests, isolated logs/final-backend-37.db,
+logs/final-backend-37-objects and separate auth key, external providers disabled.
+Command: `.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q
+--cov=services/api/app --cov-report=json:logs/final-coverage-37.json
+--junitxml=logs/final-backend-37.xml`. Native exit 0, also retained in
+logs/final-backend-37.exit. XML: 2,053 tests, zero failures/errors/skips,
+520.476s; start 2026-09-12T22:42:03.484534+08:00. Log: 2,053 passed,
+123 warnings, 520.52s. Coverage: 12,267/13,644 = 89.90765171503958%,
+1,377 missing, 31 excluded. Only documentation changed during the run.
+An early receipt read failed because the process was still running; the final
+native exit, XML and coverage were subsequently collected successfully.
+
+## Trade Recording Deployment fcaa774
+
+Docker build and up --no-deps --no-build --wait returned native 0 each, with
+logs/final-trade-recording-docker-{build,up}-01.log and .exit receipts.
+Observe-only probe 02 native 0 at 2026-09-12T14:55:04.712246+00:00: ten healthy
+services, MinIO init SUCCEEDED, no actions. Main /overview HTTP 200 at private
+sign-in, Keep-Alive timeout=70. Frontend remains 9a85cbe.
+
+Pre/post read-only fingerprints and comparison returned native 0: all 13 checked
+business-table counts/hashes are identical. Receipts:
+logs/final-trade-recording-persistence-{before,after}-01.json. No private rows,
+connection settings or volumes were exposed or reset. Workspace/container hashes:
+- portfolio_operations.py: ac833c297282533d6d8fe7844dcad2a331191be00cb2050d71232f81b77c1293.
+- trade_monitor_contracts.py: 9dd5a8abd41c53ae83f0ba4995dc6c89b83a86e2ae4d029579dbdfb10dcf9b0c.
+- portfolio_api.py: 33b2df48234e3ede8d23b2c10c0d92a394a351fcf40131777d0cca4d387a381a.
+No hosted or real-provider certification is claimed.
+
+## Valuation Records
+
+Raw position/P&L/cash/daily-curve TypedDicts retain exact amounts and missing
+states. Named optional accumulators and narrowed FX/source stamps replace
+ambiguous unions. Explicit position fields preserve the existing output order.
+Transaction posting totals cannot be subtracted when unavailable; the new
+ValueError occurs before a successful valuation run is inserted.
+
+Receipts under logs/, .venv-rc unless stated:
+
+| Receipt | Result |
+| --- | --- |
+| final-valuation-records-types-01.log | native 1: 13 diagnostics in valuation; draft spread/optional-key, update and variable-reuse issues remained |
+| final-valuation-records-types-02.log | native 1: five remaining valuation top-level return diagnostics, down from 40 |
+| final-valuation-records-test-types-01.log | native 1: focused command lacked API import path; not a valid whole-gate comparison |
+| final-valuation-records-test-types-02.log | native 1: correct import path, four existing P&L test annotations missing |
+| final-valuation-records-test-types-03.log | native 1: typed helper exposed two nullable aggregate assertions; explicit availability assertions added |
+| final-valuation-records-focused-types-01.log | native 1: test imported a non-exported module attribute; corrected to defining module |
+| final-valuation-records-focused-types-02.log | native 0: six strict files |
+| final-valuation-records-positive-01.log/xml | native 0: 189 passed, three warnings, 29.67s |
+| final-valuation-records-positive-02.log/xml | native 0: 290 passed, three warnings, 31.31s across 17 affected files |
+| final-valuation-records-parity-01.log | native 0: twelve complete valuations match frozen fcaa774 values, scalar representations and JSON field order |
+| final-valuation-records-format-01.log | native 0: 343 files formatted |
+| final-valuation-records-ruff-01.log | native 1: one import-spacing issue; correction pending |
+| final-valuation-records-no-execution-01.log | native 0: no executable broker actions |
+
+Whole strict 58 native 1, also retained in .exit: 539 raw/canonical diagnostics,
+63 files, 322 source files, nine distributions. API: 253 / 13 / 125. Observed
+2026-09-12T15:00:54.370374+00:00. Forty-seven fewer diagnostics than run 57,
+zero new diagnostics after normalizing line shifts. Parity cases: cash-only,
+long, short, closed, zero-price write-off, missing price, missing FX, foreign
+cash, precision balance adjustment, missing benchmark, spin-off and 100-date
+aligned risk history with available beta. No frontend application changes.
+Browser connection attempt again failed before execution (sandbox metadata);
+the existing isolated Node 22 Playwright runner is being used. Browser receipt
+and final static correction remain pending. No full release pass claimed.
+
+Final valuation-record verification:
+- Browser 01 native 0: five passed, zero skipped/flaky/global errors, 116.877422s,
+  start 2026-09-12T15:01:29.379Z. Command: Node 22 Playwright test
+  tests/e2e/operating.spec.ts tests/e2e/trade-monitor.spec.ts
+  tests/e2e/risk-availability.spec.ts. Isolated run ID
+  final-valuation-records-browser-01; .log/.exit/-results.json retained. All 16
+  screenshots inspected, including five overview sizes, seven operating desks,
+  two saved trade reviews and two explicit unavailable-risk states. API log:
+  zero traceback/500/database-lock matches. No Firefox or full-suite claim.
+- Ruff 01's one spacing issue corrected by the import formatter. Ruff 02 and
+  format 02 native 0, 343 files. OpenAPI 01 native 0, 170 paths.
+- Negative 01 native 1: new tests run against frozen fcaa774 valuation module,
+  six failed, one passed, one warning, 1.30s. Each failing case reproduced
+  TypeError subtracting an unavailable posting total. No active data changed.
+- Positive 03 native 0 after final import correction: 54 passed, one warning,
+  2.87s, three files; .log/.xml retained. The seven new cases are included in
+  the earlier 290-test run. Full current backend and deployment remain pending.

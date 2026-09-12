@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TypedDict
 
 from .cash import CashMovement
 from .money import ONE, ZERO, decimal
@@ -17,6 +18,19 @@ METHOD = (
 )
 
 
+class PositionPnlPayload(TypedDict):
+    instrument_id: str
+    opening_value: str | None
+    closing_value: str | None
+    economic_cash: str
+    external_security_flow: str
+    internal_transfer: str | None
+    pnl: str | None
+    state: str
+    methodology: str
+    warnings: list[str]
+
+
 @dataclass(frozen=True)
 class PositionPeriodPnl:
     instrument_id: str
@@ -28,7 +42,7 @@ class PositionPeriodPnl:
     pnl: Decimal | None
     warnings: tuple[str, ...]
 
-    def payload(self) -> dict[str, str | list[str] | None]:
+    def payload(self) -> PositionPnlPayload:
         return {
             "instrument_id": self.instrument_id,
             "opening_value": str(self.opening_value) if self.opening_value is not None else None,

@@ -11,8 +11,9 @@ Unchecked below means not certified against this directive, not necessarily miss
 - [x] Correct incomplete-NAV reconciliation serialization and validate recorded comparison inputs without changing the unconnected path.
 - [x] Close trade-monitor evidence boundary and review browser verification; 186 affected/security/report tests pass and final desktop/mobile review browser passes.
 - [x] Reject malformed new trade notes/rationale before persistence and preserve complete saved risk exposures.
-- [ ] Eliminate remaining 586 canonical first-party strict diagnostics without weakening contracts (whole run 57).
-- [ ] Complete the full current baseline and all final gates; backend 36 XML confirms 2,009 tests but native exit was not recovered, and later trade-monitor changes have focused evidence only.
+- [x] Type valuation position/P&L/cash/curve records, reject missing transaction posting totals, and verify exact prior-output parity plus five browser workflows.
+- [ ] Eliminate remaining 539 canonical first-party strict diagnostics without weakening contracts (whole run 58).
+- [ ] Complete the full current baseline and all final gates; frozen fcaa774 backend 37 passed 2,053 tests with native 0 and 89.9076517% coverage. Later valuation-record work has focused evidence; full final certification remains open.
 
 
 ## 6. REPORT ENGINE - FIRST RELEASE BLOCKER
