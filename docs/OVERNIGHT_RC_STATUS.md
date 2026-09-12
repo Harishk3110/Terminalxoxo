@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the typed backtest batch: 612da19, pushed.
-Docker API/workers/reports are bd7247d; frontend is 612da19.
+Current HEAD before the exact stress-run browser checkpoint: 05e8854, pushed.
+Docker API/workers/reports are 05e8854; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
@@ -33,6 +33,15 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Full backend 29 on frozen 05e8854 passes all 1,599 tests, 123 warnings,
+  450.20s, native exit 0. Coverage: 11,538 / 12,918 statements (89.3172318%).
+  The auth environment is corrected, not the auth tests. Three focused browser
+  workflows pass with zero retries after the stress test was bound to each
+  POST response's run ID; reconciliation, lifecycle and export assertions remain.
+  Earlier focused run had three passes and one stale-inspector test failure;
+  its 19-route 1920px layout sweep passed. Four relevant screenshots inspected.
+  Backend Docker build/up and observe-only watchdog pass; ten services healthy
+  at 2026-09-12T04:05:36.883440Z, no repair actions. /overview is HTTP 200.
 - Typed offline backtest engine/results and pinned-input consumer: 124 affected
   tests pass, seven focused strict modules pass, and the Backtrader interface is
   checked against actual feeds, order callbacks, commissions and closed trades.

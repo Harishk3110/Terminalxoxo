@@ -62,45 +62,68 @@ test("editable stress inputs produce persisted reconciled results and exports", 
   await page
     .getByLabel("Stress valuation date", { exact: true })
     .fill(DEMO_VALUATION_DATE);
-  await page.getByRole("button", { name: "Run Scenario", exact: true }).click();
-  await expect(page.getByTestId("context-inspector")).toContainText(
-    "SUCCEEDED",
-    { timeout: 60000 },
+  const firstSubmission = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/terminal/runs") &&
+      response.request().method() === "POST",
   );
-  const before = (
-    await (
-      await request.get("/backend/api/v1/terminal/runs?kind=stress")
-    ).json()
-  ).items[0];
-  await page.getByLabel("Equity shock", { exact: true }).fill("-20");
   await page.getByRole("button", { name: "Run Scenario", exact: true }).click();
+  const firstAccepted = await firstSubmission;
+  expect(firstAccepted.status(), await firstAccepted.text()).toBe(202);
+  const firstQueued = await firstAccepted.json();
+  expect(firstQueued.kind).toBe("stress");
+  expect(firstQueued.parameters.equity_shock).toBe(-10);
   await expect
     .poll(
-      async () =>
-        (
-          await (
-            await request.get("/backend/api/v1/terminal/runs?kind=stress")
-          ).json()
-        ).items[0].id,
-      { timeout: 30000 },
-    )
-    .not.toBe(before.id);
-  await expect
-    .poll(
-      async () =>
-        (
-          await (
-            await request.get("/backend/api/v1/terminal/runs?kind=stress")
-          ).json()
-        ).items[0].status,
+      async () => {
+        const response = await request.get(
+          `/backend/api/v1/terminal/runs/${firstQueued.id}`,
+        );
+        expect(response.ok()).toBeTruthy();
+        return (await response.json()).status;
+      },
       { timeout: 60000 },
     )
     .toBe("SUCCEEDED");
-  const after = (
-    await (
-      await request.get("/backend/api/v1/terminal/runs?kind=stress")
-    ).json()
-  ).items[0];
+  const before = await (
+    await request.get(`/backend/api/v1/terminal/runs/${firstQueued.id}`)
+  ).json();
+  await expect(page.getByTestId("context-inspector")).toContainText(before.id);
+  await expect(page.getByTestId("context-inspector")).toContainText(
+    "SUCCEEDED",
+  );
+  await page.getByLabel("Equity shock", { exact: true }).fill("-20");
+  const secondSubmission = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/terminal/runs") &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Run Scenario", exact: true }).click();
+  const secondAccepted = await secondSubmission;
+  expect(secondAccepted.status(), await secondAccepted.text()).toBe(202);
+  const secondQueued = await secondAccepted.json();
+  expect(secondQueued.kind).toBe("stress");
+  expect(secondQueued.parameters.equity_shock).toBe(-20);
+  expect(secondQueued.id).not.toBe(before.id);
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get(
+          `/backend/api/v1/terminal/runs/${secondQueued.id}`,
+        );
+        expect(response.ok()).toBeTruthy();
+        return (await response.json()).status;
+      },
+      { timeout: 60000 },
+    )
+    .toBe("SUCCEEDED");
+  const after = await (
+    await request.get(`/backend/api/v1/terminal/runs/${secondQueued.id}`)
+  ).json();
+  await expect(page.getByTestId("context-inspector")).toContainText(after.id);
+  await expect(page.getByTestId("context-inspector")).toContainText(
+    "SUCCEEDED",
+  );
   expect(after.result.loss).not.toBe(before.result.loss);
   expect(after.result.valuation_date).toBe(DEMO_VALUATION_DATE);
   expect(after.result.post_nav).toBeCloseTo(

@@ -14,6 +14,39 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Full Backend 29 And Exact Stress Run Selection
+
+Python source frozen at 05e8854 for full backend 29. AUTH_SECRET is empty and
+KNK_AUTH_KEY_FILE points to an isolated test key. The unchanged auth tests pass.
+Native exit 0: 1,599 passed, zero failed/skipped, 123 warnings, 450.20s.
+Coverage is 11,538 / 12,918 statements = 89.31723176962377%, 1,380 missing,
+31 existing excluded. Receipts: logs/overnight-backend-29.log/xml and
+logs/overnight-coverage-29.json.
+
+The first focused browser run had three passes and one failure, native exit 1:
+logs/overnight-backtest-browser-01.log and matching results JSON (176.039s).
+The stress test saw a prior quant run's SUCCEEDED inspector before the first
+stress request completed, then indexed an empty stress registry. Each click now
+awaits its own HTTP 202 response, asserts kind/shock and polls that exact run ID.
+Both inspector IDs/statuses and distinct runs are checked. The existing loss,
+valuation date, NAV reconciliation, lifecycle and XLSX assertions are retained.
+No timeout, tolerance or retry increase.
+
+Corrected stress plus both quant workflows: three passed, zero failed/skipped/
+flaky/retried, 92.616s, native exit 0. Receipts:
+logs/overnight-stress-exact-run-02.log and matching results JSON. Prettier passes.
+The earlier 19-route 1920px sweep passed all viewport/error/canvas checks; the
+home, backtest, stress and GEX screenshots were inspected. This is not a new
+all-viewport full-suite claim.
+
+Backtest Docker build and health-gated up both exit 0 without data reset:
+logs/overnight-backtest-docker-{build,up}.log. Deployed API backtest_engine,
+backtest_inputs, backtest_results and terminal_worker SHA256 values match 05e8854.
+Observe-only watchdog exits 0 at 2026-09-12T04:05:36.883440Z: ten healthy services,
+MinIO init SUCCEEDED, no actions (logs/overnight-backtest-watchdog.log).
+Private /overview responds HTTP 200 at sign-in, Keep-Alive 70s.
+Whole strict remains red at the previously measured 820 diagnostics.
+
 ## Typed Offline Backtest Contracts
 
 Source 612da19 plus worktree. Explicit simulation result/metric/trade/position
