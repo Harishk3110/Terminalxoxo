@@ -48,6 +48,47 @@ class RecordedTradeRisk(TypedDict, total=False):
 
 
 @with_config(ConfigDict(extra="allow", strict=True, allow_inf_nan=False))
+class SnapshotExposure(SectorWeight):
+    pass
+
+
+OrderedSnapshotExposure = Annotated[SnapshotExposure, WrapValidator(preserve_source_order)]
+
+
+class SnapshotPortfolio(TypedDict):
+    nav: Observation | None
+    cash: Observation | None
+
+
+class SnapshotRiskMetrics(TypedDict, total=False):
+    beta: Observation | None
+    gross_exposure: Observation | None
+
+
+class SnapshotPosition(TypedDict):
+    symbol: str
+    weight: Observation | None
+
+
+class LedgerValuationInput(TypedDict):
+    portfolio: SnapshotPortfolio
+    risk: SnapshotRiskMetrics
+    positions: list[SnapshotPosition]
+    exposures: dict[str, list[OrderedSnapshotExposure]]
+    as_of: str
+
+
+class SavedTradeSnapshot(TypedDict):
+    nav: Observation | None
+    beta: Observation | None
+    positions: list[SnapshotPosition]
+    exposures: dict[str, list[OrderedSnapshotExposure]]
+    cash: NotRequired[Observation | None]
+    gross_exposure: NotRequired[Observation | None]
+    as_of: NotRequired[str]
+
+
+@with_config(ConfigDict(extra="allow", strict=True, allow_inf_nan=False))
 class TradeMetadata(TypedDict, total=False):
     symbol: str | None
     external_reference: str | None
@@ -127,6 +168,8 @@ MONITOR_ROW: TypeAdapter[TradeMonitorRow] = TypeAdapter(
     Annotated[TradeMonitorRow, WrapValidator(preserve_source_order)]
 )
 REVIEW_RECEIPT = TypeAdapter(TradeReviewReceipt)
+TRADE_TEXT: TypeAdapter[str | None] = TypeAdapter(str | None)
+LEDGER_VALUATION = TypeAdapter(LedgerValuationInput)
 
 # These duplicated context fields exist in historical ledger-created events.
 LEGACY_CONTEXT_FIELDS = {
@@ -137,6 +180,21 @@ LEGACY_CONTEXT_FIELDS = {
     "strategy_id",
     "rationale",
 }
+
+
+def trade_risk_snapshot(value: object) -> SavedTradeSnapshot:
+    if not value:
+        return {"nav": "0", "beta": None, "positions": [], "exposures": {}}
+    data = LEDGER_VALUATION.validate_python(value, strict=True)
+    return {
+        "nav": data["portfolio"]["nav"],
+        "cash": data["portfolio"]["cash"],
+        "beta": data["risk"].get("beta"),
+        "gross_exposure": data["risk"].get("gross_exposure"),
+        "positions": [{"symbol": p["symbol"], "weight": p["weight"]} for p in data["positions"]],
+        "exposures": data["exposures"],
+        "as_of": data["as_of"],
+    }
 
 
 def position_weight(snapshot: RecordedTradeRisk | None, symbol: str | None) -> Observation | None:

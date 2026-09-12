@@ -62,7 +62,7 @@ class LedgerRequest(TransactionContext):
     account_id: str | None = None
     notes: str | None = Field(default=None, max_length=10000)
     child_symbol: str | None = None
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class ReviewRequest(BaseModel):

@@ -10,7 +10,7 @@ Earlier overnight starting commit and all historical receipts remain in OVERNIGH
 
 Milestone: final quality and remaining feature closure, not release certification.
 One-period FIN chart defect is corrected with negative/positive browser evidence.
-First blocking static gate: 590 distinct mypy diagnostics across 65 files.
+First blocking static gate: 586 distinct mypy diagnostics across 65 files.
 Release runner now has the required 29 ordered gates; complete execution is pending.
 
 ## Baseline
@@ -20,9 +20,9 @@ Release runner now has the required 29 ordered gates; complete execution is pend
   (12,034/13,407). Later release-runner changes have separate focused evidence.
 - Latest affected backend: 300 passed, three warnings, 44.76s on 41baacb changes.
 - Ruff: zero errors, native 0. Formatting: 336 files checked, native 0.
-- mypy: whole run 56 native 1, 590 raw/canonical diagnostics, 65 files, 319
-  sources, nine distributions. API: 292 / 13 files / 124 sources. Down 24 from
-  run 54's 614 canonical errors. No new trade-monitor-method or contract errors.
+- mypy: whole run 57 native 1, 586 raw/canonical diagnostics, 65 files, 320
+  sources, nine distributions. API: 288 / 13 files / 124 sources. Down four
+  from run 56. No new trade recording/monitor contract errors.
 - OpenAPI: 170 paths, native 0.
 - Frontend: 337 passed / 27 files, native 0, 16.58s. Shared: five passed / two
   files, native 0, 2.47s. These counts are actual tests, not placeholder scripts.
@@ -103,5 +103,17 @@ Deployment a57bd47 is complete with unchanged business-table fingerprints.
 Next implementation target: remaining ledger/valuation strict contracts.
 Full 29-stage certification and domain work
 remain open, including segments/ROIC/PIT/multiples and provider completeness.
+
+## Trade Recording Closure
+
+New notes/rationale validate before ledger writes. The typed saved-risk factory
+retains all five exposure dimensions and exact source strings/order; missing
+calculated position weight is rejected while explicit null remains null. The
+existing no-prior-valuation snapshot and notes fallback are preserved. Request
+metadata is explicitly JSON; optional FX is narrowed without changing arithmetic.
+Twelve new tests; affected/security suite: 182 passed, three warnings, 44.12s,
+native 0. Final browser: one passed, 56.156265s, native 0, zero skipped/flaky/global
+errors; both screenshots reviewed and API error scan clean. Full backend rerun
+is next; this batch is not yet deployed. Running services remain a57bd47/9a85cbe.
 
 No final release pass is claimed until all 29 required critical gates pass.

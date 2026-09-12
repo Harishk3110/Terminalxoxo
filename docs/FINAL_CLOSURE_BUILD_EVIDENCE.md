@@ -292,3 +292,40 @@ SHA256 matches:
 - trade_monitor_contracts.py: a2d5d30ab0053772204273212e50ecadf3f58d0653bcf6b5cffa860e94881182.
 - portfolio_api.py: 1d46c251ba357e024f096af9b516421554c17f00316cef3f4dbf747d2534a7f7.
 Frontend remains 9a85cbe. No hosted, live-provider or live-broker certification.
+
+## Trade Recording Boundary
+
+New invalid rationale previously persisted and could then prevent monitor reads.
+Both notes and rationale now validate before inserts, including false/zero/empty
+containers rather than silently replacing them. Valid null/empty-string fallback
+is preserved. The typed risk snapshot factory retains all five exposure groups,
+all source extensions/order, exact numeric strings and explicit missing values.
+Missing calculated weight is required, not supplied as a default. JSON request
+metadata and a correctly narrowed optional FX result close four more static errors.
+
+Receipts under logs/, .venv-rc unless specified:
+
+| Receipt | Result |
+| --- | --- |
+| final-trade-recording-negative-01.log | native 1: nine failed, one warning, 3.46s; three new preservation assertions had an incorrect guessed decimal scale |
+| final-trade-recording-negative-02.log | native 1: six failed, three passed, one warning, 3.32s after correcting expected scale to observed original output |
+| final-trade-recording-positive-01.log/xml | native 0: 131 passed, three warnings, 26.99s |
+| final-trade-recording-weight-negative-01.log | native 1: one failed, nine deselected, one warning, 1.60s; draft accepted a missing weight field |
+| final-trade-recording-positive-02.log/xml | native 0: 132 passed, three warnings, 25.08s after requiring the field while retaining explicit null |
+| final-trade-recording-positive-03.log/xml | native 0: 182 passed, three warnings, 44.12s; includes auth/security and successful API use after rejected invalid input |
+| final-trade-recording-focused-types-01.log | native 1: missing generic annotation for TRADE_TEXT; corrected |
+| final-trade-recording-focused-types-02.log | native 0: three strict files |
+| final-trade-recording-focused-types-03.log | native 0: three strict files, including the final twelve recording cases |
+| final-trade-recording-operations-types-01.log | native 1: eleven existing errors, including two untyped calculate calls; no new errors |
+| final-trade-recording-parity-01.log | native 0: three full valid trade rows exactly match 7703110 values/scalar kinds/JSON order |
+| final-trade-recording-ruff-01.log / format-01.log | native 0 each, 341 formatted files |
+| final-trade-recording-openapi-01.log | native 0, 170 paths; ledger metadata is a JSON object |
+| final-trade-recording-secrets-01.log / no-execution-01.log | native 0 each, 674 text files, zero secret findings, no broker actions |
+
+Whole strict 57: native 1, 586 raw/canonical errors, 65 files, 320 sources, nine
+distributions; API 288 / 13 files / 124 sources. Observed
+2026-09-12T14:34:58.102717+00:00. Four fewer errors than run 56, no new diagnostics.
+Browser 01 (Node 22): native 0, one passed, zero skipped/flaky/global errors,
+56.156265s; start 2026-09-12T14:36:08.076Z. Both 1440/390 review screenshots
+inspected again. API log has zero traceback/500/lock matches. No frontend changes.
+Twelve new recording cases; full current backend and deployment are pending.

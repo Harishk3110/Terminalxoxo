@@ -36,11 +36,13 @@ from .trade_monitor_contracts import (
     MONITOR_ROW,
     REVIEW_RECEIPT,
     TRADE_RISK,
+    TRADE_TEXT,
     TRANSACTIONS,
     TradeMonitorRow,
     TradeReviewReceipt,
     position_weight,
     sector_weight,
+    trade_risk_snapshot,
 )
 from .transaction_context import record_context
 from .transaction_views import transaction_views
@@ -138,13 +140,14 @@ class PortfolioLedgerService:
             fx = stored_decimal(payload["fx_rate_to_base"], "transaction FX", positive=True)
             fx_source = "USER PROVIDED TRANSACTION FX"
         else:
-            fx, provenance = FxRateResolver(self.session).resolve(
+            resolved_fx, provenance = FxRateResolver(self.session).resolve(
                 currency, portfolio.base_currency, close_of_day(day)
             )
-            if fx is None:
+            if resolved_fx is None:
                 raise ValueError(
                     "Missing transaction FX; supply an explicit recorded exchange rate"
                 )
+            fx = resolved_fx
             fx_source = provenance["source"]
         metadata = dict(payload.get("metadata") or {})
         metadata.pop("fx_recording", None)
@@ -190,6 +193,8 @@ class PortfolioLedgerService:
             if payload.get(key) is not None:
                 metadata[key] = payload[key]
         context = record_context(payload, metadata, day)
+        notes = TRADE_TEXT.validate_python(payload.get("notes"), strict=True)
+        rationale = TRADE_TEXT.validate_python(metadata.get("rationale"), strict=True) or notes
         if kind == "FX_CONVERSION":
             if str(metadata.get("to_currency", "")).upper() not in CURRENCIES:
                 raise ValueError("FX destination currency is unknown")
@@ -254,7 +259,7 @@ class PortfolioLedgerService:
             fee=fee,
             source=source,
             quality="USER PROVIDED" if source_file_id else "INTERNAL LEDGER",
-            notes=payload.get("notes"),
+            notes=notes,
         )
         self.session.add(txn)
         self.session.flush()
@@ -291,28 +296,13 @@ class PortfolioLedgerService:
                     "source_file_id": source_file_id,
                     "thesis_id": metadata.get("thesis_id"),
                     "strategy_id": metadata.get("strategy_id"),
-                    "rationale": metadata.get("rationale") or payload.get("notes"),
+                    "rationale": rationale,
                     "risk_method": "Trade-date close counterfactual, not a pre-execution live risk measurement",
                 }
             ),
         )
         self.session.add(event)
         self.session.flush()
-
-        def snapshot(data):
-            if not data:
-                return {"nav": "0", "beta": None, "positions": [], "exposures": {}}
-            return {
-                "nav": data["portfolio"]["nav"],
-                "cash": data["portfolio"]["cash"],
-                "beta": data["risk"].get("beta"),
-                "gross_exposure": data["risk"].get("gross_exposure"),
-                "positions": [
-                    {"symbol": p["symbol"], "weight": p["weight"]} for p in data["positions"]
-                ],
-                "exposures": data["exposures"],
-                "as_of": data["as_of"],
-            }
 
         breaches = list(after["breaches"])
         if instrument and kind in {"BUY", "SHORT"} and not metadata.get("thesis_id"):
@@ -328,7 +318,10 @@ class PortfolioLedgerService:
             breaches.append({"metric": "NEGATIVE_CASH", "severity": "WARN", "state": "OPEN"})
         self.session.add(
             models.TradeRiskSnapshot(
-                trade_id=event.id, before=snapshot(before), after=snapshot(after), breaches=breaches
+                trade_id=event.id,
+                before=jsonable(trade_risk_snapshot(before)),
+                after=jsonable(trade_risk_snapshot(after)),
+                breaches=breaches,
             )
         )
         audit(
