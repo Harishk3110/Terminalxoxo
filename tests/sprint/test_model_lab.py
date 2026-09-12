@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import pytest
 from app.model_lab import ModelSettings, features_and_target, model_research
+from app.model_results import ModelName
 
 
-def bars():
+def bars() -> pd.DataFrame:
     rng = np.random.default_rng(3110)
     close = 100 * np.cumprod(1 + rng.normal(0.0003, 0.008, 450))
     return pd.DataFrame(
@@ -24,13 +25,14 @@ def test_feature_pipeline_cannot_see_future_and_target_starts_next_open() -> Non
 
 
 @pytest.mark.parametrize("model", ["RIDGE", "LOGISTIC", "FOREST", "KMEANS"])
-def test_chronological_models_purge_labels_and_produce_artifacts(model):
+def test_chronological_models_purge_labels_and_produce_artifacts(model: ModelName) -> None:
     result, artifact = model_research(bars(), ModelSettings(model=model, trees=10))
     assert artifact and len(result["walk_forward"]) == 3
     train, validation, test = result["metrics"]
     assert train["end"] < validation["start"] < validation["end"] < test["start"]
     assert {row["partition"] for row in result["predictions"]} == {"TRAIN", "VALIDATION", "TEST"}
     for fold in result["walk_forward"]:
+        assert fold["state"] == "AVAILABLE"
         assert fold["train_end"] < fold["test_start"] and fold["gap"] == 6
 
 

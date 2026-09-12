@@ -101,7 +101,7 @@ def _execute_run(run_id: str) -> None:
             elif run.kind == "model":
                 from .model_runs import model_result
 
-                result = model_result(session, run.parameters, run.id)
+                result = jsonable(model_result(session, run.parameters, run.id))
             elif run.kind == "monte_carlo":
                 from .monte_carlo import monte_carlo_result
 

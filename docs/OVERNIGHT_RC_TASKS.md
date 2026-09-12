@@ -21,6 +21,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2/M9: typed model metrics, predictions, purged folds and artifacts; pinned scikit-learn/joblib runtime contracts, pre-read request validation and pre-training currency validation. 82 affected tests, seven strict modules and three browser workflows pass; ten engine/artifact and 60 full worker comparisons are exact. Whole strict 40 remains red at 797 diagnostics.
 - [x] M2/M3/M9: full backend 29 passes 1,599 tests at 89.3172% coverage; stress browser submissions tracked by exact returned run IDs, all three focused stress/quant workflows pass without retries. Verified backtest batch deployed locally, ten services healthy.
 - [x] M2/M9: typed offline backtest engine/results and pinned FX consumer, verified Backtrader boundary, covariance/FX negative controls; 124 affected tests, seven focused strict modules and 120 exact numerical/whole-output parity cases pass. Whole strict 38 remains red at 820 diagnostics.
 - [x] M2/M3/M9: atomic analysis claim/cancellation/completion/failure history, finite object-result validation and launch-error ownership; 98 affected tests including five isolated PostgreSQL races pass. Whole strict 36 remains red at 850 diagnostics.

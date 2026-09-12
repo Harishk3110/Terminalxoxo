@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import io
-from typing import Literal
+from collections.abc import Callable
 
 import joblib
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, Field
-from sklearn.base import clone
+from sklearn.base import BaseEstimator, clone
 from sklearn.cluster import KMeans
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, VotingRegressor
 from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, LogisticRegression, Ridge
@@ -21,25 +22,28 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
+
+from .model_results import (
+    AvailableFold,
+    ClassificationMetrics,
+    ClusterMetrics,
+    FeatureImportance,
+    InsufficientClassesFold,
+    ModelName,
+    ModelPrediction,
+    ModelResearchResult,
+    Partition,
+    PartitionWindow,
+    RegressionMetrics,
+)
 
 
 class ModelSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    model: Literal[
-        "LINEAR",
-        "LOGISTIC",
-        "RIDGE",
-        "LASSO",
-        "ELASTIC_NET",
-        "TREE",
-        "FOREST",
-        "GRADIENT_BOOSTING",
-        "ENSEMBLE",
-        "KMEANS",
-    ] = "RIDGE"
+    model: ModelName = "RIDGE"
     horizon: int = Field(default=5, ge=1, le=21)
     regularisation: float = Field(default=1, gt=0, le=100, allow_inf_nan=False)
     train_fraction: float = Field(default=0.6, ge=0.4, le=0.7, allow_inf_nan=False)
@@ -52,7 +56,7 @@ class ModelSettings(BaseModel):
     slippage_bps: float = Field(default=5, ge=0, le=500, allow_inf_nan=False)
 
 
-def features_and_target(frame: pd.DataFrame, horizon: int):
+def features_and_target(frame: pd.DataFrame, horizon: int) -> tuple[pd.DataFrame, pd.Series[float]]:
     if not {"open", "high", "low", "close"} <= set(frame):
         raise ValueError("Model research requires complete OHLC bars")
     if not frame.index.is_unique or not frame.index.is_monotonic_increasing:
@@ -81,9 +85,9 @@ def features_and_target(frame: pd.DataFrame, horizon: int):
     return features.loc[valid], target.loc[valid]
 
 
-def estimator(settings: ModelSettings):
+def estimator(settings: ModelSettings) -> Pipeline:
     arguments = {"random_state": settings.seed}
-    models_by_name = {
+    models_by_name: dict[ModelName, Callable[[], BaseEstimator]] = {
         "LINEAR": lambda: LinearRegression(),
         "LOGISTIC": lambda: LogisticRegression(
             C=1 / settings.regularisation, max_iter=2000, **arguments
@@ -123,7 +127,10 @@ def estimator(settings: ModelSettings):
     return make_pipeline(StandardScaler(), models_by_name[settings.model]())
 
 
-def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, bytes]:
+def model_research(
+    frame: pd.DataFrame,
+    settings: ModelSettings,
+) -> tuple[ModelResearchResult, bytes]:
     if len(frame) > 5000:
         raise ValueError("Model research is bounded to 5,000 bars")
     x, target = features_and_target(frame, settings.horizon)
@@ -133,7 +140,7 @@ def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, 
     split1 = int(count * settings.train_fraction)
     split2 = int(count * (settings.train_fraction + settings.validation_fraction))
     gap = settings.horizon + 1
-    splits = {
+    splits: dict[Partition, NDArray[np.int64]] = {
         "TRAIN": np.arange(0, split1 - gap),
         "VALIDATION": np.arange(split1, split2 - gap),
         "TEST": np.arange(split2, count),
@@ -148,48 +155,49 @@ def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, 
     if classification and y.iloc[train].nunique() != 2:
         raise ValueError("Training labels require both return directions")
     fitted.fit(x.iloc[train], y.iloc[train])
-    predictions, metrics = [], []
+    predictions: list[ModelPrediction] = []
+    metrics: list[RegressionMetrics | ClassificationMetrics | ClusterMetrics] = []
     for name, indices in splits.items():
         observed = y.iloc[indices]
         predicted = fitted.predict(x.iloc[indices])
         probabilities = fitted.predict_proba(x.iloc[indices])[:, 1] if classification else None
-        metric = {
+        window: PartitionWindow = {
             "partition": name,
             "start": str(x.index[indices[0]]),
             "end": str(x.index[indices[-1]]),
             "observations": len(indices),
         }
+        metric: RegressionMetrics | ClassificationMetrics | ClusterMetrics
         if clustering:
-            metric.update(
-                {
-                    "state": "CLUSTER ASSIGNMENT",
-                    "clusters": len(np.unique(predicted)),
-                    "r_squared": None,
-                    "rmse": None,
-                }
-            )
+            metric = {
+                **window,
+                "state": "CLUSTER ASSIGNMENT",
+                "clusters": len(np.unique(predicted)),
+                "r_squared": None,
+                "rmse": None,
+            }
         elif classification:
-            metric.update(
-                {
-                    "accuracy": float(accuracy_score(observed, predicted)),
-                    "auc": float(roc_auc_score(observed, probabilities))
-                    if observed.nunique() == 2
-                    else None,
-                }
-            )
+            if probabilities is None:
+                raise ValueError("Classification requires predicted probabilities")
+            metric = {
+                **window,
+                "accuracy": float(accuracy_score(observed, predicted)),
+                "auc": float(roc_auc_score(observed, probabilities))
+                if observed.nunique() == 2
+                else None,
+            }
         else:
-            metric.update(
-                {
-                    "r_squared": float(r2_score(observed, predicted)),
-                    "rmse": float(np.sqrt(mean_squared_error(observed, predicted))),
-                    "mae": float(mean_absolute_error(observed, predicted)),
-                    "rank_ic": float(
-                        pd.Series(observed.to_numpy()).rank().corr(pd.Series(predicted).rank())
-                    )
-                    if len(set(predicted)) > 1 and observed.nunique() > 1
-                    else None,
-                }
-            )
+            metric = {
+                **window,
+                "r_squared": float(r2_score(observed, predicted)),
+                "rmse": float(np.sqrt(mean_squared_error(observed, predicted))),
+                "mae": float(mean_absolute_error(observed, predicted)),
+                "rank_ic": float(
+                    pd.Series(observed.to_numpy()).rank().corr(pd.Series(predicted).rank())
+                )
+                if len(set(predicted)) > 1 and observed.nunique() > 1
+                else None,
+            }
         metrics.append(metric)
         predictions.extend(
             {
@@ -201,7 +209,7 @@ def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, 
             }
             for j, index in enumerate(indices)
         )
-    walk = []
+    walk: list[AvailableFold | InsufficientClassesFold] = []
     splitter = TimeSeriesSplit(n_splits=settings.folds, gap=gap)
     for fold, (train_indices, test_indices) in enumerate(splitter.split(x)):
         fold_model = clone(fitted)
@@ -229,11 +237,16 @@ def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, 
             }
         )
     final_model = fitted.steps[-1][1]
-    values = getattr(final_model, "feature_importances_", None)
-    if values is None and hasattr(final_model, "coef_"):
+    values: NDArray[np.float64] | None = None
+    if isinstance(
+        final_model, (DecisionTreeRegressor, RandomForestRegressor, GradientBoostingRegressor)
+    ):
+        values = final_model.feature_importances_
+    elif isinstance(final_model, (LinearRegression, LogisticRegression, Ridge, Lasso, ElasticNet)):
         values = np.asarray(final_model.coef_).reshape(-1)
-    importance = (
-        [{"feature": name, "value": float(values[i])} for i, name in enumerate(x.columns)]
+    feature_names = [str(name) for name in x.columns]
+    importance: list[FeatureImportance] = (
+        [{"feature": name, "value": float(values[i])} for i, name in enumerate(feature_names)]
         if values is not None and len(values) == len(x.columns)
         else []
     )
@@ -241,7 +254,7 @@ def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, 
     joblib.dump(
         {
             "model": fitted,
-            "features": list(x.columns),
+            "features": feature_names,
             "settings": settings.model_dump(),
             "train_end": str(x.index[train[-1]]),
             "version": "knk-model-1.0",
@@ -253,7 +266,7 @@ def model_research(frame: pd.DataFrame, settings: ModelSettings) -> tuple[dict, 
         "settings": settings.model_dump(),
         "feature_version": "past-close-technical-1",
         "target_version": "next-open-forward-return-1",
-        "features": list(x.columns),
+        "features": feature_names,
         "metrics": metrics,
         "predictions": predictions,
         "walk_forward": walk,

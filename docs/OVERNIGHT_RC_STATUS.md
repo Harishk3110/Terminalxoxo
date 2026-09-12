@@ -3,7 +3,7 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the exact stress-run browser checkpoint: 05e8854, pushed.
+Current HEAD before the typed model research batch: f54639c, pushed.
 Docker API/workers/reports are 05e8854; frontend is 612da19.
 Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
@@ -33,6 +33,16 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- Typed model research and stored-run contracts: 82 affected tests pass (37.24s),
+  seven strict modules pass, and all three model/backtest/stress browser workflows
+  pass without retries (88.650s). Ten full model JSON results and artifact bytes,
+  plus 60 complete worker responses, exactly match f54639c. Eleven malformed
+  requests and four malformed currency cases failed the new controls before
+  their guards. USD, missing currency, explicit null and zero-cost evidence have
+  permanent regressions. Real pinned scikit-learn pipelines/scalers/clones/folds,
+  scalar metrics and in-memory joblib writes are exercised without stub ignores.
+  Whole strict 40: 797 diagnostics / 78 files / 307 sources; API 427 / 20 files.
+  No model or analytical worker diagnostics remain; whole release remains open.
 - Full backend 29 on frozen 05e8854 passes all 1,599 tests, 123 warnings,
   450.20s, native exit 0. Coverage: 11,538 / 12,918 statements (89.3172318%).
   The auth environment is corrected, not the auth tests. Three focused browser

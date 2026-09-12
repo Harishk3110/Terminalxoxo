@@ -14,6 +14,43 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Typed Model Research Contracts
+
+Source f54639c plus the model batch. Explicit partition/prediction/metric/fold/
+feature/artifact contracts replace untyped research results. The numerical model
+selection, purged training/scaler fit, prediction errors, held-out trading rules,
+costs and warning text are unchanged. Worker inputs validate before reading a
+dataset, malformed currency metadata before training; missing and explicitly
+unknown currency remain distinct. No automatic broker action is introduced.
+
+The narrow local scikit-learn 1.9.0 and joblib file-like write interfaces were
+checked against installed signatures/source and real runtime tests, not blanket
+import ignores. All ten actual pipelines are fitted and cloned; scaler training
+means, prediction dtypes/shapes, probabilities, cluster labels, purged indices,
+scalar metrics and in-memory serialization are checked. A test observes the dump
+return through a callable returning object so its None check independently verifies
+the runtime instead of assuming the stub. No application type is weakened.
+
+| Check | Result / evidence |
+| --- | --- |
+| Initial affected selection | 52 passed, one warning, 36.26s, exit 0; overnight-model-contracts-01.log |
+| Invalid request negative controls on f54639c | 11 failed, 1.73s, exit 1; overnight-model-input-negative-01.log |
+| Invalid currency pre-training controls before guard | Four failed, 4.95s, exit 1; overnight-model-currency-negative-01.log |
+| Final affected selection | 82 passed, zero failed/skipped, one warning, 37.24s, exit 0; overnight-model-contracts-04.log/xml |
+| Focused strict | Seven modules, zero errors, exit 0; overnight-model-focused-types-04.log |
+| Exact model parity | Ten full JSON results including key order and ten byte-identical fitted artifacts; overnight-model-parity-01.log |
+| Exact worker parity | 60 full results: ten models x USD/missing/null currency x zero/25bps fee/slippage; native-currency costs, source metadata and artifact hashes unchanged; overnight-model-worker-parity-01.log |
+| Browser workflows | Three passed, zero failed/skipped/flaky/retried, 88.650s, exit 0; overnight-model-browser-03.log and matching results JSON |
+| Whole strict 39/40 | Both 797 distinct diagnostics / 78 files / 307 sources / nine distributions, exit 1; API 427 / 20 files; no model/analytical worker errors |
+| Ruff and format | Exit 0; all 18 touched Python/stub files formatted |
+| OpenAPI/settings schema | 170 paths; all ten model enum values and RIDGE default preserved, exit 0; overnight-model-openapi-02.log |
+| Secret/no-execution scans | 648 text files, zero secret findings; no forbidden broker method names; exit 0 |
+
+The first OpenAPI diagnostic assumed ModelSettings was exposed as an API component;
+the generic run endpoint does not expose that component. The final check separately
+validates the actual API schema and ModelSettings JSON schema. Whole release remains
+open. Full backend 29 belongs to 05e8854, not this subsequent model batch.
+
 ## Full Backend 29 And Exact Stress Run Selection
 
 Python source frozen at 05e8854 for full backend 29. AUTH_SECRET is empty and
