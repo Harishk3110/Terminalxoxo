@@ -1,5 +1,8 @@
 # Overnight Release Tasks
 
+The latest final-closure directive is tracked in FINAL_CLOSURE_TASKS.md.
+Preserve this historical checklist and its supporting receipts.
+
 The 2026-09-12 overnight directive controls acceptance; prior checkmarks are not
 substitutes for its release gates. All requirements within each referenced
 milestone remain open unless explicitly verified below.
@@ -21,6 +24,7 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2/M10 checkpoint 34: all 1,947 backend tests pass on frozen 3156aec, 89.7146% coverage, native 0. All ten Docker services healthy; source hashes verified and main private page responding. Remaining strict/source contracts are next, not a release-complete claim.
 - [x] M2/M10: 3156aec validates equity metadata/quotes and finite financial scalars without changing valid numeric bits or dropping source extensions/report row order. 249 affected tests, six strict files, exact financial/report parity and all four browser workflows pass; six screenshots reviewed. Whole strict 50 remains red at 638 diagnostics. Full backend 34 is next.
 - [x] M1/M2/M3/M15 checkpoint 33: backend 1,886/1,886 and all eleven real integration cases pass on patched Python/SQLite. Integration 28's omitted acknowledgement caused seven setup errors; corrected invocation 29 passes without modifying guards or tests. Remaining strict equity/service contracts are next.
 - [x] M2/M3 checkpoint 33: all 1,886 backend tests pass on frozen 71169ba, 89.6080% coverage and native exit 0. The two seed-help failures from checkpoint 32 are resolved. Real integration 28 is running; all 27 release gates are not yet green.

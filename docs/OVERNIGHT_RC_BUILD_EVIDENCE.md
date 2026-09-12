@@ -92,8 +92,16 @@ report_sources a4fec714ccd530b5b03d29dfcaa9b13a34be4840004ce22dbc04455d13b2eb94.
 Observe-only watchdog returns native 0 at 2026-09-12T07:15:57.485738Z: ten healthy
 services, MinIO init SUCCEEDED, zero actions. Receipt: overnight-equity-watchdog.log.
 Main /overview returns HTTP 200 at private sign-in with Keep-Alive 70s. No data
-reset. Full backend 34 is running on frozen 3156aec source and isolated test
-paths; backend 33 and integration 29 below predate the equity batch.
+reset. Full backend 34 passes on frozen 3156aec source and isolated test paths:
+1,947 passed / zero failures/errors/skips / 123 warnings / 485.02s / native 0.
+Command: `.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q
+--cov=services/api/app --cov-report=json:logs/overnight-coverage-34.json
+--junitxml=logs/overnight-backend-34.xml`. XML start:
+2026-09-12T15:16:11.128539+08:00; XML elapsed 485.011s. Coverage: 11,976 / 13,349
+statements, 89.71458536219941%, 1,373 missing, 31 existing excluded. Receipts:
+logs/overnight-backend-34.log/xml and overnight-coverage-34.json. Documentation
+commit 7bcb86e was added during the run; application/tests were not changed.
+Integration 29 below predates the equity batch and is not claimed as rerun here.
 
 ## Lazy SQLite Initialization Correction
 

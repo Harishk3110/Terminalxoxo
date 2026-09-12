@@ -1,5 +1,12 @@
 # Overnight Release Status
 
+Superseded acceptance directive: continue with FINAL_CLOSURE_STATUS.md and
+FINAL_CLOSURE_TASKS.md. The new directive requires 29 release gates. Historical
+results below are preserved, not relabelled as current certification.
+Latest application 41baacb is pushed and deployed to API/workers/reports; the
+curated batch evidence is in FINAL_CLOSURE_BUILD_EVIDENCE.md. Full backend 35 is
+running; a one-period FIN chart visibility defect is the next documented fix.
+
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
@@ -36,11 +43,15 @@ Current checkpoint: equity receipt/scalar batch 3156aec passes 249 affected test
 six strict files and four browser workflows. Whole strict 50 remains red at 638
 distinct diagnostics / 66 files. First unchecked task: remaining curated-source,
 analytics and service/API contracts. Full backend 33 and real integration 29
-pass on the preceding 71169ba application; full backend 34 is running frozen.
+pass on the preceding 71169ba application; full backend 34 now passes on 3156aec.
 The 27-gate release remains open.
-Next command: collect full backend 34's native exit and logs/overnight-backend-34.xml, then add focused curated-fundamental source regressions before changing that adapter. Do not edit source/tests during the frozen run.
+Next command: add focused curated-fundamental source regressions, then run `.venv-rc/Scripts/python.exe -m pytest tests/sprint/test_curated_fundamentals.py -q` before changing the adapter.
 
 Current evidence:
+- Full backend 34: 1,947 passed / zero failures/errors/skips / 123 warnings /
+  485.02s / native 0 on frozen 3156aec application source. Coverage:
+  11,976 / 13,349 statements (89.7145854%), 1,373 missing, 31 existing excluded.
+  Isolated test data only; full strict release gate remains red.
 - 3156aec Docker build/up return native 0; all four equity/report source hashes
   match the API container. Observe-only watchdog at 2026-09-12T07:15:57.485738Z
   reports ten healthy services, MinIO init SUCCEEDED and no actions. Main
