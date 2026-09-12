@@ -10,6 +10,7 @@ from .portfolio_api import identity
 from .portfolio_operations import audit
 from .portfolio_resource_api import Database
 from .portfolio_valuation import PortfolioValuationService
+from .risk_contracts import ConfiguredLimit, RiskMonitorResult
 from .risk_limits import LimitRequest, RiskLimitService
 from .risk_statistics import RiskSettings
 
@@ -36,12 +37,17 @@ def review_hedge(
 
 
 @router.get("/{portfolio}/monitor")
-def monitor(portfolio: str, request: Request, session: Database):
+def monitor(portfolio: str, request: Request, session: Database) -> RiskMonitorResult:
     return RiskLimitService(session).monitor(portfolio, identity(request, session))
 
 
 @router.post("/{portfolio}/limits", status_code=201)
-def create_limit(portfolio: str, payload: LimitRequest, request: Request, session: Database):
+def create_limit(
+    portfolio: str,
+    payload: LimitRequest,
+    request: Request,
+    session: Database,
+) -> ConfiguredLimit:
     return RiskLimitService(session).configure(
         portfolio, payload, identity(request, session, admin=True)
     )
@@ -50,7 +56,7 @@ def create_limit(portfolio: str, payload: LimitRequest, request: Request, sessio
 @router.post("/{portfolio}/limits/{limit_id}")
 def update_limit(
     portfolio: str, limit_id: str, payload: LimitRequest, request: Request, session: Database
-):
+) -> ConfiguredLimit:
     return RiskLimitService(session).configure(
         portfolio, payload, identity(request, session, admin=True), limit_id
     )

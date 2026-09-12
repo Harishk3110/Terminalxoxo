@@ -14,6 +14,49 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Typed Risk Limits And Validated Configuration
+
+Source 1a69ea5 plus risk batch. Typed valuation evidence and limit/monitor response
+contracts preserve exact Decimal comparisons, signed exposures, loss magnitudes,
+zero values and unavailable states. Disabled-limit IDs are validated as strings
+before changing a limit or breach; valuation uses the same validation before ledger
+replay. Null historical AuditLog metadata no longer breaks the monitor. The three
+limit/monitor HTTP endpoints now expose their actual response contracts in OpenAPI.
+Thresholds, tolerances, permissions and manual-only execution policy are unchanged.
+
+| Check | Result / evidence |
+| --- | --- |
+| Old-code negative controls, corrected fixture | 27 failed / 136 passed, 2.61s, exit 1; overnight-risk-limit-negative-02.log |
+| Valuation pre-replay negative controls | Seven failed, 2.35s, exit 1; overnight-risk-limit-valuation-negative-01.log |
+| Corrected focused risk selection | 166 passed, one warning, 3.94s, exit 0; overnight-risk-limit-contracts-02.log/xml |
+| Final affected risk/valuation/accounting/hedge selection | 315 passed, zero failed/skipped, three warnings, 39.00s, exit 0; overnight-risk-limit-affected-04.log/xml |
+| Exact numeric parity | 1,296 metric type/value/decimal-representation comparisons against 1a69ea5; overnight-risk-limit-parity-01.log |
+| Focused strict | Five modules, zero errors, exit 0; overnight-risk-limit-focused-types-04.log |
+| Browser | Three passed, zero failed/skipped/flaky/retried, 55.178s, exit 0; overnight-risk-limit-browser-04.log and matching results JSON |
+| Whole strict 41 | 753 diagnostics / 76 files / 309 sources, exit 1; before final API test annotations |
+| Whole strict 42 | 749 diagnostics / 75 files / 309 sources / nine distributions, exit 1; API 409 / 19 files |
+| OpenAPI | 170 paths, all three response references and four referenced limit states verified; overnight-risk-limit-openapi-02.log, exit 0 |
+| Ruff/format and safety scans | Seven files formatted, 650 text files scanned, zero secret findings, no forbidden broker action methods; exit 0 |
+
+Initial audit-row tests omitted the required correlation_id and failed in fixture
+insertion. After adding it, the old-code negative run isolates the actual null
+metadata reader failure; the non-null legacy controls pass. The initial OpenAPI
+probe assumed an inline state enum; the actual schema correctly references
+LimitState. The final probe checks that reference and its enum. These diagnostic
+failures are not represented as green runs.
+
+Inspected risk monitor and unavailable-risk screenshots at 1440px and 390px:
+logs/portfolio-screenshots/risk-{1440,390}.png and
+docs/screenshots/risk-unavailable-{1440,390}.png. Existing contained table/panel
+scrolling remains; this is not a new all-route visual acceptance claim.
+
+Model backend Docker build/up both exit 0 (overnight-model-docker-{build,up}.log).
+Deployed model_lab/model_results/model_runs/terminal_worker hashes match 1a69ea5.
+Observe-only watchdog at 2026-09-12T04:24:30.076918Z reports ten healthy services,
+MinIO init succeeded and no actions (overnight-model-watchdog.log).
+Private /overview returns HTTP 200 at sign-in, Keep-Alive 70s. Data is preserved.
+Full backend 29 is still the latest complete suite, on 05e8854; whole release is open.
+
 ## Typed Model Research Contracts
 
 Source f54639c plus the model batch. Explicit partition/prediction/metric/fold/

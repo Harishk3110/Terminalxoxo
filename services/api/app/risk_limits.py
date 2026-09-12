@@ -1,17 +1,27 @@
 """Audited risk-limit configuration and durable breach/alert lifecycle, without actions."""
 
 import uuid
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
 from .portfolio_operations import audit
 from .portfolio_valuation import PortfolioValuationService
+from .risk_contracts import (
+    ConfiguredLimit,
+    LimitEvaluation,
+    LimitState,
+    MonitorEvidence,
+    RiskMonitorResult,
+    RiskSnapshotInput,
+    disabled_limit_ids,
+)
 
 METRICS = {
     "max_position_weight",
@@ -49,29 +59,31 @@ class LimitRequest(BaseModel):
         return value
 
 
-def metric_value(data, metric):
-    nav = data.get("portfolio", {}).get("nav")
-    if nav is None or not Decimal(str(nav)).is_finite() or Decimal(str(nav)) <= 0:
+def metric_value(data: RiskSnapshotInput | Mapping[str, object], metric: str) -> Decimal | None:
+    snapshot = (
+        data if isinstance(data, RiskSnapshotInput) else RiskSnapshotInput.model_validate(data)
+    )
+    nav = snapshot.portfolio.nav
+    if nav is None or not nav.is_finite() or nav <= 0:
         return None
     source = {
         "var_loss_95": "var_95",
         "cvar_loss_95": "cvar_95",
         "drawdown_loss": "current_drawdown",
     }.get(metric, metric)
-    value = data["risk"].get(source)
+    value = snapshot.risk.get(source)
     if value is None:
         return None
-    value = Decimal(str(value))
     if not value.is_finite():
         return None
     return abs(value) if source != metric else value
 
 
 class RiskLimitService:
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def rows(self, portfolio_id):
+    def rows(self, portfolio_id: str) -> Sequence[models.RiskLimit]:
         return self.session.scalars(
             select(models.RiskLimit)
             .join(models.RiskPolicy)
@@ -83,13 +95,14 @@ class RiskLimitService:
 
     def configure(
         self, key: str, request: LimitRequest, actor: str | None, limit_id: str | None = None
-    ):
+    ) -> ConfiguredLimit:
         portfolio, profile = PortfolioValuationService(self.session).portfolio(key)
         self.session.execute(
             select(models.PortfolioProfile)
             .where(models.PortfolioProfile.id == profile.id)
             .with_for_update()
         ).scalar_one()
+        disabled = disabled_limit_ids(profile.configuration)
         row = (
             next((item for item in self.rows(portfolio.id) if item.id == limit_id), None)
             if limit_id
@@ -125,11 +138,10 @@ class RiskLimitService:
             request.direction,
         )
         self.session.flush()
-        disabled = set(profile.configuration.get("disabled_risk_limit_ids", []))
         disabled.discard(row.id) if request.enabled else disabled.add(row.id)
         profile.configuration = {
             **profile.configuration,
-            "disabled_risk_limit_ids": sorted(disabled),
+            "disabled_risk_limit_ids": list[JsonValue](sorted(disabled)),
         }
         audit(
             self.session,
@@ -144,21 +156,35 @@ class RiskLimitService:
             actor,
         )
         self.session.flush()
-        return {"id": row.id, **request.model_dump(mode="json")}
+        return {
+            "id": row.id,
+            "metric": request.metric,
+            "threshold": str(request.threshold),
+            "direction": request.direction,
+            "enabled": request.enabled,
+            "reason": request.reason,
+        }
 
-    def evaluate(self, data, actor=None):
-        portfolio_id = data["portfolio"]["id"]
+    def evaluate(
+        self,
+        data: Mapping[str, object],
+        actor: str | None = None,
+    ) -> list[LimitEvaluation]:
+        snapshot = RiskSnapshotInput.model_validate(data)
+        portfolio_id = snapshot.portfolio.id
+        if not portfolio_id:
+            raise ValueError("Risk evaluation requires a portfolio identifier")
         profile = self.session.execute(
             select(models.PortfolioProfile)
             .where(models.PortfolioProfile.portfolio_id == portfolio_id)
             .with_for_update()
         ).scalar_one()
-        disabled = set(profile.configuration.get("disabled_risk_limit_ids", []))
+        disabled = disabled_limit_ids(profile.configuration)
         now = datetime.now(UTC)
-        result = []
+        result: list[LimitEvaluation] = []
         for limit in self.rows(portfolio_id):
-            value = metric_value(data, limit.metric)
-            state = (
+            value = metric_value(snapshot, limit.metric)
+            state: LimitState = (
                 "DISABLED"
                 if limit.id in disabled
                 else "NOT_EVALUATED"
@@ -184,6 +210,8 @@ class RiskLimitService:
             previous = breach.state if breach else None
             previous_value = breach.observed_value if breach else None
             if state == "BREACH":
+                if value is None:
+                    raise ValueError("A risk breach requires an observed value")
                 if breach is None:
                     breach = models.RiskBreach(
                         id=identifier,
@@ -229,9 +257,9 @@ class RiskLimitService:
                             "after": breach.state,
                             "value": value,
                             "threshold": limit.threshold,
-                            "valuation_run_id": data.get("valuation_run_id"),
-                            "source": data.get("source"),
-                            "as_of": data.get("as_of"),
+                            "valuation_run_id": snapshot.valuation_run_id,
+                            "source": snapshot.source,
+                            "as_of": snapshot.as_of,
                         },
                         actor,
                     )
@@ -244,7 +272,7 @@ class RiskLimitService:
                         {
                             "before": previous_value,
                             "after": value,
-                            "valuation_run_id": data.get("valuation_run_id"),
+                            "valuation_run_id": snapshot.valuation_run_id,
                         },
                         actor,
                     )
@@ -274,8 +302,9 @@ class RiskLimitService:
             )
         return result
 
-    def monitor(self, key, actor=None):
+    def monitor(self, key: str, actor: str | None = None) -> RiskMonitorResult:
         data = PortfolioValuationService(self.session).latest(key, commit=False)
+        evidence = MonitorEvidence.model_validate(data)
         limits = self.evaluate(data, actor)
         ids = [row["breach_id"] for row in limits if row["breach_id"]]
         history = self.session.scalars(
@@ -287,22 +316,22 @@ class RiskLimitService:
             .limit(100)
         ).all()
         return {
-            "portfolio": data["portfolio"],
-            "risk": data["risk"],
-            "model": data.get("risk_model", {}),
-            "source": data["source"],
-            "quality": data["quality"],
-            "as_of": data["as_of"],
-            "valuation_run_id": data["valuation_run_id"],
+            "portfolio": evidence.portfolio,
+            "risk": evidence.risk,
+            "model": evidence.risk_model,
+            "source": evidence.source,
+            "quality": evidence.quality,
+            "as_of": evidence.as_of,
+            "valuation_run_id": evidence.valuation_run_id,
             "limits": limits,
             "timeline": [
                 {
                     "id": row.id,
                     "timestamp": row.created_at.isoformat(),
                     "action": row.action,
-                    **row.metadata_json,
+                    **(row.metadata_json or {}),
                 }
                 for row in history
             ],
-            "warnings": data["warnings"],
+            "warnings": evidence.warnings,
         }

@@ -35,6 +35,7 @@ from .portfolio_engine import ONE, ZERO, Entry, LedgerState, daily_performance, 
 from .portfolio_exposure import exposure_service
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
+from .risk_contracts import disabled_limit_ids
 from .transaction_context import context_payload
 from .valuation_metrics import metric_summary
 from .valuation_values import jsonable as jsonable
@@ -305,6 +306,7 @@ class PortfolioValuationService:
 
     def calculate(self, key=None, end=None):
         portfolio, profile = self.portfolio(key)
+        disabled = disabled_limit_ids(profile.configuration)
         end = end or datetime.now(UTC).date()
         now = datetime.now(UTC)
         entries, transactions = load_entries(self.session, portfolio.id)
@@ -695,7 +697,7 @@ class PortfolioValuationService:
         ).all()
         breaches = []
         for limit, _ in limits:
-            if limit.id in profile.configuration.get("disabled_risk_limit_ids", []):
+            if limit.id in disabled:
                 continue
             actual = risk.get(limit.metric)
             if actual is not None and (

@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 from app import models
 from app.database import get_session
@@ -5,10 +7,11 @@ from app.risk_api import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture
-def risk_client(ledger_session, session_token):
+def risk_client(ledger_session: Session, session_token: str) -> Iterator[TestClient]:
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[get_session] = lambda: ledger_session
@@ -17,7 +20,9 @@ def risk_client(ledger_session, session_token):
         yield client
 
 
-def test_monitor_records_breach_and_configured_threshold_survives_refresh(risk_client):
+def test_monitor_records_breach_and_configured_threshold_survives_refresh(
+    risk_client: TestClient,
+) -> None:
     payload = {
         "metric": "gross_exposure",
         "threshold": ".5",
@@ -27,6 +32,14 @@ def test_monitor_records_breach_and_configured_threshold_survives_refresh(risk_c
     response = risk_client.post("/api/v1/risk/portfolios/book/limits", json=payload)
     assert response.status_code == 201, response.text
     identifier = response.json()["id"]
+    assert response.json() == {
+        "id": identifier,
+        "metric": "gross_exposure",
+        "threshold": "0.5",
+        "direction": "MIN",
+        "enabled": True,
+        "reason": "Review cash-only test portfolio",
+    }
     first = risk_client.get("/api/v1/risk/portfolios/book/monitor")
     assert first.status_code == 200, first.text
     limit = first.json()["limits"][0]
@@ -44,7 +57,7 @@ def test_monitor_records_breach_and_configured_threshold_survives_refresh(risk_c
     )
 
 
-def test_settings_validate_and_change_valuation_fingerprint(risk_client):
+def test_settings_validate_and_change_valuation_fingerprint(risk_client: TestClient) -> None:
     first = risk_client.get("/api/v1/risk/portfolios/book/monitor").json()
     updated = risk_client.post(
         "/api/v1/risk/portfolios/book/settings",
@@ -64,9 +77,11 @@ def test_settings_validate_and_change_valuation_fingerprint(risk_client):
 
 
 def test_risk_configuration_requires_admin_and_unknown_portfolio_is_rejected(
-    risk_client, ledger_session
-):
+    risk_client: TestClient,
+    ledger_session: Session,
+) -> None:
     user = ledger_session.scalar(select(models.User))
+    assert user is not None
     user.role = "VIEWER"
     ledger_session.commit()
     assert (
