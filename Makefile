@@ -1,6 +1,6 @@
 .PHONY: bootstrap dev stop test test-unit test-integration test-e2e lint format typecheck migrate seed reset-demo backfill backup backup-sqlite restore verify-backup verify-backup-sqlite restore-test security-check build health broker-agent-build
 
-PYTHON ?= python
+PYTHON ?= $(firstword $(wildcard .venv-rc/Scripts/python.exe .venv-rc/bin/python) python)
 RELEASE_ARGS ?=
 BACKUP_ARGS ?=
 BACKUP_ARCHIVE ?=

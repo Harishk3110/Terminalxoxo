@@ -11,6 +11,10 @@ record manual activity and never transmit orders.
 
 Use Node.js 22, pnpm 9.15.4 and Python 3.12. Install frontend and Python dependencies:
 
+For file-backed SQLite, use a Python runtime with SQLite 3.51.3+ or a fixed
+maintenance backport. See [Local SQLite Runtime](docs/SQLITE_RUNTIME.md) for the
+verified `.venv-rc` setup. The Docker stack uses PostgreSQL and is unaffected.
+
 ```powershell
 corepack pnpm install --frozen-lockfile
 python -m pip install -r services/api/requirements.txt

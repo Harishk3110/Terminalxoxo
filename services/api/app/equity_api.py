@@ -5,7 +5,7 @@ import json
 from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Self, TypedDict
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, model_validator
@@ -22,6 +22,20 @@ from .terminal_analytics import fundamentals, history, instrument, quotes
 
 router = APIRouter(prefix="/api/v1/equity", tags=["equity-research"])
 ANALYSIS_OBJECT = TypeAdapter(dict[str, JsonValue])
+ANALYSIS_SYMBOL = TypeAdapter(str)
+
+
+class SavedSecurityLink(BaseModel):
+    model_config = ConfigDict(strict=True)
+    instrument_id: str = Field(min_length=1)
+
+
+class SavedThesisLink(SavedSecurityLink):
+    version: int = Field(default=1, ge=1)
+
+
+class ThesisHistory(TypedDict):
+    items: list[dict[str, JsonValue]]
 
 
 @router.get("/{symbol}/snapshot")
@@ -366,7 +380,7 @@ class ThesisRequest(BaseModel):
     state: Literal["DRAFT", "ACTIVE", "REVIEW", "EXITED", "ARCHIVED"] = "DRAFT"
 
     @model_validator(mode="after")
-    def coherent(self):
+    def coherent(self) -> Self:
         if self.bull_probability + self.base_probability + self.bear_probability != 1:
             raise ValueError("Scenario probabilities must sum to one")
         if self.target_weight > self.maximum_weight:
@@ -383,21 +397,27 @@ class ThesisRequest(BaseModel):
 
 
 @router.post("/theses", status_code=201)
-def save_thesis(payload: ThesisRequest, request: Request, session: Database):
+def save_thesis(
+    payload: ThesisRequest, request: Request, session: Database
+) -> dict[str, JsonValue]:
     actor = identity(request, session)
     item = instrument(session, payload.symbol)
     parent = session.get(models.AnalysisRun, payload.parent_id) if payload.parent_id else None
-    if payload.parent_id and (
-        parent is None or parent.kind != "thesis" or parent.result.get("instrument_id") != item.id
-    ):
-        raise ValueError("Thesis parent must be a saved thesis for this security")
+    version = 1
+    if payload.parent_id:
+        if parent is None or parent.kind != "thesis" or parent.status != "SUCCEEDED":
+            raise ValueError("Thesis parent must be a completed saved thesis for this security")
+        parent_link = SavedThesisLink.model_validate(parent.result)
+        if parent_link.instrument_id != item.id:
+            raise ValueError("Thesis parent must be a saved thesis for this security")
+        version = parent_link.version + 1
     if payload.dcf_run_id:
         dcf = session.get(models.AnalysisRun, payload.dcf_run_id)
         if (
             dcf is None
             or dcf.kind != "dcf"
             or dcf.status != "SUCCEEDED"
-            or dcf.result.get("instrument_id") != item.id
+            or SavedSecurityLink.model_validate(dcf.result).instrument_id != item.id
         ):
             raise ValueError("DCF link must be a completed valuation for this security")
     if any(
@@ -416,7 +436,7 @@ def save_thesis(payload: ThesisRequest, request: Request, session: Database):
             "instrument_id": item.id,
             "source": "PRIVATE USER RESEARCH",
             "quality": "RESEARCH OPINION",
-            "version": parent.result.get("version", 1) + 1 if parent else 1,
+            "version": version,
         },
         actor,
     )
@@ -458,17 +478,20 @@ def save_thesis(payload: ThesisRequest, request: Request, session: Database):
 
 
 @router.get("/theses")
-def theses(session: Database, symbol: str | None = None):
+def theses(session: Database, symbol: str | None = None) -> ThesisHistory:
     rows = session.scalars(
         select(models.AnalysisRun)
         .where(models.AnalysisRun.kind == "thesis")
         .order_by(models.AnalysisRun.created_at.desc())
         .limit(500)
     ).all()
-    return {
-        "items": [
-            {"id": row.id, **row.result}
-            for row in rows
-            if not symbol or row.result.get("symbol", "").upper() == symbol.upper()
-        ]
-    }
+    items: list[dict[str, JsonValue]] = []
+    for row in rows:
+        result = ANALYSIS_OBJECT.validate_python(row.result, strict=True)
+        if "id" in result:
+            raise ValueError("Stored thesis result cannot override receipt identity")
+        json.dumps(result, allow_nan=False)
+        saved_symbol = ANALYSIS_SYMBOL.validate_python(result.get("symbol", ""), strict=True)
+        if not symbol or saved_symbol.upper() == symbol.upper():
+            items.append({"id": row.id, **result})
+    return {"items": items}

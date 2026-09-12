@@ -4,6 +4,7 @@ node_modules/
 .venv-local-agent/
 .venv-sprint/
 .venv-release/
+.venv-rc/
 .hypothesis/
 
 # Build outputs
