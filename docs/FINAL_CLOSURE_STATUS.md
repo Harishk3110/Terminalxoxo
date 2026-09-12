@@ -7,12 +7,13 @@ Chart/29-stage runner checkpoint: 9a85cbe, pushed. Reconciliation checkpoint:
 Trade-monitor checkpoint: a57bd47, pushed and deployed to those same services.
 Trade-recording checkpoint: fcaa774, pushed and deployed; full backend 37 passes
 on frozen Python application/tests with separate database/storage/auth paths.
+Valuation-record checkpoint: 9d2577b, pushed; full current rerun/deployment pending.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git. Pushed.
 Earlier overnight starting commit and all historical receipts remain in OVERNIGHT_RC_*.
 
 Milestone: final quality and remaining feature closure, not release certification.
 One-period FIN chart defect is corrected with negative/positive browser evidence.
-First blocking static gate: 539 distinct mypy diagnostics across 63 files.
+First blocking static gate: 536 distinct mypy diagnostics across 63 files.
 Release runner now has the required 29 ordered gates; complete execution is pending.
 
 ## Baseline
@@ -21,10 +22,10 @@ Release runner now has the required 29 ordered gates; complete execution is pend
   native 0 on frozen fcaa774 Python application/tests. Coverage: 89.9076517%
   (12,267/13,644), 1,377 missing and 31 excluded. XML and native exit retained.
 - Latest affected backend: 300 passed, three warnings, 44.76s on 41baacb changes.
-- Ruff: zero errors, native 0. Formatting: 336 files checked, native 0.
-- mypy: whole run 58 native 1, 539 raw/canonical diagnostics, 63 files, 322
-  sources, nine distributions. API: 253 / 13 files / 125 sources. Down 47
-  from run 57, with zero new diagnostics after accounting for line shifts.
+- Ruff: zero errors, native 0. Formatting: 343 files checked, native 0.
+- mypy: whole run 60 native 1, 536 raw/canonical diagnostics, 63 files, 322
+  sources, nine distributions. Down three from run 58, with zero new
+  diagnostics after accounting for line shifts. The whole gate remains red.
 - OpenAPI: 170 paths, native 0.
 - Frontend: 337 passed / 27 files, native 0, 16.58s. Shared: five passed / two
   files, native 0, 2.47s. These counts are actual tests, not placeholder scripts.
@@ -138,5 +139,27 @@ native 0, zero skipped/flaky/global errors. All 16 screenshots reviewed and API
 error scan clean. Final Ruff/format pass, 343 files; OpenAPI generates 170 paths.
 Old-code negative control: six failures from missing transaction posting totals,
 one passed; final affected rerun: 54 passed, one warning, 2.87s, native 0.
-This batch is ready to commit but is not yet deployed. Top-level valuation
+This batch is committed and pushed as 9d2577b but is not yet deployed. Top-level valuation
 return contracts remain open; full current backend is not yet rerun.
+
+## Risk Record Closure
+
+The risk adapter now has explicit evidence, settings, rolling-beta and position
+contribution records; estimator arithmetic is unchanged. Twelve standalone risk
+outputs exactly match 9d2577b and twelve valuation-adapter outputs match fcaa774,
+including scalar kinds and JSON order. Minimal three-field analytical position
+inputs remain supported alongside full valuation rows; no dummy fields added.
+Missing weights raise ValueError while recorded zero remains valid.
+
+Twelve new regression cases. Wider affected/hedge/stress/security suite: 386
+passed, three warnings, 28.41s, native 0. Final caller-compatibility suite: 53
+passed, three warnings, 11.74s, native 0. Four focused strict files pass; three
+top-level valuation-return diagnostics remain. Whole 60: 536 diagnostics, no
+new diagnostics versus run 58. Browser 01: four passed, zero skipped/flaky/global
+errors, 73.408078s, native 0. Eight screenshots reviewed; API error scan clean.
+Ruff and format 03 pass; OpenAPI generates 170 paths. No frontend source changes.
+Full current backend and deployment remain pending; backend 37 predates these
+twelve risk tests and seven valuation tests. Exact next command:
+`.venv-rc/Scripts/python.exe -m pytest tests/sprint services/api/tests -q
+--cov=services/api/app --cov-report=json:logs/final-coverage-38.json
+--junitxml=logs/final-backend-38.xml` on the frozen next commit with isolated paths.

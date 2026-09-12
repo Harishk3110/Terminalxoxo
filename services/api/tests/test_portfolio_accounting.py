@@ -9,6 +9,7 @@ from app.portfolio_engine import Entry, LedgerState, daily_performance, nav_tota
 from app.portfolio_seed import ANCHORS, ensure_main
 from app.portfolio_valuation import PortfolioValuationService
 from app.price_sources import FxRateResolver, MarketPriceResolver
+from app.valuation_records import WeightedRiskPosition
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
@@ -210,7 +211,7 @@ def test_seed_nav_and_independent_reconciliation(accounting_session: Session) ->
 
 def test_correlation_order_uses_symbols_and_undefined_values_are_missing() -> None:
     histories = {"first-id": {DAY: 100}, "second-id": {DAY: 200}}
-    positions = [
+    positions: list[WeightedRiskPosition] = [
         {"instrument_id": "first-id", "symbol": "ZZZ", "weight": 0.5},
         {"instrument_id": "second-id", "symbol": "AAA", "weight": 0.5},
     ]

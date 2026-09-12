@@ -26,7 +26,7 @@ Classifications describe evidence, not promises of live connectivity.
 | Authentication | PARTIAL | Complete trusted-device, provisioning and race acceptance |
 | Monitoring | PARTIAL | Ten dashboards and all required observed metrics |
 | PostgreSQL / object backup | DEMO_FUNCTIONAL | Latest final gate plus operator-managed offsite policy |
-| Static quality | PARTIAL | Whole Ruff passes; 539 raw/canonical strict diagnostics remain (run 58) |
+| Static quality | PARTIAL | Whole Ruff passes; 536 raw/canonical strict diagnostics remain (run 60); no new diagnostics versus run 58 |
 | Release command | PARTIAL | Required 29 stages implemented and 55 runner tests pass; complete execution pending |
 | Tomorrow onboarding/deployment wrappers | MISSING | Required scripts and exact validated runbooks |
 | Hosted deployment | MISSING | Code gates and authorised cloud execution remain |

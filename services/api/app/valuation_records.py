@@ -1,11 +1,30 @@
 """In-memory valuation records before exact amounts cross the JSON boundary."""
 
+from collections.abc import Hashable
 from decimal import Decimal
 from typing import NotRequired, TypedDict
 
 from .portfolio_domain.position_metrics import PositionPayload
 from .portfolio_domain.position_pnl import PositionPnlPayload
 from .price_sources import PriceProvenance
+from .risk_statistics import RiskEvidence
+
+
+class ValuationCorrelation(TypedDict):
+    symbols: list[Hashable]
+    values: list[list[float | None]]
+    model: RiskEvidence
+
+
+class WeightedRiskPosition(TypedDict):
+    instrument_id: str
+    symbol: str
+    weight: Decimal | float | None
+    beta: NotRequired[float | None]
+    beta_contribution: NotRequired[float | None]
+    risk_contribution: NotRequired[float | None]
+    marginal_volatility: NotRequired[float | None]
+    component_volatility: NotRequired[float | None]
 
 
 class ValuationPosition(PositionPayload):

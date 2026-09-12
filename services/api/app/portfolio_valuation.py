@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -36,9 +37,16 @@ from .portfolio_exposure import exposure_service
 from .portfolio_seed import ensure_main, profile_for
 from .price_sources import FxRateResolver, MarketPriceResolver, close_of_day
 from .risk_contracts import disabled_limit_ids
+from .risk_statistics import RiskEvidence
 from .transaction_context import context_payload
 from .valuation_metrics import metric_summary
-from .valuation_records import ValuationCash, ValuationDay, ValuationPosition
+from .valuation_records import (
+    ValuationCash,
+    ValuationCorrelation,
+    ValuationDay,
+    ValuationPosition,
+    WeightedRiskPosition,
+)
 from .valuation_values import jsonable as jsonable
 from .valuation_values import number as number
 
@@ -649,7 +657,7 @@ class PortfolioValuationService:
             raise ValueError("Configured risk-free rate must be numeric")
         performance, states, performance_warnings = metric_summary(curve, end, float(risk_free))
         warnings.extend(performance_warnings)
-        risk, correlations = self.risk(
+        risk, correlation_details = self.risk(
             histories,
             last_positions,
             benchmark.id if benchmark else None,
@@ -657,9 +665,16 @@ class PortfolioValuationService:
             performance,
             profile.configuration.get("risk_settings"),
         )
-        risk_model = correlations.pop("model")
+        risk_model = correlation_details["model"]
+        correlations = {
+            "symbols": correlation_details["symbols"],
+            "values": correlation_details["values"],
+        }
         if risk_model["state"] != "AVAILABLE":
-            warnings.append("Risk: " + risk_model["reason"])
+            reason = risk_model["reason"]
+            if reason is None:
+                raise ValueError("Unavailable risk result must include a reason")
+            warnings.append("Risk: " + reason)
         position_weights = position_exposures(
             [
                 ExposurePosition(
@@ -718,7 +733,8 @@ class PortfolioValuationService:
             ("cvar_loss_95", "cvar_95"),
             ("drawdown_loss", "current_drawdown"),
         ):
-            risk[metric] = abs(risk[source]) if risk.get(source) is not None else None
+            observed_risk = risk.get(source)
+            risk[metric] = abs(observed_risk) if observed_risk is not None else None
         if nav is None:
             risk = {key: value if key == "observations" else None for key, value in risk.items()}
             for row in last_positions:
@@ -1080,14 +1096,25 @@ class PortfolioValuationService:
         )
 
     @staticmethod
-    def risk(histories, positions, benchmark_id, nav, performance, settings=None):
+    def risk(
+        histories: Mapping[str, Mapping[date, float]],
+        positions: Sequence[ValuationPosition | WeightedRiskPosition],
+        benchmark_id: str | None,
+        nav: Decimal | None,
+        performance: Mapping[str, float | None],
+        settings: object = None,
+    ) -> tuple[dict[str, float | int | None], ValuationCorrelation]:
         from .risk_statistics import RiskSettings, calculate_risk
 
         frame = pd.DataFrame(histories).sort_index()
         ordered = sorted(positions, key=lambda row: row["symbol"])
-        weights = pd.Series(
-            {row["instrument_id"]: float(row["weight"]) for row in ordered}, dtype=float
-        )
+        weights_by_id = {}
+        for row in ordered:
+            weight = row["weight"]
+            if weight is None:
+                raise ValueError("Risk requires calculated position weights")
+            weights_by_id[row["instrument_id"]] = float(weight)
+        weights = pd.Series(weights_by_id, dtype=float)
         result = calculate_risk(
             frame,
             weights,
@@ -1096,13 +1123,19 @@ class PortfolioValuationService:
             RiskSettings.model_validate(settings or {}),
         )
         for row in positions:
-            row.update(result.positions.get(row["instrument_id"], {}))
+            contribution = result.positions.get(row["instrument_id"])
+            if contribution is not None:
+                row["beta"] = contribution["beta"]
+                row["beta_contribution"] = contribution["beta_contribution"]
+                row["risk_contribution"] = contribution["risk_contribution"]
+                row["marginal_volatility"] = contribution["marginal_volatility"]
+                row["component_volatility"] = contribution["component_volatility"]
         risk = {
             **result.metrics,
             "max_drawdown": performance.get("max_drawdown"),
             "current_drawdown": performance.get("current_drawdown"),
         }
-        evidence = {**result.evidence, "symbols": [row["symbol"] for row in ordered]}
+        evidence: RiskEvidence = {**result.evidence, "symbols": [row["symbol"] for row in ordered]}
         return risk, {
             "symbols": evidence["symbols"],
             "values": evidence["values"],

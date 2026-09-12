@@ -12,7 +12,8 @@ Unchecked below means not certified against this directive, not necessarily miss
 - [x] Close trade-monitor evidence boundary and review browser verification; 186 affected/security/report tests pass and final desktop/mobile review browser passes.
 - [x] Reject malformed new trade notes/rationale before persistence and preserve complete saved risk exposures.
 - [x] Type valuation position/P&L/cash/curve records, reject missing transaction posting totals, and verify exact prior-output parity plus five browser workflows.
-- [ ] Eliminate remaining 539 canonical first-party strict diagnostics without weakening contracts (whole run 58).
+- [x] Type risk evidence/settings/contributions without changing estimator arithmetic; preserve minimal analytical inputs, exact prior outputs and desktop/mobile workflows.
+- [ ] Eliminate remaining 536 canonical first-party strict diagnostics without weakening contracts (whole run 60).
 - [ ] Complete the full current baseline and all final gates; frozen fcaa774 backend 37 passed 2,053 tests with native 0 and 89.9076517% coverage. Later valuation-record work has focused evidence; full final certification remains open.
 
 

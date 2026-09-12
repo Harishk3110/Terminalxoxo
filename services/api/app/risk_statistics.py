@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Hashable
 from dataclasses import dataclass
 from statistics import NormalDist
-from typing import Any, cast
+from typing import NotRequired, SupportsFloat, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -21,14 +22,52 @@ class RiskSettings(BaseModel):
     rolling_window: int = Field(default=60, ge=20, le=1000, strict=True)
 
 
+class RiskSettingsRecord(TypedDict):
+    minimum_observations: int
+    ewma_decay: float
+    simulations: int
+    seed: int
+    rolling_window: int
+
+
+class RollingBeta(TypedDict):
+    date: str
+    beta: float | None
+
+
+class RiskEvidence(TypedDict):
+    state: str
+    reason: str | None
+    symbols: list[Hashable]
+    values: list[list[float | None]]
+    covariance: list[list[float | None]]
+    rolling_beta: list[RollingBeta]
+    settings: RiskSettingsRecord
+    version: str
+    horizon: str
+    annual_periods: int
+    methodology: str
+    start: NotRequired[str]
+    end: NotRequired[str]
+    benchmark_state: NotRequired[str]
+
+
+class PositionRisk(TypedDict):
+    beta: float | None
+    beta_contribution: float | None
+    risk_contribution: float | None
+    marginal_volatility: float | None
+    component_volatility: float | None
+
+
 @dataclass
 class RiskAnalysis:
     metrics: dict[str, float | int | None]
-    evidence: dict[str, Any]
-    positions: dict[str, dict[str, float | None]]
+    evidence: RiskEvidence
+    positions: dict[str, PositionRisk]
 
 
-def finite(value: Any) -> float | None:
+def finite(value: SupportsFloat | str | bytes | bytearray | None) -> float | None:
     return float(value) if value is not None and math.isfinite(float(value)) else None
 
 
@@ -44,7 +83,7 @@ def calculate_risk(
     weights = weights.astype(float)
     if not np.isfinite(weights.to_numpy()).all():
         raise ValueError("Risk weights must be finite")
-    metrics = dict.fromkeys(
+    metrics: dict[str, float | int | None] = dict.fromkeys(
         [
             "beta",
             "volatility",
@@ -72,29 +111,33 @@ def calculate_risk(
             "concentration": float(weights.abs().max()) if len(weights) else 0,
         }
     )
-    evidence = {
+    evidence: RiskEvidence = {
         "state": "INSUFFICIENT_DATA",
         "reason": None,
         "symbols": names,
         "values": [[None for _ in names] for _ in names],
         "covariance": [],
         "rolling_beta": [],
-        "settings": settings.model_dump(),
+        "settings": {
+            "minimum_observations": settings.minimum_observations,
+            "ewma_decay": settings.ewma_decay,
+            "simulations": settings.simulations,
+            "seed": settings.seed,
+            "rolling_window": settings.rolling_window,
+        },
         "version": "knk-risk-1.0",
         "horizon": "1 trading day",
         "annual_periods": 252,
         "methodology": "Current signed security weights; sample covariance ddof=1; historical linear quantiles; normal parametric and seeded normal-return Monte Carlo; pandas bias-corrected EWMA variance. Cash-FX, liability and nonlinear option risk excluded. Negative values are P&L losses, not positive loss amounts.",
     }
-    contributions = {
-        str(key): dict.fromkeys(
-            [
-                "beta",
-                "beta_contribution",
-                "risk_contribution",
-                "marginal_volatility",
-                "component_volatility",
-            ]
-        )
+    contributions: dict[str, PositionRisk] = {
+        str(key): {
+            "beta": None,
+            "beta_contribution": None,
+            "risk_contribution": None,
+            "marginal_volatility": None,
+            "component_volatility": None,
+        }
         for key in names
     }
     result = RiskAnalysis(metrics, evidence, contributions)
@@ -130,7 +173,9 @@ def calculate_risk(
         return result
     covariance = returns.cov()
     correlation = returns.corr()
-    portfolio_returns = cast("pd.Series[float]", returns @ weights)
+    portfolio_returns = returns @ weights
+    if not isinstance(portfolio_returns, pd.Series):
+        raise ValueError("Weighted security returns must form one portfolio series")
     weight_array = weights.to_numpy(dtype=float)
     variance = float(weight_array @ covariance.to_numpy(dtype=float) @ weight_array)
     deviation = math.sqrt(max(0, variance))

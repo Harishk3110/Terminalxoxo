@@ -430,3 +430,53 @@ Final valuation-record verification:
 - Positive 03 native 0 after final import correction: 54 passed, one warning,
   2.87s, three files; .log/.xml retained. The seven new cases are included in
   the earlier 290-test run. Full current backend and deployment remain pending.
+
+Valuation-record checkpoint 9d2577b committed and pushed, native 0 each.
+Pre-push secret scan 01 native 0, 676 text files, zero findings; diff check
+native 0. No frontend source changes or active business records were included.
+Running local backend remains fcaa774; terminal remains 9a85cbe.
+
+## Risk Records
+
+Starting commit 9d2577b. Typed risk settings, evidence, rolling-beta and position
+contribution records replace dynamic shapes; covariance/quantile/Monte Carlo
+arithmetic is unchanged. Runtime series validation replaces an unchecked cast.
+Minimal three-field analytical positions remain supported using a named record.
+Missing weights raise an explicit ValueError; observed zero remains zero, not
+an invented beta. Twelve new regression cases; no frontend source changes.
+
+Receipts under logs/, .venv-rc unless stated:
+
+| Receipt | Result |
+| --- | --- |
+| final-risk-records-types-01.log | native 1: four valuation diagnostics; new nullable abs input corrected |
+| final-risk-records-types-03.log | native 1: three existing top-level valuation return diagnostics |
+| final-risk-records-focused-types-01.log | native 1: one test compared incompatible empty typed lists; split assertions |
+| final-risk-records-focused-types-03.log | native 0: four strict source/test files |
+| final-risk-records-positive-01.log/xml | native 0: 167 passed, three warnings, 22.78s |
+| final-risk-records-positive-02.log/xml | native 0: 169 passed, three warnings, 20.17s |
+| final-risk-records-positive-03.log/xml | native 0: 386 passed, three warnings, 28.41s, 16 affected/risk/hedge/stress/security files |
+| final-risk-records-positive-04.log/xml | native 0: 53 passed, three warnings, 11.74s after final minimal-input compatibility fix |
+| final-risk-records-parity-01.log | native 0: twelve standalone risk results match 9d2577b values, scalar kinds and JSON order |
+| final-risk-records-valuation-parity-01.log | native 0: twelve full valuation-adapter outputs match fcaa774 |
+| final-risk-records-weight-negative-01.log | native 1: one failed, one passed, seven deselected, one warning, 0.83s; baseline raised incidental TypeError for missing weight |
+| final-risk-records-ruff-03.log / format-03.log | native 0 each, 343 formatted files |
+| final-risk-records-openapi-01.log / no-execution-01.log | native 0 each; 170 OpenAPI paths and no executable broker actions |
+
+Whole 59 native 1: 537 diagnostics, 63 files, 322 sources, nine groups; observed
+2026-09-12T15:13:42.373302+00:00. One new diagnostic exposed a supported minimal
+three-field caller. Named WeightedRiskPosition and a covariant Sequence boundary
+preserve that caller without fabricated fields. Whole 60 native 1, retained in
+.exit: 536 raw/canonical diagnostics, 63 files, 322 sources, nine groups;
+observed 2026-09-12T15:17:53.403837+00:00. Three fewer than run 58, zero new
+diagnostics after normalizing line shifts. The whole strict gate remains red.
+
+Browser 01 command: Node 22 Playwright test tests/e2e/risk-hedge.spec.ts
+tests/e2e/risk-availability.spec.ts tests/e2e/trade-monitor.spec.ts. Isolated
+run ID final-risk-records-browser-01. Native 0, four passed, zero skipped/flaky/
+global errors, 73.408078s; start 2026-09-12T15:14:18.909Z. Eight 1440/390px
+screenshots reviewed: risk, hedge, unavailable-risk, and saved trade review.
+Tables retain their existing horizontal scrolling; no shell redesign. API log
+has zero traceback/500/database-lock matches. The final compatibility change
+after browser completion changes annotations only. No Firefox/full-suite claim.
+Full backend 38 and deployment remain pending.

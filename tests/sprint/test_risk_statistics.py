@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
+from typing import SupportsFloat
 
 import numpy as np
 import pandas as pd
 import pytest
-from app.risk_statistics import RiskSettings, calculate_risk
+from app.risk_statistics import RiskSettings, calculate_risk, finite
 
 
 def inputs() -> tuple[pd.DataFrame, pd.Series[float]]:
@@ -95,3 +97,70 @@ def test_settings_do_not_allow_unbounded_work_or_nonfinite_estimation() -> None:
         RiskSettings(simulations=100000000)
     with pytest.raises(ValueError):
         RiskSettings(ewma_decay=float("nan"))
+
+
+def test_risk_evidence_retains_settings_and_partial_history_schema() -> None:
+    prices, weights = inputs()
+    settings = RiskSettings(
+        minimum_observations=40, ewma_decay=0.9, simulations=1500, seed=0, rolling_window=30
+    )
+    result = calculate_risk(prices.iloc[:30], weights, 100000, "SPY", settings)
+    assert result.evidence["settings"] == settings.model_dump()
+    assert list(result.evidence["settings"]) == list(settings.model_dump())
+    assert list(result.evidence) == [
+        "state",
+        "reason",
+        "symbols",
+        "values",
+        "covariance",
+        "rolling_beta",
+        "settings",
+        "version",
+        "horizon",
+        "annual_periods",
+        "methodology",
+    ]
+    assert result.evidence["symbols"] == ["A", "B"]
+    assert result.evidence["values"] == [[None, None], [None, None]]
+    assert result.evidence["covariance"] == []
+    assert result.evidence["rolling_beta"] == []
+    assert result.metrics["observations"] == 29
+    for row in result.positions.values():
+        assert list(row) == [
+            "beta",
+            "beta_contribution",
+            "risk_contribution",
+            "marginal_volatility",
+            "component_volatility",
+        ]
+        assert all(value is None for value in row.values())
+
+
+def test_existing_numeric_security_labels_are_not_coerced_in_matrix_evidence() -> None:
+    prices, _ = inputs()
+    prices = prices.rename(columns={"A": 1, "B": 2})
+    result = calculate_risk(prices, pd.Series({1: 0.4, 2: -0.2}), 100000, "SPY")
+    assert result.evidence["state"] == "AVAILABLE"
+    assert result.evidence["symbols"] == [1, 2]
+    assert all(isinstance(value, int) for value in result.evidence["symbols"])
+    assert list(result.positions) == ["1", "2"]
+    assert result.metrics["beta"] is not None
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (None, None),
+        (float("nan"), None),
+        (float("inf"), None),
+        (Decimal("-0"), -0.0),
+        (np.float64(0.25), 0.25),
+        ("-1.25", -1.25),
+        (b"2.5", 2.5),
+        (bytearray(b"3.5"), 3.5),
+    ],
+)
+def test_finite_risk_values_retain_existing_numeric_representations(
+    value: SupportsFloat | str | bytes | bytearray | None, expected: float | None
+) -> None:
+    assert finite(value) == expected

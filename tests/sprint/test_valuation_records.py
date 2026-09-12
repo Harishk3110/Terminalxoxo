@@ -9,8 +9,11 @@ from app import models, portfolio_valuation
 from app.portfolio_domain.position_metrics import PortfolioPositionService
 from app.portfolio_domain.postings import AccountingPosting, summarize_postings
 from app.portfolio_domain.types import Lot
+from app.portfolio_operations import PortfolioLedgerService
 from app.portfolio_valuation import PortfolioValuationService
+from app.valuation_records import ValuationPosition
 from app.valuation_values import jsonable
+from pydantic import TypeAdapter
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -69,3 +72,33 @@ def test_missing_transaction_posting_total_cannot_persist_a_successful_valuation
         PortfolioValuationService(ledger_session).latest("book", end=date(2026, 1, 7))
     assert ledger_session.scalar(select(func.count(models.PortfolioValuationRun.id))) == 0
     assert ledger_session.scalar(select(func.count(models.PortfolioTransaction.id))) == 1
+
+
+@pytest.mark.parametrize("weight", [None, D(0)])
+def test_risk_distinguishes_missing_weight_from_a_recorded_zero_weight(
+    ledger_session: Session, weight: D | None
+) -> None:
+    PortfolioLedgerService(ledger_session).add(
+        {
+            "transaction_type": "BUY",
+            "trade_date": "2026-01-06",
+            "symbol": "AAA",
+            "quantity": "1",
+            "price": "120",
+        },
+        "TEST_BOOK",
+    )
+    data = PortfolioValuationService(ledger_session).latest("book", end=date(2026, 1, 7))
+    positions = TypeAdapter(list[ValuationPosition]).validate_python(data["positions"])
+    assert len(positions) == 1
+    positions[0]["weight"] = weight
+    if weight is None:
+        with pytest.raises(ValueError, match="Risk requires calculated position weights"):
+            PortfolioValuationService.risk({}, positions, None, D(10000), {})
+    else:
+        metrics, correlation = PortfolioValuationService.risk({}, positions, None, D(10000), {})
+        assert metrics["gross_exposure"] == metrics["net_exposure"] == 0
+        assert metrics["beta"] is None
+        assert correlation["model"]["state"] == "INSUFFICIENT_DATA"
+        assert correlation["model"]["reason"]
+        assert correlation["values"] == [[None]]
