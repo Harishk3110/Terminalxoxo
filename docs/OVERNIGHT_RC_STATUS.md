@@ -3,8 +3,9 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the analysis-lifecycle batch: a516add, pushed.
-Docker runtime is a516add. Full browser 15 passes all 52 tests with zero retries.
+Current HEAD before the GEX label-fit batch: bd7247d, pushed.
+Docker API/workers/reports are bd7247d; frontend remains a516add until refreshed.
+Full browser 15 passes all 52 tests with zero retries.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +33,21 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- GEX label fit: shorter, equivalent "Largest contract share" label; no numeric or
+  layout change. The strengthened browser check reproduced the old overflow,
+  then passed all eleven metric labels at five viewports. Both options workflows
+  pass with zero retries in 41.200s; all ten metric/chart screenshots inspected.
+  All 333 terminal unit tests pass (95.09s); Node 22 production build (including
+  types/lint) and Prettier pass.
+- Full backend 28 on unchanged bd7247d: 1,574 passed and two auth-key tests failed
+  because the manual command supplied an invalid AUTH_SECRET, then Settings cached
+  it. This is not a green full-suite result. With that test override empty, all
+  20 authentication tests pass unchanged (23.69s). A clean full rerun is pending.
+  Failed-run coverage was 11,397 / 12,794 lines (89.0808191%).
+- Docker backend refresh to bd7247d: build and health-gated up exit 0; three
+  lifecycle/API/worker file hashes match source. Observe-only watchdog at
+  2026-09-12T03:29:09.116490Z reports ten healthy services and no repair actions.
+  /overview responds HTTP 200. No active ledger or object storage was reset.
 - Atomic analysis lifecycle: 98 affected tests pass, including 23 isolated worker
   regressions and five competing-transaction PostgreSQL cases. Eleven original
   failures and four additional launch failures were reproduced before correction.
@@ -46,9 +62,9 @@ Current evidence:
   local source. /overview returns HTTP 200 at private sign-in, Keep-Alive 70s.
 - Full browser 15: frozen a516add, 52 passed, zero failed/skipped/flaky/retried,
   1,030.413s, native exit 0. All 95 screenshots inspected: 19 populated routes at
-  1366/1440/1920/2560/390px. Canvas checks pass. A clipped long GEX metric label
-  at smaller desktop widths is tracked separately; no blanket visual perfection
-  or release-completion claim is made.
+  1366/1440/1920/2560/390px. Canvas checks pass. The long GEX metric label found
+  during inspection is corrected by the subsequent focused fit batch above;
+  no blanket visual perfection or release-completion claim is made.
 - Report source contract: 51 affected backend tests, all 333 terminal unit tests,
   five focused strict modules and two rebuilt browser workflows pass. Template
   metadata is the single source of accepted analysis kinds; actual Monte Carlo

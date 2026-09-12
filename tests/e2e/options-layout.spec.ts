@@ -78,9 +78,26 @@ test("negative million-scale gamma labels stay inside the chart canvas", async (
   await page.getByRole("tab", { name: "GEX", exact: true }).click();
   for (const [width, height] of [
     [1366, 768],
+    [1440, 900],
+    [1920, 1080],
+    [2560, 1440],
     [390, 844],
   ]) {
     await page.setViewportSize({ width, height });
+    const metricLabels = page.locator(".kpi > span");
+    await expect(metricLabels).toHaveCount(11);
+    await expect
+      .poll(async () =>
+        metricLabels.evaluateAll((labels) =>
+          labels
+            .filter((label) => label.scrollWidth > label.clientWidth)
+            .map((label) => label.textContent),
+        ),
+      )
+      .toEqual([]);
+    await metricLabels.last().scrollIntoViewIfNeeded();
+    mkdirSync("logs/options-layout", { recursive: true });
+    await page.screenshot({ path: `logs/options-layout/metrics-${width}.png` });
     const canvas = page
       .getByLabel("Gamma spot profile", { exact: true })
       .locator("canvas");

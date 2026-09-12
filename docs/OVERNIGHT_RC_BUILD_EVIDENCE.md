@@ -14,6 +14,41 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## GEX Metric Fit And Runtime Refresh
+
+Source bd7247d plus the one-label frontend change. The new overflow assertion
+first failed on "Largest contract concentration" in the old production bundle:
+`logs/overnight-gex-label-negative-01.log`, native exit 1, zero retries. It checks
+all eleven metric labels, not just the renamed label, with unchanged canvas-label
+and viewport assertions, expanded to 1366/1440/1920/2560/390px.
+
+After changing the label to "Largest contract share", the Node 22 production
+build (types/lint included) and Prettier check pass. Both rebuilt options browser
+workflows pass, zero failed/skipped/flaky/retried, 41.200s, native exit 0:
+`logs/overnight-gex-label-positive-01.log` and matching results JSON. All ten new
+`logs/options-layout/{metrics,gamma}-{width}.png` images were inspected. The
+underlying concentration value, calculations, CSS and terminal layout are unchanged.
+All 333 terminal unit tests / 26 files pass in 95.09s, native exit 0:
+`logs/overnight-terminal-units-30.log`.
+
+Full backend 28 retained unchanged bd7247d Python sources: 1,574 passed, two failed,
+123 warnings, 461.25s, native exit 1. Both failures are auth-key tests: the manual
+test command supplied a GUID-based AUTH_SECRET, not a Fernet key, and the cached
+Settings fallback retained that value after the tests removed the environment
+override. No auth source/test change was made. Running the complete auth enrollment
+file with AUTH_SECRET empty (generated isolated local key path) passes all 20 tests,
+three warnings, 23.69s, native exit 0, `logs/overnight-auth-harness-01.log`.
+The failed full run is not relabeled green. Evidence: `overnight-backend-28.log/xml`;
+coverage JSON records 11,397 / 12,794 lines (89.0808191%), 31 existing exclusions.
+A clean full-suite rerun remains pending.
+
+Backend-only Docker build/up passed in `overnight-analysis-docker-build.log` and
+`overnight-analysis-docker-up.log`. API, both workers and reports contain bd7247d;
+frontend remains a516add at this checkpoint. Local and deployed SHA256 hashes
+match for analysis_lifecycle.py, terminal_worker.py and terminal_api.py.
+`overnight-analysis-watchdog.log` records ten healthy services, no repair actions,
+at 2026-09-12T03:29:09.116490Z. Private /overview returns HTTP 200; data preserved.
+
 ## Current Analysis Lifecycle
 
 Application a516add, unchanged while full browser 15 runs. New isolated tests use

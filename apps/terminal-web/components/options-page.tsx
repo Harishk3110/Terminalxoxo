@@ -509,7 +509,7 @@ export function OptionsWorkspace({ route }: { route: string }) {
                 value: number(current?.summary.put_wall),
               },
               {
-                label: "Largest contract concentration",
+                label: "Largest contract share",
                 value: pct(current?.summary.gamma_concentration),
               },
             ]}
