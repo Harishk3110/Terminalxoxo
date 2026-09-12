@@ -3,11 +3,12 @@ from contextlib import nullcontext
 import pytest
 from app import models, queue_worker, terminal_worker
 from app.provider_data import NAMES
+from pydantic import JsonValue
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-def sessions(monkeypatch, ledger_session):
+def sessions(monkeypatch: pytest.MonkeyPatch, ledger_session: Session) -> None:
     monkeypatch.setattr(queue_worker, "SessionLocal", lambda: nullcontext(ledger_session))
     monkeypatch.setattr(terminal_worker, "SessionLocal", lambda: nullcontext(ledger_session))
 
@@ -22,7 +23,7 @@ def test_quant_claim_is_idempotent_and_cancelled_runs_are_not_executed(
     )
     ledger_session.add(run)
     ledger_session.commit()
-    calls = []
+    calls: list[str] = []
     monkeypatch.setattr(terminal_worker, "_execute_run", lambda key: calls.append(key))
     terminal_worker.execute_run(run.id)
     terminal_worker.execute_run(run.id)
@@ -34,7 +35,9 @@ def test_quant_claim_is_idempotent_and_cancelled_runs_are_not_executed(
 
 
 @pytest.mark.anyio
-async def test_data_job_records_actual_probe_outcome(monkeypatch, ledger_session):
+async def test_data_job_records_actual_probe_outcome(
+    monkeypatch: pytest.MonkeyPatch, ledger_session: Session
+) -> None:
     sessions(monkeypatch, ledger_session)
     job = models.IngestionJob(
         job_type="provider_health_check",
@@ -58,17 +61,18 @@ async def test_data_job_records_actual_probe_outcome(monkeypatch, ledger_session
     monkeypatch.setattr(queue_worker, "connection", lambda session, key, settings: row)
     monkeypatch.setattr(queue_worker, "adapters", lambda settings: {"fred": object()})
 
-    async def failed(*args):
+    async def failed(*args: object) -> dict[str, JsonValue]:
         return {"connection_state": "AUTH_FAILED"}
 
     monkeypatch.setattr(queue_worker, "probe", failed)
     await queue_worker.execute_provider_job(job.id)
     ledger_session.refresh(job)
     assert job.status == "FAILED" and job.records_received == 1 and job.records_rejected == 1
-    assert (
-        ledger_session.scalar(select(models.IngestionJobRun)).log_payload["items"][0]["state"]
-        == "AUTH_FAILED"
-    )
+    receipt = ledger_session.scalar(select(models.IngestionJobRun))
+    assert receipt is not None and receipt.log_payload is not None
+    items = receipt.log_payload["items"]
+    assert isinstance(items, list) and len(items) == 1
+    assert isinstance(items[0], dict) and items[0]["state"] == "AUTH_FAILED"
 
 
 @pytest.mark.anyio
@@ -100,7 +104,7 @@ async def test_invalid_provider_job_actor_fails_before_network_call(
     ledger_session.add(job)
     ledger_session.commit()
 
-    def unexpected(*args):
+    def unexpected(*args: object) -> None:
         pytest.fail("Malformed jobs must not construct network adapters")
 
     monkeypatch.setattr(queue_worker, "adapters", unexpected)

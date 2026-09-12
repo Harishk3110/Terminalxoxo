@@ -14,6 +14,55 @@ Baseline: 3466694, main, 2026-09-12 SGT. These observations are not a release pa
 Runtime data and credentials have not been reset. Pending code is unverified
 until concrete tests are recorded here.
 
+## Current Analysis Lifecycle
+
+Application a516add, unchanged while full browser 15 runs. New isolated tests use
+independent SQLite sessions and statement-level deterministic interleavings; no
+active database is changed. Fifteen cases: eleven fail on the old application,
+four preservation cases pass, one upstream warning, 23.45s, native exit 1.
+Evidence: `logs/overnight-analysis-races-negative-04.log`. Earlier controls contain
+five and ten failures in negative-02 and negative-03 respectively. Failures cover
+both worker outcomes overwriting cancellation, cancellation overwriting success
+or claim history, cancellation after claim losing RUNNING history, removed runs,
+four invalid JSON outputs and a result-write failure escaping the error handler.
+No retries or tolerances changed.
+
+The shared typed lifecycle helper now compares the exact observed predecessor
+and writes status, history and timestamps in one conditional SQL update. Result
+validation and commit are inside the worker exception handler; cancellation and
+missing rows cannot be overwritten. Launch errors can fail only still-queued
+runs, with explicit finish evidence. Cancellation audit remains transactional.
+
+| Check | Result / evidence |
+| --- | --- |
+| Initial lifecycle/queue/audit selection | 21 passed, one warning, 17.27s, exit 0; overnight-analysis-lifecycle-01.log |
+| Expanded engine/API/runner selection | 89 passed, 46 warnings, 53.97s, exit 0; overnight-analysis-lifecycle-02.log |
+| Five independent PostgreSQL interleavings | 5 passed, zero skipped, 27.03s, exit 0; overnight-analysis-postgres-01.log |
+| Launcher negative controls | 4 failed before correction, 5.19s, exit 1; overnight-analysis-launch-negative-01.log |
+| Final affected selection, including PostgreSQL | 98 passed, zero failed/skipped, six warnings, 83.54s, exit 0; overnight-analysis-lifecycle-03.log/xml |
+| Focused strict lifecycle/test/runner contracts | Six source files, zero diagnostics, exit 0; overnight-analysis-focused-types-02.log |
+| Whole first-party strict 36 | 850 distinct diagnostics / 85 files / 287 sources / nine distributions, exit 1; overnight-whole-types-36/manifest.json |
+| Ruff / secret / no-execution scans / diff check | Exit 0; 628 text files scanned, zero secret findings; no forbidden broker methods |
+
+All PostgreSQL cases allocate separate databases; active ledger and storage are
+untouched. The five race cases are now included in release gate 9 and its inventory
+test. Full release remains blocked by code-controlled gaps, including whole types.
+
+Full browser 15 on frozen a516add: 52 passed, zero failed/skipped/flaky/retried,
+no global errors, 1,030.413s, native exit 0. Evidence:
+`logs/overnight-browser-full-15.log`, `logs/overnight-full-15-results.json`.
+All 95 new populated screenshots were inspected across the 19 routes and five
+viewport sizes. Nonblank canvas checks pass; the long GEX concentration label
+needs a separate smaller-desktop fit correction. This browser evidence predates
+the lifecycle changes and is not presented as verification of the newer backend.
+
+Docker refresh after the report-source batch: build and health-gated up exit 0
+in `overnight-home-report-docker-build.log` and `overnight-home-report-docker-up.log`.
+Observe-only watchdog exit 0 at 2026-09-12T03:00:11.687468Z in
+`overnight-home-report-watchdog.log`: ten healthy daemons, no repair actions.
+Actual runtime is a516add; four changed Python/frontend module hashes equal source.
+Private `/overview` returns 200 with Keep-Alive timeout 70. No data was reset.
+
 ## M1 Pipeline, 2026-09-12 00:24-00:42 SGT
 
 All commands use 3466694 + worktree, not final release code.

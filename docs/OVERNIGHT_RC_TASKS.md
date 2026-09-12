@@ -21,6 +21,8 @@ milestone remain open unless explicitly verified below.
 - [x] M2: persisted model/repository/price-source contracts, dated FX and missing-volume regressions.
 - [x] M2: seed, worker, provider API/queue consumers and validated persisted research JSON.
 - [ ] M2: remaining engine/API types and all first-party strict invocation.
+- [x] M2/M3/M9: atomic analysis claim/cancellation/completion/failure history, finite object-result validation and launch-error ownership; 98 affected tests including five isolated PostgreSQL races pass. Whole strict 36 remains red at 850 diagnostics.
+- [ ] M3: prevent the long GEX concentration metric label clipping at smaller desktop widths; retain the approved terminal shell and verify all five sizes.
 - [x] M2: complete distribution-aware strict invocation, nonempty inventory and failing-exit tests.
 - [x] M2: shared validated DCF result consumers; existing financial assertions retained.
 - [x] M2/M9: typed alpha regression/rolling/availability contracts, verified statsmodels boundary and independent HAC/t-inference checks; 20 focused tests and 13 exact old/new result cases pass.

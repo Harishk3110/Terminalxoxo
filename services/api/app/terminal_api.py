@@ -20,6 +20,7 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from . import models
+from .analysis_lifecycle import transition_run
 from .config import get_settings
 from .database import get_session
 from .object_storage import ObjectStorage
@@ -261,7 +262,9 @@ def launch_worker(run_id):
 
 
 @router.post("/terminal/runs", status_code=202)
-def start_run(payload: RunRequest, request: Request, session: Session = SESSION_DEPENDENCY):
+def start_run(
+    payload: RunRequest, request: Request, session: Session = SESSION_DEPENDENCY
+) -> dict[str, JsonValue]:
     from .portfolio_api import identity
     from .portfolio_operations import audit
 
@@ -377,8 +380,17 @@ def start_run(payload: RunRequest, request: Request, session: Session = SESSION_
     try:
         launch_worker(run.id)
     except OSError as exc:
-        run.status, run.error = "FAILED", f"Worker launch failed: {exc.__class__.__name__}"
-        session.commit()
+        if transition_run(
+            session,
+            run.id,
+            "FAILED",
+            error=f"Worker launch failed: {exc.__class__.__name__}",
+            expected_status="QUEUED",
+        ):
+            session.commit()
+        else:
+            session.rollback()
+    session.refresh(run)
     return run_payload(run)
 
 
@@ -399,25 +411,20 @@ def run_detail(run_id: str, session: Session = SESSION_DEPENDENCY):
 
 
 @router.post("/terminal/runs/{run_id}/cancel")
-def cancel_run(run_id: str, request: Request, session: Session = SESSION_DEPENDENCY):
+def cancel_run(
+    run_id: str, request: Request, session: Session = SESSION_DEPENDENCY
+) -> dict[str, JsonValue]:
     from .portfolio_api import identity
     from .portfolio_operations import audit
 
     actor = identity(request, session)
     run = session.get(models.AnalysisRun, run_id)
-    if not run or run.status not in ("QUEUED", "RUNNING"):
+    if run is None or not transition_run(session, run_id, "CANCELLED"):
+        session.rollback()
         raise HTTPException(409, "Run is not active")
-    run.status = "CANCELLED"
-    run.history = [
-        *run.history,
-        {
-            "state": "CANCELLED",
-            "at": datetime.now(UTC).isoformat(),
-            "message": "Cancellation requested; worker result will be discarded",
-        },
-    ]
     audit(session, "ANALYSIS_RUN_CANCELLED", "analysis_run", run.id, {"kind": run.kind}, actor)
     session.commit()
+    session.refresh(run)
     return run_payload(run)
 
 

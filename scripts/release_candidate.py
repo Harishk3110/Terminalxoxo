@@ -329,6 +329,7 @@ def release_gates(output: Path, env_file: Path, pg_container: str) -> list[Gate]
                     "services/api/tests",
                     "tests/integration/test_managed_backup.py",
                     "tests/integration/test_excel_dcf.py",
+                    "tests/integration/test_postgres_lifecycle.py::test_postgres_analysis_transitions_preserve_the_committed_winner",
                     "--cov=services/api/app",
                     "--cov-append",
                     "--cov-report=term",

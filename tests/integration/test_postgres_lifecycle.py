@@ -15,20 +15,25 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import httpx
 import pytest
 from dotenv import dotenv_values
 from pydantic import BaseModel, JsonValue, TypeAdapter
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.engine import make_url
+from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.engine import Connection, ExecutionContext, make_url
+from sqlalchemy.orm import Session, sessionmaker
 
 from infrastructure.scripts.managed_postgres import Postgres
 from scripts.release_candidate import ROOT, stop_process_tree
 from scripts.release_checks import local_configuration
 
 JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+
+if TYPE_CHECKING:
+    from app.analysis_lifecycle import AnalysisState
 
 
 @dataclass(frozen=True)
@@ -122,6 +127,91 @@ def test_postgres_latest_downgrade_upgrade_retains_existing_book(
                 text("SELECT reference_capital FROM portfolios WHERE id='retained'")
             ) == Decimal("100000.12345678")
             assert connection.scalar(text("SELECT COUNT(*) FROM portfolios")) == 1
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("initial", "contender", "winner"),
+    [
+        ("RUNNING", "SUCCEEDED", "CANCELLED"),
+        ("RUNNING", "FAILED", "CANCELLED"),
+        ("RUNNING", "CANCELLED", "SUCCEEDED"),
+        ("QUEUED", "CANCELLED", "RUNNING"),
+        ("QUEUED", "RUNNING", "CANCELLED"),
+    ],
+)
+def test_postgres_analysis_transitions_preserve_the_committed_winner(
+    isolated_postgres: IsolatedDatabase,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    initial: str,
+    contender: AnalysisState,
+    winner: AnalysisState,
+) -> None:
+    monkeypatch.syspath_prepend(str(ROOT / "services/api"))
+    from app import models
+    from app.analysis_lifecycle import transition_run
+
+    migrate(isolated_postgres, tmp_path, "upgrade", "head")
+    engine = create_engine(isolated_postgres.environment["DATABASE_URL"])
+    sessions: sessionmaker[Session] = sessionmaker(engine, expire_on_commit=False)
+    states = ["QUEUED", "RUNNING"] if initial == "RUNNING" else ["QUEUED"]
+    interleaved = False
+
+    def competing_write(
+        _connection: Connection,
+        _cursor: object,
+        statement: str,
+        parameters: object,
+        _context: ExecutionContext,
+        _executemany: bool,
+    ) -> None:
+        nonlocal interleaved
+        if (
+            interleaved
+            or not statement.startswith("UPDATE analysis_runs SET")
+            or not isinstance(parameters, dict)
+            or parameters.get("status") != contender
+        ):
+            return
+        interleaved = True
+        with sessions() as competing:
+            assert transition_run(competing, "race", winner, result={"metric": 0})
+            competing.commit()
+
+    try:
+        with sessions() as session:
+            session.add(
+                models.AnalysisRun(
+                    id="race",
+                    name="Isolated PostgreSQL race",
+                    kind="stress",
+                    parameters={},
+                    status=initial,
+                    history=[{"state": state} for state in states],
+                )
+            )
+            session.commit()
+        event.listen(engine, "before_cursor_execute", competing_write)
+        try:
+            with sessions() as stale:
+                assert not transition_run(
+                    stale, "race", contender, result={"metric": 99}, error="Losing failure"
+                )
+                stale.commit()
+        finally:
+            event.remove(engine, "before_cursor_execute", competing_write)
+        assert interleaved, "The competing transaction must commit before the stale update"
+        with sessions() as verification:
+            run = verification.get(models.AnalysisRun, "race")
+            assert run is not None and run.status == winner
+            assert [entry["state"] for entry in run.history] == [*states, winner]
+            assert run.result == ({"metric": 0} if winner == "SUCCEEDED" else None)
+            assert run.error is None
+            assert (run.finished_at is None) == (winner == "RUNNING")
+            if winner == "RUNNING":
+                assert run.started_at is not None
     finally:
         engine.dispose()
 

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import sys
-from datetime import UTC, datetime
 
 import pandas as pd
-from sqlalchemy import update
 
 from . import models
+from .analysis_lifecycle import transition_run
 from .database import SessionLocal
 from .terminal_analytics import stress_result
+from .valuation_values import jsonable
 
 
 def backtest_result(session, params):
@@ -76,13 +76,9 @@ def execute_run(run_id: str) -> None:
     from .worker_health import heartbeat
 
     with SessionLocal() as session:
-        claimed = session.execute(
-            update(models.AnalysisRun)
-            .where(models.AnalysisRun.id == run_id, models.AnalysisRun.status == "QUEUED")
-            .values(status="RUNNING", started_at=datetime.now(UTC))
-        )
+        claimed = transition_run(session, run_id, "RUNNING")
         session.commit()
-        if claimed.rowcount != 1:
+        if not claimed:
             return
     with heartbeat(run_id):
         _execute_run(run_id)
@@ -93,17 +89,6 @@ def _execute_run(run_id: str) -> None:
         run = session.get(models.AnalysisRun, run_id)
         if not run or run.status != "RUNNING":
             return
-        run.status = "RUNNING"
-        run.started_at = datetime.now(UTC)
-        run.history = [
-            *run.history,
-            {
-                "state": "RUNNING",
-                "at": run.started_at.isoformat(),
-                "message": "Validated template executing in isolated process",
-            },
-        ]
-        session.commit()
         try:
             if run.kind == "stress":
                 result = stress_result(session, run.parameters)
@@ -119,28 +104,19 @@ def _execute_run(run_id: str) -> None:
                 result = monte_carlo_result(run.parameters)
             else:
                 raise ValueError("Unknown approved analytical template")
-            session.refresh(run)
-            if run.status == "CANCELLED":
-                return
-            run.result = result
-            run.status = "SUCCEEDED"
+            validated = jsonable(result)
+            if not isinstance(validated, dict):
+                raise ValueError("Analytical result must be a JSON object")
+            if transition_run(session, run_id, "SUCCEEDED", result=validated):
+                session.commit()
+            else:
+                session.rollback()
         except Exception as exc:
             session.rollback()
-            run = session.get(models.AnalysisRun, run_id)
-            if run.status == "CANCELLED":
-                return
-            run.status = "FAILED"
-            run.error = str(exc)
-        run.finished_at = datetime.now(UTC)
-        run.history = [
-            *run.history,
-            {
-                "state": run.status,
-                "at": run.finished_at.isoformat(),
-                "message": run.error or "Result persisted",
-            },
-        ]
-        session.commit()
+            if transition_run(session, run_id, "FAILED", error=str(exc), expected_status="RUNNING"):
+                session.commit()
+            else:
+                session.rollback()
 
 
 if __name__ == "__main__":

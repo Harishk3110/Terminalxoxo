@@ -62,6 +62,10 @@ def test_release_contract_is_ordered_nonempty_and_non_destructive(tmp_path: Path
     assert not {"--reset", "--clean", "down", "--force", "--update-snapshots"} & set(argv)
     assert gates[7].commands[0].test_environment
     assert gates[8].commands[0].test_environment
+    assert (
+        "tests/integration/test_postgres_lifecycle.py::test_postgres_analysis_transitions_preserve_the_committed_winner"
+        in gates[8].commands[0].argv
+    )
     assert not gates[15].commands[0].test_environment
     full, visual = gates[18].commands[0], gates[19].commands[0]
     assert visual.environment["KNK_COMPARE_SCREENSHOTS"] == "1"
