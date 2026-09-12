@@ -2,18 +2,51 @@
 
 import hashlib
 import json
+from collections.abc import Mapping
+from copy import deepcopy
 from datetime import UTC, datetime, time
 from pathlib import Path
+from typing import TypedDict
 
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from . import models
 from .data_mapping import filename_metadata, normalize, parse_file, seed_profiles, suggest_mapping
 from .object_storage import ObjectStorage
 from .portfolio_engine import decimal
 from .portfolio_operations import PortfolioLedgerService, audit
-from .portfolio_valuation import jsonable
+
+
+class FilePayload(TypedDict):
+    id: str
+    filename: str
+    hash: str
+    size_bytes: int
+    state: str
+    source: str
+    agent_id: str | None
+    profile_id: str | None
+    dataset_version_id: str | None
+    duplicate_of: str | None
+    metadata: dict[str, JsonValue]
+    mapping: dict[str, str]
+    validation: dict[str, JsonValue]
+    history: list[dict[str, JsonValue]]
+    created_at: str | None
+    updated_at: str | None
+
+
+class MappingInputs(BaseModel):
+    model_config = ConfigDict(strict=True, allow_inf_nan=False, hide_input_in_errors=True)
+    defaults: dict[str, JsonValue] = Field(default_factory=dict)
+    symbol_resolution: str | None = None
+
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue], config=ConfigDict(strict=True, allow_inf_nan=False))
+
 
 FINAL = {"IMPORTED", "ARCHIVED", "DUPLICATE"}
 TRANSITIONS = {
@@ -38,7 +71,7 @@ TRANSITIONS = {
 }
 
 
-def transition(row, state, message=""):
+def transition(row: models.ExternalFile, state: str, message: str = "") -> None:
     if state not in TRANSITIONS.get(row.state, set()):
         raise ValueError(f"Invalid file transition {row.state} -> {state}")
     row.state = state
@@ -48,48 +81,57 @@ def transition(row, state, message=""):
     ]
 
 
-def file_payload(row):
-    return jsonable(
-        {
-            "id": row.id,
-            "filename": row.filename,
-            "hash": row.content_hash,
-            "size_bytes": row.size_bytes,
-            "state": row.state,
-            "source": row.source,
-            "agent_id": row.agent_id,
-            "profile_id": row.profile_id,
-            "dataset_version_id": row.dataset_version_id,
-            "duplicate_of": row.duplicate_of,
-            "metadata": row.metadata_json,
-            "mapping": row.mapping,
-            "validation": row.validation,
-            "history": row.history,
-            "created_at": row.created_at,
-            "updated_at": row.updated_at,
-        }
-    )
+def file_payload(row: models.ExternalFile) -> FilePayload:
+    return {
+        "id": row.id,
+        "filename": row.filename,
+        "hash": row.content_hash,
+        "size_bytes": row.size_bytes,
+        "state": row.state,
+        "source": row.source,
+        "agent_id": row.agent_id,
+        "profile_id": row.profile_id,
+        "dataset_version_id": row.dataset_version_id,
+        "duplicate_of": row.duplicate_of,
+        "metadata": deepcopy(row.metadata_json),
+        "mapping": dict(row.mapping),
+        "validation": deepcopy(row.validation),
+        "history": deepcopy(row.history),
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
 
 
 class DataDropService:
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
         self.storage = ObjectStorage()
 
-    def get(self, file_id):
+    def get(self, file_id: str) -> models.ExternalFile:
         row = self.session.get(models.ExternalFile, file_id)
         if row is None:
             raise ValueError("File not found")
         return row
 
-    def raw_rows(self, row):
+    def raw_rows(self, row: models.ExternalFile) -> tuple[list[dict[str, JsonValue]], list[str]]:
+        if row.uploaded_file_id is None:
+            raise ValueError("Raw file reference is missing")
         uploaded = self.session.get(models.UploadedFile, row.uploaded_file_id)
+        if uploaded is None:
+            raise ValueError("Raw file reference is missing")
         data = self.storage.get_bytes(uploaded.object_key)
         if hashlib.sha256(data).hexdigest() != row.content_hash:
             raise ValueError("Raw file integrity check failed")
         return parse_file(data, row.filename)
 
-    def receive(self, filename, data, *, source="EXTERNAL FILE", agent_id=None):
+    def receive(
+        self,
+        filename: str,
+        data: bytes,
+        *,
+        source: str = "EXTERNAL FILE",
+        agent_id: str | None = None,
+    ) -> FilePayload:
         if not 0 < len(data) <= 25_000_000:
             raise ValueError("File must be nonempty and at most 25 MB")
         filename = Path(filename.replace("\\", "/")).name
@@ -161,7 +203,7 @@ class DataDropService:
             row.metadata_json = {
                 **meta,
                 "columns": [*columns],
-                "preview": jsonable(rows[:30]),
+                "preview": [{**record} for record in rows[:30]],
                 "row_count": len(rows),
                 "licence": None,
                 "raw_key": key,
@@ -182,8 +224,14 @@ class DataDropService:
         return file_payload(row)
 
     def map_validate(
-        self, file_id, profile_id, mapping=None, defaults=None, resolution=None, actor=None
-    ):
+        self,
+        file_id: str,
+        profile_id: str,
+        mapping: Mapping[str, str] | None = None,
+        defaults: Mapping[str, JsonValue] | None = None,
+        resolution: str | None = None,
+        actor: str | None = None,
+    ) -> FilePayload:
         row = self.get(file_id)
         if row.state in FINAL or row.state in {"QUARANTINED", "REJECTED", "UPLOAD_FAILED"}:
             raise ValueError("This file cannot be mapped")
@@ -191,15 +239,21 @@ class DataDropService:
         if profile is None:
             raise ValueError("Unknown mapping profile")
         rows, columns = self.raw_rows(row)
-        chosen = mapping if mapping is not None else suggest_mapping(columns, profile)
+        chosen = dict(mapping) if mapping is not None else suggest_mapping(columns, profile)
+        inputs = MappingInputs.model_validate(
+            {
+                "defaults": dict(defaults) if defaults is not None else {},
+                "symbol_resolution": resolution,
+            }
+        )
         if any(value not in columns for value in chosen.values() if value):
             raise ValueError("Mapped columns must exist in the raw file")
         transition(row, "MAPPED")
         row.profile_id, row.mapping, row.source = profile.id, chosen, profile.source
         row.metadata_json = {
             **row.metadata_json,
-            "defaults": defaults or {},
-            "symbol_resolution": resolution,
+            "defaults": {**inputs.defaults},
+            "symbol_resolution": inputs.symbol_resolution,
             "mapping_profile": profile.code,
             "mapping_version": profile.version,
         }
@@ -210,10 +264,10 @@ class DataDropService:
             profile,
             self.session.scalars(select(models.Instrument)).all(),
             row.metadata_json,
-            defaults or {},
-            resolution,
+            inputs.defaults,
+            inputs.symbol_resolution,
         )
-        row.validation = validation
+        row.validation = JSON_OBJECT.validate_python(validation)
         transition(
             row,
             "VALIDATED_WITH_WARNINGS"
@@ -224,7 +278,10 @@ class DataDropService:
         )
         if validation["valid"]:
             transition(row, "AWAITING_APPROVAL")
-        row.metadata_json = {**row.metadata_json, "normalized_preview": jsonable(normalized[:30])}
+        row.metadata_json = {
+            **row.metadata_json,
+            "normalized_preview": [{**record} for record in normalized[:30]],
+        }
         audit(
             self.session,
             "FILE_MAPPING_VALIDATED",
@@ -243,7 +300,16 @@ class DataDropService:
         self.session.commit()
         return file_payload(row)
 
-    def import_file(self, file_id, *, name, licence, approve, portfolio="KNK_MAIN", actor=None):
+    def import_file(
+        self,
+        file_id: str,
+        *,
+        name: str,
+        licence: str,
+        approve: bool,
+        portfolio: str = "KNK_MAIN",
+        actor: str | None = None,
+    ) -> FilePayload:
         row = self.get(file_id)
         if row.state in {"IMPORTED", "ARCHIVED"}:
             return file_payload(row)
@@ -251,7 +317,12 @@ class DataDropService:
             raise ValueError("Validated mapping and explicit import approval required")
         if not licence.strip() or not name.strip() or len(name) > 200:
             raise ValueError("Dataset name and licence note are required")
+        if row.profile_id is None:
+            raise ValueError("Approved mapping profile is missing")
         profile = self.session.get(models.MappingProfile, row.profile_id)
+        if profile is None:
+            raise ValueError("Approved mapping profile is missing")
+        inputs = MappingInputs.model_validate(row.metadata_json)
         rows, columns = self.raw_rows(row)
         normalized, validation = normalize(
             rows,
@@ -259,8 +330,8 @@ class DataDropService:
             profile,
             self.session.scalars(select(models.Instrument)).all(),
             row.metadata_json,
-            row.metadata_json.get("defaults", {}),
-            row.metadata_json.get("symbol_resolution"),
+            inputs.defaults,
+            inputs.symbol_resolution,
         )
         if not validation["valid"]:
             raise ValueError("Revalidation failed")
@@ -292,6 +363,8 @@ class DataDropService:
                     or 0
                 ) + 1
                 uploaded = self.session.get(models.UploadedFile, row.uploaded_file_id)
+                if uploaded is None:
+                    raise ValueError("Raw file reference is missing")
                 raw = models.RawObject(
                     provider=profile.source,
                     dataset=profile.dataset_type,
@@ -306,13 +379,11 @@ class DataDropService:
                 self.session.flush()
                 normalized.sort(
                     key=lambda r: (
-                        r.get("date") or r.get("trade_date") or "",
-                        r.get("symbol") or "",
+                        str(r.get("date") or r.get("trade_date") or ""),
+                        str(r.get("symbol") or ""),
                     )
                 )
-                curated = json.dumps(
-                    jsonable(normalized), ensure_ascii=True, sort_keys=True
-                ).encode()
+                curated = json.dumps(normalized, ensure_ascii=True, sort_keys=True).encode()
                 key = f"data-drop/curated/{dataset.id}/v{next_version}-{row.id}.json"
                 stored = self.storage.put_bytes(
                     key=key, data=curated, content_type="application/json"
@@ -331,7 +402,7 @@ class DataDropService:
                         "profile_version": profile.version,
                         "file_id": row.id,
                         "columns": columns,
-                        "quality": validation,
+                        "quality": JSON_OBJECT.validate_python(validation),
                         "curated_key": key,
                         "curated_hash": stored.content_hash,
                         "point_in_time": "UNVERIFIED",
@@ -373,7 +444,10 @@ class DataDropService:
                 }
                 for index, record in enumerate(normalized):
                     if profile.dataset_type in {"ohlcv", "snapshot"}:
-                        item = instruments[record["symbol"]]
+                        symbol = record["symbol"]
+                        if not isinstance(symbol, str):
+                            raise ValueError("Normalized security symbol must be text")
+                        item = instruments[symbol]
                         observed_date = record["date"]
                         if not isinstance(observed_date, str):
                             raise ValueError("Normalized observation date must be text")

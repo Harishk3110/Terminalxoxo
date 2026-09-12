@@ -3,8 +3,8 @@
 Controlling directive: final overnight continuation, 2026-09-12 SGT.
 Starting commit: 3466694fd7513bf1c494419ab0fb09767748cd0e.
 Branch: main. Remote: https://github.com/Harishk3110/Terminalxoxo.git.
-Current HEAD before the parser commit: 33d423d, pushed.
-Docker runtime is 0699ab0. Full backend 26 and browser 14 passed.
+Current HEAD before the DataDrop-service commit: e5a366d, pushed.
+Docker runtime is e5a366d. Full backend 26 and browser 14 passed before this batch.
 Dated-source/options/risk, ledger/factor, local
 archive/reader, ASGI concurrency and bounded agent status fixes are committed.
 Local backup manifest and recovery probe/migration contracts are also committed.
@@ -32,6 +32,15 @@ the current portfolio projection; the calculation version is now knk-nav-4.9.
 Whole first-party type command: `.venv-release/Scripts/python.exe scripts/check_python_types.py`.
 
 Current evidence:
+- DataDrop service contracts: 77 affected tests pass, three warnings, 21.37s;
+  service/new tests pass focused strict types. Missing raw/profile references,
+  malformed persisted mapping and non-finite defaults fail before transitions.
+  Complete payloads match seven persisted old-version files; returned containers
+  remain independent of ORM state. Whole strict 32: 958 diagnostics / 88 files /
+  279 sources; API 539 / 25 files. Strict release is still red.
+- Health-gated Docker refresh to e5a366d passed; deployed parser/importer hashes
+  match that commit, not the new service worktree. Ten services are healthy and
+  /overview returns 200 at private sign-in with Keep-Alive timeout=70.
 - Typed tabular parsing/normalization: 55 affected import/options/portfolio tests
   pass, including immutable raw bytes after quarantine. Twenty-seven new parser
   cases and both focused strict modules pass. Exactly 120 valid parser fixtures

@@ -1311,3 +1311,37 @@ strict release gate is still red; the next source batch is DataDrop service type
 The observe-only watchdog returned 0 at 2026-09-11T23:50:16Z: ten healthy services,
 successful init and no restart action. A documentation patch initially failed
 to match its final line; it made no changes and was reapplied with the exact line.
+
+## DataDrop Service Contracts And Parser Deployment
+
+2026-09-12 08:00-08:06 SGT. The completed Docker application image build and
+health-gated refresh carry e5a366d. New DataDrop edits began only after all source
+layers and frontend compilation had completed and image export was underway.
+Post-refresh container hashes independently confirm the exact committed inputs:
+data_mapping.py = 34a9060ca580125419b80b9a22e19961b002b98af672c5100da6ec129632469f;
+data_drop.py = bb5bb68a443c95caf3fee21927392a98f16e9a5884f9213fdd9cb7badaf6c104.
+No uncommitted service code was deployed. All ten services are healthy, init
+succeeded, and /overview returns 200 at private sign-in with Keep-Alive timeout=70.
+Build/up/watchdog logs: overnight-tabular-docker-build.log,
+overnight-tabular-docker-up.log, overnight-tabular-deployed-watchdog.log; all exit 0.
+
+The following service worktree adds explicit Session/file/JSON return contracts,
+validated finite mapping defaults and stored resolution, missing raw/profile
+guards before state changes, and independent copied response containers. Curated
+JSON serialization uses the already validated rows, preserving existing byte
+ordering. Approval, immutable storage, deduplication and atomic rollback remain.
+
+| Check | Exit | Evidence |
+| --- | --- | --- |
+| Prior-service negative control | 1 | overnight-drop-contracts-negative-01.log: eight intended failures, one genuine-zero preservation pass; null-reference SAWarnings also reproduced |
+| Initial corrected service tests | 0 | overnight-drop-contracts-positive-01.log: nine passed, one warning, 4.38s |
+| Initial focused strict | 1 | overnight-drop-contracts-types-01.log: one TypedDict-to-JSON container mismatch; corrected with validated JSON conversion, no cast/ignore |
+| Final service/new-test strict | 0 | overnight-drop-contracts-types-02.log: both modules; imports-silent scope does not certify all dependencies |
+| Affected file/options/agent/portfolio tests | 0 | overnight-drop-contracts-affected.log: 77 passed, three warnings, 21.37s |
+| Complete file-response parity | 0 | overnight-drop-contracts-parity.log: all 16 payload fields equal e5a366d for seven files in a read-only populated browser DB, IMPORTED and MAPPING_REQUIRED states |
+| Whole strict checkpoint 32 | 1 | overnight-whole-types-32/: 958 distinct diagnostics, 88 files, 279 sources; API 539 / 25 files; all distributions checked |
+| Changed Ruff | 0 | service and new contract tests pass |
+
+The response-copy regression also verifies mutations of returned metadata,
+mapping, validation and nested history cannot mutate ORM state. Broad release,
+all-state payload visual review and live-provider certification remain open.
