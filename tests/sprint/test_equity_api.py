@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from app import models
 from app.database import get_session
-from app.equity_api import router
+from app.equity_api import financial_report, router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import JsonValue
@@ -154,6 +154,184 @@ def test_snapshot_does_not_invent_bid_ask_or_vwap(equity_client: TestClient) -> 
     assert data["quote"]["bid"] is None and data["quote"]["ask"] is None
     assert data["quote"]["vwap"] is None and data["quote"]["spread"] is None
     assert data["provenance"]["source"] == "TEST"
+
+
+def test_snapshot_keeps_missing_legacy_history_ranges_unavailable(
+    equity_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "app.equity_api.history",
+        lambda _session, _key, _limit: {
+            "items": [{"date": datetime.now(UTC).date().isoformat(), "close": 120.0}]
+        },
+    )
+    response = equity_client.get("/api/v1/equity/AAA/snapshot")
+    assert response.status_code == 200, response.text
+    assert response.json()["fifty_two_week_low"] is None
+    assert response.json()["fifty_two_week_high"] is None
+
+
+def financial_evidence() -> dict[str, JsonValue]:
+    return {
+        "symbol": "AAA",
+        "source": "TEST FILE",
+        "quality": "FILE IMPORT",
+        "unit": "USD millions",
+        "as_of": "2025-12-31",
+        "items": [{"year": "2025", "revenue": 100, "net_income": 15, "shares": 10}],
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("symbol", None),
+        ("symbol", "BBB"),
+        ("source", None),
+        ("quality", []),
+        ("as_of", 2025),
+        ("unit", {}),
+        ("warnings", None),
+        ("warnings", [1]),
+        ("lineage", {}),
+        ("lineage", [1]),
+        ("extension", {"nested": float("nan")}),
+    ],
+)
+def test_financial_receipts_validate_before_calculation(
+    equity_client: TestClient,
+    ledger_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: JsonValue,
+) -> None:
+    data = {**financial_evidence(), field: value}
+    monkeypatch.setattr("app.equity_api.fundamentals", lambda _session, _key: data)
+    called = False
+
+    def reject_calculation(*args: object, **kwargs: object) -> dict[str, JsonValue]:
+        nonlocal called
+        called = True
+        raise ValueError("Invalid source reached ratio calculation")
+
+    monkeypatch.setattr("app.equity_api.ratios", reject_calculation)
+    with pytest.raises(ValueError):
+        financial_report(ledger_session, "AAA", quote={"price": 10})
+    assert not called, "Invalid financial receipt reached the calculator"
+
+
+@pytest.mark.parametrize(
+    "quote",
+    [
+        {"price": True},
+        {"price": "10"},
+        {"price": float("nan")},
+        {"price": []},
+        {"price": 10, "as_of": 2025},
+        {"price": 10, "id": "BBB"},
+        {"price": 10, "symbol": "BBB"},
+    ],
+)
+def test_financial_quote_validates_before_calculation(
+    equity_client: TestClient,
+    ledger_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    quote: dict[str, object],
+) -> None:
+    called = False
+
+    def reject_calculation(*args: object, **kwargs: object) -> dict[str, JsonValue]:
+        nonlocal called
+        called = True
+        raise ValueError("Invalid quote reached ratio calculation")
+
+    monkeypatch.setattr("app.equity_api.ratios", reject_calculation)
+    with pytest.raises(ValueError):
+        financial_report(ledger_session, "AAA", quote=quote)
+    assert not called, "Invalid quote reached the calculator"
+
+
+@pytest.mark.parametrize("quote", [{}, {"price": None}, {"price": 0}, {"price": 10}])
+def test_financial_report_preserves_legacy_metadata_and_missing_prices(
+    equity_client: TestClient,
+    ledger_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    quote: dict[str, object],
+) -> None:
+    data: dict[str, JsonValue] = {
+        **financial_evidence(),
+        "warnings": ["ORIGINAL SOURCE WARNING"],
+        "lineage": [{"version_id": "v1", "revision": 0}],
+        "extension": {"literal": "NaN", "zero": 0, "flag": False},
+    }
+    quote = {**quote, "vendor_metadata": {"version": 0, "approved": False}}
+    original = deepcopy((data, quote))
+    monkeypatch.setattr("app.equity_api.fundamentals", lambda _session, _key: data)
+    report = financial_report(ledger_session, "AAA", quote=quote)
+    assert report.get("extension") == data["extension"]
+    assert report["lineage"] == data["lineage"]
+    assert report["quote"] == quote
+    assert list(report["quote"]) == list(quote)
+    assert report["warnings"][0] == "ORIGINAL SOURCE WARNING"
+    assert report["ratios"][0]["revenue"] == 100
+    assert (data, quote) == original
+
+
+def test_financial_http_response_keeps_source_extensions(
+    equity_client: TestClient, ledger_session: Session
+) -> None:
+    snapshot = ledger_session.scalar(
+        select(models.FundamentalSnapshot).where(models.FundamentalSnapshot.instrument_id == "AAA")
+    )
+    assert snapshot is not None
+    extension: dict[str, JsonValue] = {"revision": 0, "verified": False, "literal": "NaN"}
+    snapshot.statements = {**snapshot.statements, "extension": extension}
+    ledger_session.commit()
+    response = equity_client.get("/api/v1/equity/AAA/financials")
+    assert response.status_code == 200, response.text
+    assert response.json()["extension"] == extension
+    schema = equity_client.get("/openapi.json").json()
+    contract = schema["components"]["schemas"]["FinancialReport"]
+    assert {"symbol", "items", "quote", "ratios", "warnings"} <= set(contract["required"])
+
+
+@pytest.mark.parametrize(
+    "invalid", [{"source": None}, {"extension": {"value": float("nan")}}, {"warnings": [1]}]
+)
+def test_financial_http_rejects_invalid_receipts_before_serialization(
+    equity_client: TestClient, ledger_session: Session, invalid: dict[str, JsonValue]
+) -> None:
+    snapshot = ledger_session.scalar(
+        select(models.FundamentalSnapshot).where(models.FundamentalSnapshot.instrument_id == "AAA")
+    )
+    assert snapshot is not None
+    snapshot.statements = {**snapshot.statements, **invalid}
+    ledger_session.commit()
+    response = equity_client.get("/api/v1/equity/AAA/financials")
+    assert response.status_code == 422, response.text
+
+
+def test_financial_report_quote_order_is_preserved_in_exported_rows(
+    equity_client: TestClient, ledger_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.report_contracts import ReportRequest, section
+    from app.report_sources import capture
+
+    quote: dict[str, JsonValue] = {
+        "id": "AAA",
+        "symbol": "AAA",
+        "name": "Fixture security",
+        "currency": "SGD",
+        "price": 10,
+        "source": "FIXTURE",
+        "as_of": "2025-12-31",
+    }
+    monkeypatch.setattr("app.equity_api.quotes", lambda _session: [quote])
+    report = financial_report(ledger_session, "AAA")
+    assert list(report["quote"]) == list(quote)
+    captured = capture(ledger_session, ReportRequest(kind="equity", format="xlsx", symbol="AAA"))
+    actual = next(item for item in captured.sections if item.title == "Quote")
+    assert actual == section("Quote", quote)
 
 
 @pytest.mark.parametrize(

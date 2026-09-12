@@ -55,9 +55,15 @@ METRICS = FLOW | BALANCE
 
 
 def number(value: object) -> float:
-    if not isinstance(value, (str, SupportsFloat)):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (str, SupportsFloat)):
         raise ValueError("Financial values must be numeric scalars")
-    return float(value)
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("Financial values must be finite numeric scalars") from exc
+    if not math.isfinite(result):
+        raise ValueError("Financial values must be finite numeric scalars")
+    return result
 
 
 def divide(a: float | None, b: float | None) -> float | None:
@@ -124,6 +130,8 @@ def ratios(
     previous: Mapping[str, object] | None = None,
     price: float | None = None,
 ) -> dict[str, JsonValue]:
+    if price is not None:
+        price = number(price)
     r = {key: number(row[key]) if row.get(key) is not None else None for key in METRICS}
     if r["ebitda"] is None and r["ebit"] is not None and r["depreciation"] is not None:
         r["ebitda"] = r["ebit"] + r["depreciation"]

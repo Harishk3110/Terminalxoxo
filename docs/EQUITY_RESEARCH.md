@@ -23,6 +23,17 @@ quarterly earnings are not annualized into a P/E. Non-positive denominators stay
 null. Negative earnings/FCF yields are retained. Forward P/E, historical multiple
 percentiles, segments and measured after-tax ROIC remain unavailable.
 
+Financial receipts validate source metadata, warnings, lineage and same-security
+quote identity before ratio calculation. Boolean, overflowing and non-finite
+numeric inputs are rejected, including non-finite JSON metadata. Missing prices
+remain missing; genuine zero values are preserved. Numeric conversion retains
+the existing float conversion and rounding behavior. Valid source extensions
+and input field order survive HTTP responses and pinned report tables. The FIN
+factory validates its output explicitly because the pinned Pydantic 2.10.4
+TypedDict serializer otherwise discards allowed extra fields; OpenAPI still
+documents the response contract. These checks do not certify provider accuracy
+or make segments, ROIC or other unavailable metrics available.
+
 ## Valuation
 
 DCF saves baseline statements, metric lineage, quote provenance, assumptions,

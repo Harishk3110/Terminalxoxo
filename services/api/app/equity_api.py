@@ -13,7 +13,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
-from .equity_financials import comparable_statistics, ratios, statements
+from .equity_contracts import (
+    FINANCIAL_EVIDENCE,
+    FINANCIAL_QUOTE,
+    FINANCIAL_REPORT,
+    WARNINGS,
+    FinancialReport,
+    SecurityQuote,
+    SecuritySnapshot,
+    finite_object,
+)
+from .equity_financials import comparable_statistics, number, ratios, statements
 from .equity_valuation import DcfRequest, WaccInputs, calculate_wacc, dcf_scenarios
 from .portfolio_api import identity
 from .portfolio_operations import audit
@@ -39,7 +49,7 @@ class ThesisHistory(TypedDict):
 
 
 @router.get("/{symbol}/snapshot")
-def security_snapshot(symbol: str, session: Database):
+def security_snapshot(symbol: str, session: Database) -> SecuritySnapshot:
     from .price_sources import MarketPriceResolver
 
     item = instrument(session, symbol)
@@ -58,7 +68,7 @@ def security_snapshot(symbol: str, session: Database):
         row
         for row in data["items"]
         if row["date"] >= cutoff
-        and (not row.get("as_of") or str(row["as_of"])[:10] == str(row["date"])[:10])
+        and (not (as_of := row.get("as_of")) or str(as_of)[:10] == str(row["date"])[:10])
     ]
     financial = (
         financial_report(session, item.id, quote={"price": price})
@@ -66,11 +76,27 @@ def security_snapshot(symbol: str, session: Database):
         else None
     )
     latest = financial["ratios"][-1] if financial and financial["ratios"] else {}
-    quote = {
-        key: float(fields[key]) if fields.get(key) is not None else None
-        for key in ("bid", "ask", "open", "high", "low", "volume", "vwap")
+
+    def observed(key: str) -> float | None:
+        value = fields.get(key)
+        return number(value) if value is not None else None
+
+    def latest_metric(key: str) -> float | None:
+        value = latest.get(key)
+        return number(value) if value is not None else None
+
+    quote: SecurityQuote = {
+        "bid": observed("bid"),
+        "ask": observed("ask"),
+        "open": observed("open"),
+        "high": observed("high"),
+        "low": observed("low"),
+        "volume": observed("volume"),
+        "vwap": observed("vwap"),
+        "last": price,
+        "spread": None,
+        "previous_close": None,
     }
-    quote["last"] = price
     quote["spread"] = (
         quote["ask"] - quote["bid"]
         if quote["ask"] is not None and quote["bid"] is not None and quote["ask"] >= quote["bid"]
@@ -100,15 +126,15 @@ def security_snapshot(symbol: str, session: Database):
         "float": None,
         "description": None,
         "beta": None,
-        "market_cap": latest.get("market_cap"),
-        "enterprise_value": latest.get("enterprise_value"),
-        "shares": latest.get("shares"),
-        "dividend_yield": latest.get("dividend_yield"),
+        "market_cap": latest_metric("market_cap"),
+        "enterprise_value": latest_metric("enterprise_value"),
+        "shares": latest_metric("shares"),
+        "dividend_yield": latest_metric("dividend_yield"),
         "fifty_two_week_low": min(
-            (row["low"] for row in actual_bars if row.get("low") is not None), default=None
+            (low for row in actual_bars if (low := row.get("low")) is not None), default=None
         ),
         "fifty_two_week_high": max(
-            (row["high"] for row in actual_bars if row.get("high") is not None), default=None
+            (high for row in actual_bars if (high := row.get("high")) is not None), default=None
         ),
         "quote": quote,
         "provenance": resolver.describe(item.id, at),
@@ -127,22 +153,31 @@ def financial_report(
     symbol: str,
     frequency: str = "ANNUAL",
     actual_estimate: str = "ACTUAL",
-    quote: dict[str, object] | None = None,
-) -> dict[str, object]:
+    quote: Mapping[str, object] | None = None,
+) -> FinancialReport:
     item = instrument(session, symbol)
-    data = fundamentals(session, item.id)
+    data = FINANCIAL_EVIDENCE.validate_python(
+        finite_object(fundamentals(session, item.id)), strict=True
+    )
+    if data["symbol"].upper() != item.symbol.upper():
+        raise ValueError("Financial statements must match the selected security")
     selected = statements(data, frequency, actual_estimate)
-    quote = (
+    raw_quote = (
         quote
         if quote is not None
         else next((row for row in quotes(session) if row["id"] == item.id), {})
     )
-    values = []
+    selected_quote = FINANCIAL_QUOTE.validate_python(finite_object(raw_quote), strict=True)
+    if ("id" in selected_quote and selected_quote["id"] != item.id) or (
+        "symbol" in selected_quote and selected_quote["symbol"].upper() != item.symbol.upper()
+    ):
+        raise ValueError("Financial quote must match the selected security")
+    values: list[dict[str, JsonValue]] = []
     for row in selected:
         period = str(row["year"])
         previous_period = str(int(period[:4]) - 1) + period[4:] if period[:4].isdigit() else ""
         previous = next((old for old in selected if str(old["year"]) == previous_period), None)
-        calculated = ratios(row, previous, quote.get("price"))
+        calculated = ratios(row, previous, selected_quote.get("price"))
         if frequency == "QUARTERLY":
             for key in (
                 "pe",
@@ -156,32 +191,40 @@ def financial_report(
             ):
                 calculated[key] = None
         values.append(calculated)
-    return {
-        **data,
-        "instrument_id": item.id,
-        "currency": item.currency,
-        "frequency": frequency,
-        "actual_estimate": actual_estimate,
-        "items": selected,
-        "ratios": values,
-        "quote": quote,
-        "state": "AVAILABLE" if selected else "INSUFFICIENT_DATA",
-        "warnings": data.get("warnings", [])
-        + [
-            "Market multiples use current source-aware price and the selected fiscal period, not historical prices. Historical percentile and forward P/E require aligned verified inputs.",
-            "Ratios use positive denominators; ROE/ROA require prior-year average balances. TTM sums four consecutive standalone quarters and uses the final balance sheet/share count.",
-            "Segments and after-tax ROIC are unavailable unless a separately validated segment/invested-capital model is supplied.",
-        ],
-    }
+    return FINANCIAL_REPORT.validate_python(
+        finite_object(
+            {
+                **data,
+                "instrument_id": item.id,
+                "currency": item.currency,
+                "frequency": frequency,
+                "actual_estimate": actual_estimate,
+                "items": selected,
+                "ratios": values,
+                "quote": selected_quote,
+                "state": "AVAILABLE" if selected else "INSUFFICIENT_DATA",
+                "warnings": data.get("warnings", [])
+                + [
+                    "Market multiples use current source-aware price and the selected fiscal period, not historical prices. Historical percentile and forward P/E require aligned verified inputs.",
+                    "Ratios use positive denominators; ROE/ROA require prior-year average balances. TTM sums four consecutive standalone quarters and uses the final balance sheet/share count.",
+                    "Segments and after-tax ROIC are unavailable unless a separately validated segment/invested-capital model is supplied.",
+                ],
+            }
+        ),
+        strict=True,
+    )
 
 
-@router.get("/{symbol}/financials")
+# financial_report validates the receipt; Pydantic 2.10.4 TypedDict serialization drops extras.
+@router.get(
+    "/{symbol}/financials", response_model=None, responses={200: {"model": FinancialReport}}
+)
 def financials(
     symbol: str,
     session: Database,
     frequency: Literal["ANNUAL", "QUARTERLY", "TTM"] = "ANNUAL",
     actual_estimate: Literal["ACTUAL", "ESTIMATE"] = "ACTUAL",
-):
+) -> FinancialReport:
     return financial_report(session, symbol, frequency, actual_estimate)
 
 
@@ -234,7 +277,7 @@ def save_analysis(
 
 
 @router.post("/dcf", status_code=201)
-def calculate_dcf(payload: DcfRequest, request: Request, session: Database):
+def calculate_dcf(payload: DcfRequest, request: Request, session: Database) -> dict[str, JsonValue]:
     actor = identity(request, session)
     item = instrument(session, payload.symbol)
     if item.asset_class.upper() != "EQUITY":
@@ -263,7 +306,8 @@ def calculate_dcf(payload: DcfRequest, request: Request, session: Database):
         "as_of": financial["as_of"],
         "quote": financial["quote"],
         "statement_lineage": financial.get("lineage", []),
-        "warnings": calculated["warnings"] + financial["warnings"],
+        "warnings": WARNINGS.validate_python(calculated["warnings"], strict=True)
+        + financial["warnings"],
     }
     return save_analysis(
         session, "dcf", f"{item.symbol} FCFF", payload.model_dump(mode="json"), result, actor
@@ -271,7 +315,7 @@ def calculate_dcf(payload: DcfRequest, request: Request, session: Database):
 
 
 @router.post("/wacc", status_code=201)
-def wacc(payload: WaccInputs, request: Request, session: Database):
+def wacc(payload: WaccInputs, request: Request, session: Database) -> dict[str, JsonValue]:
     return save_analysis(
         session,
         "wacc",
@@ -294,7 +338,9 @@ class ComparableRequest(BaseModel):
 
 
 @router.post("/comparables", status_code=201)
-def comparables(payload: ComparableRequest, request: Request, session: Database):
+def comparables(
+    payload: ComparableRequest, request: Request, session: Database
+) -> dict[str, JsonValue]:
     actor = identity(request, session)
     targets = list(dict.fromkeys([payload.symbol.upper(), *(key.upper() for key in payload.peers)]))
     price_map = {row["symbol"]: row for row in quotes(session)}

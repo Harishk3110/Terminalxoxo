@@ -1,6 +1,8 @@
 from copy import deepcopy
 from decimal import Decimal
+from fractions import Fraction
 
+import numpy as np
 import pytest
 from app.equity_financials import comparable_statistics, divide, number, ratios, statements
 from pydantic import JsonValue, ValidationError
@@ -72,6 +74,70 @@ def test_numeric_statement_boundary_accepts_existing_scalar_inputs(value: object
 def test_compound_statement_metrics_are_not_coerced_to_numbers(value: object) -> None:
     with pytest.raises(ValueError, match="numeric scalars"):
         number(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        True,
+        False,
+        np.bool_(True),
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+        "NaN",
+        "Infinity",
+        "-Infinity",
+        Decimal("NaN"),
+        Decimal("Infinity"),
+        Decimal("-Infinity"),
+        np.float32("inf"),
+        10**400,
+    ],
+)
+def test_financial_numbers_reject_boolean_nonfinite_and_overflow_inputs(value: object) -> None:
+    with pytest.raises(ValueError, match="numeric|finite"):
+        number(value)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (-0.0, -0.0),
+        ("-0", -0.0),
+        (np.float32(0.1), float(np.float32(0.1))),
+        (Decimal("1.234567890123456789"), float(Decimal("1.234567890123456789"))),
+        (Fraction(1, 3), 1 / 3),
+        (-123.5, -123.5),
+    ],
+)
+def test_financial_number_conversion_preserves_existing_bits(
+    value: object, expected: float
+) -> None:
+    assert number(value).hex() == expected.hex()
+
+
+def test_financial_number_retains_the_existing_float_protocol() -> None:
+    class MetricScalar:
+        def __float__(self) -> float:
+            return 12.5
+
+    assert number(MetricScalar()) == 12.5
+
+
+@pytest.mark.parametrize("boundary", ["current", "previous", "price"])
+@pytest.mark.parametrize("value", [True, float("nan"), float("inf"), float("-inf")])
+def test_ratio_inputs_reject_invalid_current_previous_and_price_values(
+    boundary: str, value: float
+) -> None:
+    current: dict[str, object] = {"year": "2025", "revenue": 100, "shares": 10}
+    previous: dict[str, object] = {"year": "2024", "revenue": 80}
+    if boundary == "current":
+        current["revenue"] = value
+    elif boundary == "previous":
+        previous["revenue"] = value
+    with pytest.raises(ValueError, match="numeric|finite"):
+        ratios(current, previous, value if boundary == "price" else 10)
 
 
 @pytest.mark.parametrize("denominator", [None, 0, -1])

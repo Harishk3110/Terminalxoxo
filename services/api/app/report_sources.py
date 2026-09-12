@@ -1,5 +1,6 @@
 """Capture existing engine results once, including their original lineage."""
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 
 from fastapi.encoders import jsonable_encoder
@@ -16,17 +17,19 @@ def capture(session: Session, request: ReportRequest) -> ReportSnapshot:
     if request.format not in FORMATS[request.kind]:
         raise ValueError("Unsupported report kind/format combination")
     references: dict[str, JsonValue] = {}
+    raw: Mapping[str, object]
     keys: tuple[str, ...]
     currency = "PER_SOURCE"
     if request.kind in ("portfolio", "risk"):
         from .portfolio_resources import PortfolioResourceService
 
-        raw = PortfolioResourceService(session).valuation_snapshot(
+        portfolio_snapshot = PortfolioResourceService(session).valuation_snapshot(
             request.portfolio, run_id=request.valuation_run_id, end=request.as_of
         )
-        references["portfolio_id"] = raw["portfolio"]["id"]
-        references["valuation_run_id"] = raw.get("valuation_run_id")
-        currency = str(raw["portfolio"]["base_currency"])
+        raw = portfolio_snapshot
+        references["portfolio_id"] = portfolio_snapshot["portfolio"]["id"]
+        references["valuation_run_id"] = portfolio_snapshot.get("valuation_run_id")
+        currency = str(portfolio_snapshot["portfolio"]["base_currency"])
         keys = (
             (
                 "portfolio",
